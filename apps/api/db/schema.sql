@@ -301,3 +301,128 @@ CREATE TABLE IF NOT EXISTS webhook_dead_letters (
 );
 
 CREATE INDEX IF NOT EXISTS idx_dead_letters_event ON webhook_dead_letters(event_log_id);
+
+-- Phase 5: UMS Unified Schema Additions
+
+-- 1. Student Profiles (Extends users table for admitted students)
+CREATE TABLE IF NOT EXISTS students (
+  user_id         TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  reg_no          TEXT UNIQUE NOT NULL,
+  gender          TEXT,
+  date_of_birth   TEXT,
+  nationality     TEXT,
+  admission_date  TEXT NOT NULL,
+  programme       TEXT NOT NULL,
+  status          TEXT NOT NULL DEFAULT 'Active' CHECK(status IN ('Active', 'Inactive', 'Graduated', 'Suspended', 'Applicant')),
+  avatar_color    TEXT,
+  study_center_id TEXT,
+  gpa             REAL,
+  year_of_study   INTEGER,
+  graduation_date TEXT,
+  degree_level    TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_students_reg_no ON students(reg_no);
+CREATE INDEX IF NOT EXISTS idx_students_status ON students(status);
+
+-- 2. Staff Profiles (Extends users table for faculty and admins)
+CREATE TABLE IF NOT EXISTS staff (
+  user_id         TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+  staff_no        TEXT UNIQUE NOT NULL,
+  department_id   TEXT,
+  designation     TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- 3. Academic Structure
+CREATE TABLE IF NOT EXISTS faculties (
+  id              TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  name            TEXT NOT NULL,
+  code            TEXT UNIQUE NOT NULL,
+  dean_id         TEXT REFERENCES users(id),
+  description     TEXT,
+  is_active       INTEGER NOT NULL DEFAULT 1,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS departments (
+  id              TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  name            TEXT NOT NULL,
+  code            TEXT UNIQUE NOT NULL,
+  faculty_id      TEXT NOT NULL REFERENCES faculties(id) ON DELETE CASCADE,
+  head_id         TEXT REFERENCES users(id),
+  description     TEXT,
+  is_active       INTEGER NOT NULL DEFAULT 1,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS programs (
+  id              TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  name            TEXT NOT NULL,
+  code            TEXT UNIQUE NOT NULL,
+  degree_type     TEXT NOT NULL,
+  level           TEXT NOT NULL,
+  department_id   TEXT NOT NULL REFERENCES departments(id) ON DELETE CASCADE,
+  duration_years  INTEGER NOT NULL,
+  total_credit_hours INTEGER NOT NULL,
+  mode_of_study   TEXT NOT NULL,
+  is_active       INTEGER NOT NULL DEFAULT 1,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS academic_terms (
+  id              TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  name            TEXT NOT NULL,
+  code            TEXT UNIQUE NOT NULL,
+  academic_year   TEXT NOT NULL,
+  semester_number INTEGER NOT NULL,
+  start_date      TEXT NOT NULL,
+  end_date        TEXT NOT NULL,
+  status          TEXT NOT NULL DEFAULT 'upcoming' CHECK(status IN ('upcoming', 'registration', 'active', 'exam', 'grading', 'closed')),
+  created_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- 4. Alter existing courses and enrollments
+ALTER TABLE courses ADD COLUMN department_id TEXT REFERENCES departments(id);
+ALTER TABLE courses ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1;
+
+ALTER TABLE enrollments ADD COLUMN term_id TEXT REFERENCES academic_terms(id);
+ALTER TABLE enrollments ADD COLUMN registration_date TEXT NOT NULL DEFAULT (datetime('now'));
+
+-- 5. Grades
+CREATE TABLE IF NOT EXISTS grades (
+  id              TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  enrollment_id   TEXT NOT NULL REFERENCES enrollments(id) ON DELETE CASCADE,
+  assessment_type TEXT NOT NULL,
+  score           REAL NOT NULL,
+  max_score       REAL NOT NULL,
+  graded_by       TEXT REFERENCES users(id),
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_grades_enrollment ON grades(enrollment_id);
+
+-- 6. Certificates
+CREATE TABLE IF NOT EXISTS certificates (
+  id              TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  student_id      TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  serial_number   TEXT UNIQUE NOT NULL,
+  degree_title    TEXT NOT NULL,
+  issue_date      TEXT NOT NULL,
+  gpa             REAL,
+  status          TEXT NOT NULL DEFAULT 'ISSUED' CHECK(status IN ('ISSUED', 'REVOKED', 'SUSPENDED')),
+  content_hash    TEXT NOT NULL,
+  verification_count INTEGER NOT NULL DEFAULT 0,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_certificates_student ON certificates(student_id);
+CREATE INDEX IF NOT EXISTS idx_certificates_serial ON certificates(serial_number);
