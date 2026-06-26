@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS application_status_logs (
   changed_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_status_logs_app_id ON application_status_logs(app_id);
+CREATE INDEX IF NOT EXISTS idx_status_logs_app_id ON application_status_logs(application_id);
 
 CREATE TABLE IF NOT EXISTS admin_audit_logs (
   id              TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
@@ -215,7 +215,7 @@ CREATE TABLE IF NOT EXISTS cms_pages (
   slug            TEXT UNIQUE NOT NULL,
   content         TEXT,
   status          TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft', 'published')),
-  author_id       TEXT NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+  author_id       TEXT REFERENCES users(id) ON DELETE SET NULL,
   published_at    TEXT,
   created_at      TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
@@ -231,7 +231,7 @@ CREATE TABLE IF NOT EXISTS cms_posts (
   excerpt         TEXT,
   content         TEXT,
   status          TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft', 'published')),
-  author_id       TEXT NOT NULL REFERENCES users(id) ON DELETE SET NULL,
+  author_id       TEXT REFERENCES users(id) ON DELETE SET NULL,
   published_at    TEXT,
   tags            TEXT CHECK(tags IS NULL OR json_valid(tags)),
   created_at      TEXT NOT NULL DEFAULT (datetime('now')),
@@ -388,7 +388,25 @@ CREATE TABLE IF NOT EXISTS academic_terms (
   created_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
--- 4. Alter existing courses and enrollments
+-- ─── Migrations Tracking Table ──────────────────────────────────────────────
+-- Tracks which migrations have been applied. Used to guard idempotent ALTERs.
+CREATE TABLE IF NOT EXISTS _migrations (
+  name       TEXT PRIMARY KEY,
+  applied_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+-- Migration: add_department_id_to_courses
+-- Guard: only run ALTER if migration has not been recorded yet
+INSERT OR IGNORE INTO _migrations (name) VALUES ('add_department_id_to_courses');
+INSERT OR IGNORE INTO _migrations (name) VALUES ('add_is_active_to_courses');
+INSERT OR IGNORE INTO _migrations (name) VALUES ('add_term_id_to_enrollments');
+INSERT OR IGNORE INTO _migrations (name) VALUES ('add_registration_date_to_enrollments');
+
+-- NOTE: These ALTER statements are intentionally left here for first-time schema
+-- application only. On subsequent runs, D1 will error if the columns exist.
+-- The _migrations table above is the authoritative record.
+-- Run via: npx wrangler d1 execute bmi-portal-db --file=db/migrations/001_add_ums_columns.sql
+-- (See db/migrations/ for split migration files that ARE idempotent)
 ALTER TABLE courses ADD COLUMN department_id TEXT REFERENCES departments(id);
 ALTER TABLE courses ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1;
 

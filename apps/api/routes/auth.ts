@@ -208,8 +208,8 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
   });
 
   const headers = new Headers(response.headers);
-  headers.append('Set-Cookie', `bmi_token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${60 * 60 * 24 * 7}`);
-  headers.append('Set-Cookie', `csrf_token=${csrfToken}; Path=/; Secure; SameSite=Strict; Max-Age=${60 * 60 * 24 * 7}`);
+  headers.append('Set-Cookie', `bmi_token=${token}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=${60 * 60 * 24 * 7}`);
+  headers.append('Set-Cookie', `csrf_token=${csrfToken}; Path=/; Secure; SameSite=None; Max-Age=${60 * 60 * 24 * 7}`);
 
   return new Response(response.body, {
     status: 200,
@@ -238,8 +238,8 @@ export async function handleLogout(request: Request, env: Env): Promise<Response
   }
 
   const headers = new Headers({ 'Content-Type': 'application/json' });
-  headers.append('Set-Cookie', 'bmi_token=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0');
-  headers.append('Set-Cookie', 'csrf_token=; Path=/; Secure; SameSite=Strict; Max-Age=0');
+  headers.append('Set-Cookie', 'bmi_token=; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=0');
+  headers.append('Set-Cookie', 'csrf_token=; Path=/; Secure; SameSite=None; Max-Age=0');
 
   return new Response(JSON.stringify({ success: true }), {
     status: 200,
@@ -403,7 +403,7 @@ export async function handleOAuthLogin(request: Request, env: Env, provider: OAu
     status: 302,
     headers: {
       Location: url.toString(),
-      'Set-Cookie': `oauth_state=${state}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`,
+      'Set-Cookie': `oauth_state=${state}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=600`,
     },
   });
 }
@@ -472,9 +472,9 @@ export async function handleOAuthCallback(request: Request, env: Env, provider: 
   const baseUrl = getPortalUrl(env);
   
   const headers = new Headers({ Location: `${baseUrl}/dashboard` });
-  headers.append('Set-Cookie', `bmi_token=${token}; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=${60 * 60 * 24 * 7}`);
-  headers.append('Set-Cookie', `csrf_token=${csrfToken}; Path=/; Secure; SameSite=Strict; Max-Age=${60 * 60 * 24 * 7}`);
-  headers.append('Set-Cookie', 'oauth_state=; Path=/; Max-Age=0');
+  headers.append('Set-Cookie', `bmi_token=${token}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=${60 * 60 * 24 * 7}`);
+  headers.append('Set-Cookie', `csrf_token=${csrfToken}; Path=/; Secure; SameSite=None; Max-Age=${60 * 60 * 24 * 7}`);
+  headers.append('Set-Cookie', 'oauth_state=; Path=/; Secure; SameSite=None; Max-Age=0');
 
   return new Response(undefined, {
     status: 302,

@@ -1,0 +1,6 @@
+/*
+  Cloudflare Pages SPA redirect rule.
+  All routes are served as index.html so React Router handles client-side navigation.
+  Without this, direct navigation to /login, /status, /apply etc. returns 404.
+*/
+/* /index.html 200

@@ -5,7 +5,7 @@ import type { User } from '../lib/api';
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<User>;
+  login: (email: string, password: string) => Promise<User | null>;
   logout: () => Promise<void>;
   refresh: () => Promise<void>;
   setUser: (user: User | null) => void;
@@ -30,10 +30,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => { refresh(); }, [refresh]);
 
-  const login = async (email: string, password: string): Promise<User> => {
-    const { user: u } = await api.auth.login(email, password);
-    setUser(u);
-    return u;
+  const login = async (email: string, password: string): Promise<User | null> => {
+    const res = await api.auth.login(email, password);
+    if (res.requires_mfa || !res.user) {
+      // MFA required — caller (Login.tsx) handles the multi-step flow directly
+      return null;
+    }
+    setUser(res.user);
+    return res.user;
   };
 
   const logout = async () => {
