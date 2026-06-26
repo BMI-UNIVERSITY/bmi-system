@@ -4,15 +4,6 @@
   "compatibility_date": "2025-01-01",
   "main": "index.ts",
 
-  // Static assets: the portal SPA is served from apps/portal/dist
-  // The UMS SPA is deployed separately as a Cloudflare Pages project.
-  "assets": {
-    "directory": "../portal/dist",
-    "binding": "ASSETS",
-    "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
-  },
-
   // ─── Cloudflare Account ───────────────────────────────────────────
   // Set this to your account ID: npx wrangler whoami
   "account_id": "2557f2f143734abc82bd4c80be750eb6",

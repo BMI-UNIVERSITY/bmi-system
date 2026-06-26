@@ -46,7 +46,7 @@ export default {
     }
 
     if (!path.startsWith('/api/')) {
-      return env.ASSETS.fetch(request);
+      return new Response('Not found', { status: 404 });
     }
 
     try {
@@ -421,7 +421,7 @@ export default {
       return withCors(error('Internal server error', 500), request);
     }
   },
-  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
-    await backupWorker.scheduled(event, env, ctx);
+  async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+    await backupWorker.scheduled(controller, env, ctx);
   },
 } satisfies ExportedHandler<Env>;

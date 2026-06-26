@@ -17,7 +17,7 @@ async function encryptBackup(plaintext: string, keyHex: string): Promise<ArrayBu
 }
 
 export default {
-  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+  async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext) {
     const encryptionKey = env.BACKUP_ENCRYPTION_KEY;
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
