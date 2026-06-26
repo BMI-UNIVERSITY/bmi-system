@@ -56,8 +56,15 @@ input, select, textarea, button { font-family: inherit; }
 /* ─── Layout ─── */
 .container { max-width: 1100px; margin: 0 auto; padding: 0 1.5rem; }
 .page { min-height: 100vh; padding-top: 80px; }
-.page-center { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; }
-
+.page-center { 
+  min-height: 100vh; 
+  display: flex; 
+  flex-direction: column; 
+  padding: 90px 2rem 2rem 2rem; 
+}
+.page-center > * { 
+  margin: auto; 
+}
 /* ─── Card ─── */
 .card {
   background: var(--bg-card);
