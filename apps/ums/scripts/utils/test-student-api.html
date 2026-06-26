@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Student API</title>
+</head>
+<body>
+    <h1>Student API Test</h1>
+    <button onclick="testAPI()">Test API</button>
+    <pre id="output"></pre>
+
+    <script>
+        async function testAPI() {
+            const output = document.getElementById('output');
+            output.textContent = 'Testing...';
+            
+            try {
+                // Test 1: Check if backend is running
+                output.textContent += '\n\n1. Testing backend health...';
+                const healthResponse = await fetch('http://localhost:3001/health');
+                const healthData = await healthResponse.json();
+                output.textContent += '\n   Health: ' + JSON.stringify(healthData, null, 2);
+                
+                // Test 2: Try to fetch students (will fail if not authenticated)
+                output.textContent += '\n\n2. Testing students API (no auth)...';
+                const studentsResponse = await fetch('http://localhost:3001/api/v1/students');
+                const studentsData = await studentsResponse.json();
+                output.textContent += '\n   Students: ' + JSON.stringify(studentsData, null, 2);
+                
+            } catch (error) {
+                output.textContent += '\n\nError: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>

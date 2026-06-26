@@ -1,0 +1,8 @@
+{
+  "name": "@bmi/types",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "main": "./types/index.js",
+  "types": "./types/index.ts"
+}

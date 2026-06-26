@@ -1,0 +1,235 @@
+openapi: 3.1.0
+info:
+  title: BMI University Management System API
+  version: 1.0.0
+  description: REST API for the BMI UMS. All endpoints require Bearer JWT authentication unless noted.
+  contact:
+    email: security@bmi.edu
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:3001
+    description: Local development
+  - url: https://bmi.university.edu/api
+    description: Production
+
+security:
+  - bearerAuth: []
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    Student:
+      type: object
+      required: [id, studentId, firstName, lastName, email, programme]
+      properties:
+        id: { type: string }
+        studentId: { type: string, pattern: '^[A-Z]{2,4}\\d{4,8}$' }
+        firstName: { type: string, maxLength: 100 }
+        lastName: { type: string, maxLength: 100 }
+        email: { type: string, format: email }
+        programme: { type: string }
+        yearOfStudy: { type: integer, minimum: 1, maximum: 7 }
+        status:
+          type: string
+          enum: [active, inactive, graduated, suspended]
+
+    Error:
+      type: object
+      required: [error, message]
+      properties:
+        error: { type: string }
+        message: { type: string }
+        details: { type: object }
+
+paths:
+  /health:
+    get:
+      summary: Health check
+      security: []
+      responses:
+        '200':
+          description: Service healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  timestamp: { type: string, format: date-time }
+
+  /api/auth/login:
+    post:
+      summary: Authenticate user
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string, minLength: 8 }
+      responses:
+        '200':
+          description: Authentication successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken: { type: string }
+                  refreshToken: { type: string }
+                  expiresIn: { type: integer }
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/auth/refresh:
+    post:
+      summary: Refresh access token
+      security: []
+      responses:
+        '200':
+          description: New tokens issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken: { type: string }
+                  expiresIn: { type: integer }
+        '401':
+          description: Invalid or expired refresh token
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /api/auth/logout:
+    post:
+      summary: Logout user
+      responses:
+        '200':
+          description: Logged out successfully
+        '401':
+          description: Unauthorized
+
+  /api/students:
+    get:
+      summary: List students
+      responses:
+        '200':
+          description: List of students
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Student' }
+    post:
+      summary: Create student
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Student' }
+      responses:
+        '201':
+          description: Student created
+        '400':
+          description: Invalid input
+
+  /api/students/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: string }
+    get:
+      summary: Get student by ID
+      responses:
+        '200':
+          description: Student details
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Student' }
+    put:
+      summary: Update student
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Student' }
+      responses:
+        '200':
+          description: Student updated
+    delete:
+      summary: Delete student
+      responses:
+        '204':
+          description: Student deleted
+
+  /api/certificates/{hash}:
+    get:
+      summary: Verify certificate by hash
+      security: []
+      parameters:
+        - name: hash
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: Certificate found
+        '404':
+          description: Certificate not found
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, default: 1 }
+        - name: perPage
+          in: query
+          schema: { type: integer, default: 20, maximum: 100 }
+        - name: search
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: Student list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Student' } }
+                  total: { type: integer }
+                  page: { type: integer }
+                  perPage: { type: integer }
+
+    post:
+      summary: Create student
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Student' }
+      responses:
+        '201':
+          description: Student created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Student' }
+        '400':
+          description: Validation error
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }

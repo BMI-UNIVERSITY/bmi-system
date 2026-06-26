@@ -1,0 +1,16 @@
+#!/bin/sh
+# .husky/pre-commit
+# Runs before every commit — blocks bad code from ever reaching the repo.
+
+set -e
+
+echo "⏳ Pre-commit: type-check..."
+npm run type-check
+
+echo "⏳ Pre-commit: lint..."
+npm run lint
+
+echo "⏳ Pre-commit: backend lint..."
+(cd backend && npm run lint)
+
+echo "✅ Pre-commit checks passed."

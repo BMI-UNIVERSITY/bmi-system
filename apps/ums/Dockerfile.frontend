@@ -1,0 +1,38 @@
+# BMI UMS — Frontend Build Image
+#
+# This Dockerfile is used ONLY during production deployment.
+# It builds the React app and copies the output to the /dist volume
+# which is then served by Caddy as static files.
+#
+# VITE_VERIFY_URL must be set via build arg so QR codes contain the real URL.
+# Example in docker-compose.yml:
+#   build:
+#     args:
+#       VITE_VERIFY_URL: https://verify.bmiuniversity.ac.ke
+
+FROM node:20-alpine AS builder
+
+ARG VITE_VERIFY_URL
+ENV VITE_VERIFY_URL=$VITE_VERIFY_URL
+
+WORKDIR /app
+
+# Install dependencies first (cached layer)
+COPY package*.json ./
+RUN npm ci --prefer-offline
+
+# Copy source
+COPY . .
+
+# Build — Vite bakes VITE_VERIFY_URL into the bundle at build time
+RUN npm run build
+
+# ── Copy built output to the shared volume ───────────────────────────────────
+# We use a second stage just to copy /dist cleanly.
+FROM alpine:3.23
+
+COPY --from=builder /app/dist /dist
+
+# This container has one job: populate the volume.
+# It exits immediately; Caddy continues serving the files.
+CMD ["sh", "-c", "echo 'Frontend build complete. Files in /dist.' && ls /dist"]

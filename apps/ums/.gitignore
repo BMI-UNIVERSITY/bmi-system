@@ -1,0 +1,131 @@
+# Logs and PIDs
+logs/
+backend/logs/
+*.log
+*.pid
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# Dependencies and build output
+node_modules/
+backend/node_modules/
+dist/
+dist-ssr/
+backend/dist/
+coverage/
+*.tsbuildinfo
+*.local
+
+# Editor and local tooling
+.vscode/*
+!.vscode/extensions.json
+.idea/
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.kiro/
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+!.env.*.example
+backend/.env
+backend/.env.*
+!backend/.env.example
+google-credentials.json
+backend/google-credentials.json
+credentials.json
+backend/credentials.json
+docker-compose.override.yml
+*.local.env
+.env.local
+
+
+# Runtime data and databases
+bin/
+pb_data/
+data/pb_data/
+.ollama/
+*.db
+*.db-wal
+*.db-shm
+
+# Runtime log artifacts (committed by mistake)
+build_output.log
+err.log
+out.log
+backend/err.log
+backend/out.log
+
+# Scratch / exploratory workspace
+scratch/
+
+# Certificates and private keys
+*.pem
+*.key
+*.crt
+*.p12
+
+# Generated exports and local analysis artifacts
+*.xlsx
+*.xls
+*.csv
+*.pdf
+*.docx
+*.pptx
+*:Zone.Identifier
+*Zone.Identifier
+scripts/analysis_output*.txt
+public/certificates.json
+scripts/user.json
+
+# Development/Task tracking files (keep out of repo)
+*_SUMMARY.md
+*_COMPLETE.md
+TASK_*.md
+BACKEND_INTEGRATION_*.md
+STUDENT_ADMISSION_*.md
+TRANSCRIPT_*.md
+FILES_CREATED_*.md
+MANUAL_ENTRY_*.md
+README_EXAM_*.md
+
+# OS / temporary files
+tmp/
+temp/
+.cache/
+*.tmp
+*.bak
+*.orig
+
+# Specific files to exclude
+/BMI SEAL.png
+/BMIUniversity (2).jsx
+export-students.html
+test-backend-connection.sh
+COURSE_CODES_VISUAL_MAP.txt
+
+# Export archives
+*.zip
+
+# Agent memory and tooling
+.agent/
+.agent.zip
+AGENTS.md
+AGENT_SKILLS.md
+
+# Debug and task tracking
+DEBUG_FIX.md
+NEXT_ACTIONS_CHECKLIST.md
+GRADING_SYSTEM_IMPLEMENTATION_STATUS.md
+
+# Slide and generated content
+slide.md
+philosophy-slides-generator/

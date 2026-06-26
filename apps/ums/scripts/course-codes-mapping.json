@@ -1,0 +1,266 @@
+{
+  "HOMILETICS": {
+    "code": "MINS101",
+    "name": "HOMILETICS",
+    "fullName": "Homiletics",
+    "category": "Ministry",
+    "level": 100,
+    "credits": 3
+  },
+  "HERMENEUTICS": {
+    "code": "BIBL101",
+    "name": "HERMENEUTICS",
+    "fullName": "Hermeneutics",
+    "category": "Biblical Studies",
+    "level": 100,
+    "credits": 3
+  },
+  "CHURCH_ADMIN": {
+    "code": "CHUR201",
+    "name": "CHURCH_ADMIN",
+    "fullName": "Church Administration",
+    "category": "Church Leadership",
+    "level": 200,
+    "credits": 3
+  },
+  "PNEUMATOLOGY": {
+    "code": "THEO101",
+    "name": "PNEUMATOLOGY",
+    "fullName": "Pneumatology",
+    "category": "Systematic Theology",
+    "level": 200,
+    "credits": 3
+  },
+  "EVANGELISM": {
+    "code": "MINS102",
+    "name": "EVANGELISM",
+    "fullName": "Evangelism",
+    "category": "Ministry",
+    "level": 100,
+    "credits": 3
+  },
+  "ESCHATOLOGY": {
+    "code": "THEO102",
+    "name": "ESCHATOLOGY",
+    "fullName": "Eschatology",
+    "category": "Systematic Theology",
+    "level": 300,
+    "credits": 3
+  },
+  "PRINCIPLE_OF_SUCCESS": {
+    "code": "DEVL101",
+    "name": "PRINCIPLE_OF_SUCCESS",
+    "fullName": "Principle of Success",
+    "category": "Personal Development",
+    "level": 100,
+    "credits": 2
+  },
+  "ANGELOLOGY": {
+    "code": "THEO103",
+    "name": "ANGELOLOGY",
+    "fullName": "Angelology",
+    "category": "Systematic Theology",
+    "level": 200,
+    "credits": 3
+  },
+  "HAMARTIOLOGY": {
+    "code": "THEO104",
+    "name": "HAMARTIOLOGY",
+    "fullName": "Hamartiology",
+    "category": "Systematic Theology",
+    "level": 200,
+    "credits": 3
+  },
+  "NEW_SURVEY": {
+    "code": "BIBL102",
+    "name": "NEW_SURVEY",
+    "fullName": "New Testament Survey",
+    "category": "Biblical Studies",
+    "level": 100,
+    "credits": 3
+  },
+  "OLD_SURVEY": {
+    "code": "BIBL103",
+    "name": "OLD_SURVEY",
+    "fullName": "Old Testament Survey",
+    "category": "Biblical Studies",
+    "level": 100,
+    "credits": 3
+  },
+  "CHRISTOLOGY": {
+    "code": "THEO105",
+    "name": "CHRISTOLOGY",
+    "fullName": "Christology",
+    "category": "Systematic Theology",
+    "level": 200,
+    "credits": 3
+  },
+  "CHURCH_GROWTH": {
+    "code": "CHUR202",
+    "name": "CHURCH_GROWTH",
+    "fullName": "Church Growth",
+    "category": "Church Leadership",
+    "level": 200,
+    "credits": 3
+  },
+  "BIBLIOLOGY": {
+    "code": "THEO106",
+    "name": "BIBLIOLOGY",
+    "fullName": "Bibliology",
+    "category": "Systematic Theology",
+    "level": 100,
+    "credits": 3
+  },
+  "THEOLOGY_PROPER": {
+    "code": "THEO107",
+    "name": "THEOLOGY_PROPER",
+    "fullName": "Theology Proper",
+    "category": "Systematic Theology",
+    "level": 300,
+    "credits": 3
+  },
+  "SOTERIOLOGY": {
+    "code": "THEO108",
+    "name": "SOTERIOLOGY",
+    "fullName": "Soteriology",
+    "category": "Systematic Theology",
+    "level": 200,
+    "credits": 3
+  },
+  "CHRISTIAN_FAMILY": {
+    "code": "PRAC201",
+    "name": "CHRISTIAN_FAMILY",
+    "fullName": "Christian Family",
+    "category": "Practical Theology",
+    "level": 200,
+    "credits": 3
+  },
+  "CHURCH_PLANTING": {
+    "code": "CHUR203",
+    "name": "CHURCH_PLANTING",
+    "fullName": "Church Planting",
+    "category": "Church Leadership",
+    "level": 300,
+    "credits": 3
+  },
+  "CHURCH_HISTORY": {
+    "code": "HIST201",
+    "name": "CHURCH_HISTORY",
+    "fullName": "Church History",
+    "category": "Historical Theology",
+    "level": 200,
+    "credits": 3
+  },
+  "PRAISE_AND_WORSHIP": {
+    "code": "MINS103",
+    "name": "PRAISE_AND_WORSHIP",
+    "fullName": "Praise and Worship",
+    "category": "Ministry",
+    "level": 100,
+    "credits": 2
+  },
+  "SPIRITUAL_WARFARE": {
+    "code": "SPIR201",
+    "name": "SPIRITUAL_WARFARE",
+    "fullName": "Spiritual Warfare",
+    "category": "Spiritual Formation",
+    "level": 200,
+    "credits": 3
+  },
+  "FOUNDATION_SUCCESSFUL_MINISTRY": {
+    "code": "MINS104",
+    "name": "FOUNDATION_SUCCESSFUL_MINISTRY",
+    "fullName": "Foundation of Successful Ministry",
+    "category": "Ministry",
+    "level": 100,
+    "credits": 3
+  },
+  "SPIRITUAL_FORMATION": {
+    "code": "SPIR202",
+    "name": "SPIRITUAL_FORMATION",
+    "fullName": "Spiritual Formation",
+    "category": "Spiritual Formation",
+    "level": 200,
+    "credits": 3
+  },
+  "KINGDOM_PRINCIPLES": {
+    "code": "THLG101",
+    "name": "KINGDOM_PRINCIPLES",
+    "fullName": "Kingdom Principles",
+    "category": "Theology",
+    "level": 200,
+    "credits": 3
+  },
+  "PRINCIPLES_OF_SUCCESS": {
+    "code": "DEVL102",
+    "name": "PRINCIPLES_OF_SUCCESS",
+    "fullName": "Principles of Success",
+    "category": "Personal Development",
+    "level": 100,
+    "credits": 2
+  },
+  "UNDERSTANDING_GODS": {
+    "code": "THLG102",
+    "name": "UNDERSTANDING_GODS",
+    "fullName": "Understanding God's Word",
+    "category": "Theology",
+    "level": 100,
+    "credits": 3
+  },
+  "ECCLESIOLOGY": {
+    "code": "THEO109",
+    "name": "ECCLESIOLOGY",
+    "fullName": "Ecclesiology",
+    "category": "Systematic Theology",
+    "level": 200,
+    "credits": 3
+  },
+  "PASTORAL_COUNSELLING_ETHICS": {
+    "code": "PAST301",
+    "name": "PASTORAL_COUNSELLING_ETHICS",
+    "fullName": "Pastoral Counselling & Ethics",
+    "category": "Pastoral Ministry",
+    "level": 300,
+    "credits": 3
+  },
+  "GREEK": {
+    "code": "LANG201",
+    "name": "GREEK",
+    "fullName": "Biblical Greek",
+    "category": "Biblical Languages",
+    "level": 200,
+    "credits": 4
+  },
+  "CHRISTIAN_APOLOGETICS": {
+    "code": "APOL301",
+    "name": "CHRISTIAN_APOLOGETICS",
+    "fullName": "Christian Apologetics",
+    "category": "Apologetics",
+    "level": 300,
+    "credits": 3
+  },
+  "HEBREW": {
+    "code": "LANG202",
+    "name": "HEBREW",
+    "fullName": "Biblical Hebrew",
+    "category": "Biblical Languages",
+    "level": 200,
+    "credits": 4
+  },
+  "WORLD_RELIGION": {
+    "code": "COMP201",
+    "name": "WORLD_RELIGION",
+    "fullName": "World Religions",
+    "category": "Comparative Religion",
+    "level": 200,
+    "credits": 3
+  },
+  "SPIRITUAL_REALM": {
+    "code": "SPIR203",
+    "name": "SPIRITUAL_REALM",
+    "fullName": "The Spiritual Realm",
+    "category": "Spiritual Formation",
+    "level": 200,
+    "credits": 3
+  }
+}

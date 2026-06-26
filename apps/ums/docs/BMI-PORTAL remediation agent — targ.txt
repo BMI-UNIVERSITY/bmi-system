@@ -1,0 +1,625 @@
+BMI-PORTAL remediation agent — target: all dimensions 10/10
+Agent operating contract
+You are a principal engineer performing a complete remediation of the BMI University Management System. You have full access to the repository filesystem.
+Rules — none may be violated:
+Read every file before modifying it. Never assume its contents.
+After every task, run the stated verification command. It must exit 0.
+Execute phases in strict order (1→7). Never skip.
+Commit after each phase with a conventional commit message.
+Never hard-code secrets. All sensitive values are environment variables.
+Never break existing behaviour. All changes are structural improvements.
+If a task conflicts with existing code, stop, describe the conflict precisely, and ask.
+Tests must test real behaviour — never mock the thing under test.
+Do not re-audit the repository. Trust the findings below. Act on them.
+---
+Phase 1 — Docker hardening (Docker 6→10)
+Task 1.1 — Remove source volume mounts from api service
+In `docker-compose.yml`, delete these two lines from the `api` service `volumes:` block:
+```yaml
+- ./backend:/app
+- /app/node_modules
+```
+Keep only `- ./logs:/app/logs`. The Dockerfile builds the correct image. These mounts override it.
+Task 1.2 — Pin all Docker image versions
+In `docker-compose.yml`, replace all `:latest` tags:
+```
+ghcr.io/muchobien/pocketbase:latest  →  ghcr.io/muchobien/pocketbase:0.22.21
+litestream/litestream:latest         →  litestream/litestream:0.3.13
+ollama/ollama:latest                 →  ollama/ollama:0.3.14
+caddy:2-alpine                       →  caddy:2.9.1-alpine
+```
+Verify these are the latest stable releases at time of implementation.
+Task 1.3 — Add `restart: unless-stopped` to Caddy service
+The Caddy service is missing a restart policy. Add `restart: unless-stopped` to the caddy service block.
+Task 1.4 — Add resource limits to all services
+Add `deploy.resources` to every service:
+```yaml
+api:       deploy: { resources: { limits: { memory: 512M, cpus: '1.0' }, reservations: { memory: 256M } } }
+pocketbase: deploy: { resources: { limits: { memory: 256M, cpus: '0.5' } } }
+ollama:    deploy: { resources: { limits: { memory: 4G, cpus: '2.0' } } }
+litestream: deploy: { resources: { limits: { memory: 128M, cpus: '0.2' } } }
+caddy:     deploy: { resources: { limits: { memory: 128M, cpus: '0.5' } } }
+```
+Task 1.5 — Fix Litestream empty-string default
+Change (docker-compose.yml lines 39-40):
+```yaml
+# FROM:
+- LITESTREAM_ACCESS_KEY_ID=${LITESTREAM_ACCESS_KEY_ID:-}
+- LITESTREAM_SECRET_ACCESS_KEY=${LITESTREAM_SECRET_ACCESS_KEY:-}
+# TO:
+- LITESTREAM_ACCESS_KEY_ID=${LITESTREAM_ACCESS_KEY_ID}
+- LITESTREAM_SECRET_ACCESS_KEY=${LITESTREAM_SECRET_ACCESS_KEY}
+```
+Task 1.6 — Create `docker-compose.override.yml` for development
+Create at root (add to `.gitignore`):
+```yaml
+version: '3.8'
+services:
+  api:
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    command: npm run dev
+```
+Add `docker-compose.override.yml` to `.gitignore`. Document in README.
+Task 1.7 — Harden backend Dockerfile to multi-stage, non-root
+Replace `backend/Dockerfile` entirely:
+```dockerfile
+FROM node:20-alpine AS builder
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --include=dev
+COPY . .
+RUN npm run build
+
+FROM node:20-alpine AS runner
+RUN addgroup -S bmigroup && adduser -S bmiuser -G bmigroup
+WORKDIR /app
+COPY package*.json ./
+RUN npm ci --omit=dev && npm cache clean --force
+COPY --from=builder /app/dist ./dist
+USER bmiuser
+EXPOSE 3001
+HEALTHCHECK --interval=30s --timeout=10s --retries=3 \
+  CMD wget -q --spider http://localhost:3001/health || exit 1
+CMD ["node", "dist/index.js"]
+```
+Task 1.8 — Create `backend/.dockerignore`
+```
+node_modules
+dist
+.env
+*.log
+coverage
+**/*.test.ts
+.git
+```
+Verification — Phase 1
+```bash
+docker compose build
+docker compose up -d
+docker compose ps                  # all 5 services: healthy
+docker exec bmi-api whoami         # must NOT return root
+docker exec bmi-api ls /app        # must show dist/ not .ts files
+grep ":latest" docker-compose.yml  # must return nothing
+```
+Commit: `fix(docker): remove source mount, pin images, non-root Dockerfile, resource limits, dev override`
+---
+Phase 2 — Security hardening (Security 5→10)
+Task 2.1 — Replace the Caddyfile with dev/prod split
+Delete current `Caddyfile`. Create `Caddyfile.dev` and `Caddyfile.prod`. Copy `Caddyfile.dev` content to `Caddyfile` for local dev.
+Caddyfile.dev:
+```caddyfile
+{ auto_https off; admin off }
+
+:80 {
+  encode gzip
+
+  header {
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "DENY"
+    Referrer-Policy "strict-origin-when-cross-origin"
+    Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none';"
+    Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    -Server
+  }
+
+  handle_path /api/* {
+    reverse_proxy api:3001 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-Proto {scheme}
+    }
+  }
+
+  handle_path /_/* { respond "Access Denied" 403 }
+
+  handle {
+    root * /srv
+    try_files {path} {path}/ /index.html
+    file_server
+  }
+
+  log {
+    output file /var/log/caddy/access.log { roll_size 10MB; roll_keep 5 }
+  }
+}
+```
+Caddyfile.prod:
+```caddyfile
+{ email security@youruniversity.edu; admin off }
+
+http://yourdomain.edu { redir https://yourdomain.edu{uri} permanent }
+
+yourdomain.edu {
+  encode gzip
+
+  header {
+    X-Content-Type-Options "nosniff"
+    X-Frame-Options "DENY"
+    Referrer-Policy "strict-origin-when-cross-origin"
+    Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: blob:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self';"
+    Strict-Transport-Security "max-age=63072000; includeSubDomains; preload"
+    Permissions-Policy "geolocation=(), microphone=(), camera=()"
+    -Server
+  }
+
+  handle_path /api/* {
+    reverse_proxy api:3001 {
+      header_up Host {host}
+      header_up X-Real-IP {remote_host}
+      header_up X-Forwarded-Proto {scheme}
+    }
+  }
+
+  handle_path /_/* { respond "Access Denied" 403 }
+
+  # /pb/* route intentionally absent — all data flows through /api/* only
+
+  handle {
+    root * /srv
+    try_files {path} {path}/ /index.html
+    file_server
+  }
+
+  log {
+    output file /var/log/caddy/access.log { roll_size 10MB; roll_keep 10; roll_keep_for 720h }
+  }
+}
+```
+Task 2.2 — Fix Litestream CHANGEME placeholder
+In `litestream.yml` lines 37 and 60, replace:
+```yaml
+bucket: bmi-ums-backup-CHANGEME
+```
+With:
+```yaml
+bucket: ${LITESTREAM_S3_BUCKET}
+```
+Add to root `.env.example`:
+```
+# REQUIRED: Set to your actual S3 bucket name. Leaving this placeholder disables off-site backup silently.
+LITESTREAM_S3_BUCKET=your-bucket-name-here
+```
+Task 2.3 — Create preflight validation script
+Create `scripts/preflight-check.sh`:
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+REQUIRED=(JWT_SECRET ENCRYPTION_KEY PB_ENCRYPTION_KEY LITESTREAM_S3_BUCKET LITESTREAM_ACCESS_KEY_ID LITESTREAM_SECRET_ACCESS_KEY POCKETBASE_ADMIN_EMAIL POCKETBASE_ADMIN_PASSWORD)
+FAIL=0
+for VAR in "${REQUIRED[@]}"; do
+  VAL="${!VAR:-}"
+  if [[ -z "$VAL" ]] || [[ "$VAL" == *CHANGEME* ]] || [[ "$VAL" == *EXAMPLE* ]] || [[ "$VAL" == *your-* ]]; then
+    echo "FAIL: $VAR is unset or still contains a placeholder"
+    FAIL=1
+  fi
+done
+[[ $FAIL -eq 0 ]] && echo "PASS: all required variables are set" || exit 1
+```
+Make executable: `chmod +x scripts/preflight-check.sh`. Add `make preflight` to Makefile.
+Verification — Phase 2
+```bash
+grep -n "unsafe-inline" Caddyfile.prod && echo "FAIL: unsafe-inline in prod CSP" || echo "PASS"
+grep -n "X-XSS-Protection" Caddyfile.dev Caddyfile.prod && echo "FAIL: deprecated header" || echo "PASS"
+grep -n "CHANGEME" litestream.yml && echo "FAIL: placeholder remains" || echo "PASS"
+grep -n ":latest" docker-compose.yml && echo "FAIL: unpinned image" || echo "PASS"
+grep -n "handle_path /pb" Caddyfile.prod && echo "FAIL: /pb/* in prod" || echo "PASS"
+```
+Commit: `fix(security): strict CSP, remove deprecated headers, fix Litestream placeholder, split Caddyfile`
+---
+Phase 3 — Package hygiene (Hygiene 4→8 partial)
+Task 3.1 — Remove backend libraries from frontend dependencies
+In root `package.json`, remove from `dependencies`: `cors`, `helmet`, `express-rate-limit`.
+Verify they are in `backend/package.json`. If not, add them there.
+Task 3.2 — Fix @types misclassification
+Move from `dependencies` to `devDependencies`: `@types/file-saver`, `@types/qrcode`.
+Task 3.3 — Remove unused Vite plugin
+Remove `@vitejs/plugin-react-swc` from `devDependencies`. Verify `vite.config.ts` only imports `@vitejs/plugin-react`.
+Task 3.4 — Replace xlsx
+```bash
+npm uninstall xlsx
+npm install exceljs@^4.4.0
+```
+Update all `import ... from 'xlsx'` references in `src/`. Update `vite.config.ts` `manualChunks` to reference `exceljs`.
+Task 3.5 — Add missing scripts to package.json
+```json
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "lint": "eslint src --ext .ts,.tsx --max-warnings 0",
+    "lint:fix": "eslint src --ext .ts,.tsx --fix",
+    "type-check": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage"
+  }
+}
+```
+Task 3.6 — Create ESLint config if absent
+Check for `eslint.config.js` or `.eslintrc.*`. If missing, create `eslint.config.js` with `@typescript-eslint/recommended` rules, `no-explicit-any: error`, `no-unused-vars: error`, `no-console: warn`.
+Verification — Phase 3
+```bash
+npm install
+npm run type-check   # exit 0
+npm run lint         # exit 0
+npm run build        # exit 0
+node -e "const p=require('./package.json'); ['cors','helmet','express-rate-limit'].forEach(b => { if(p.dependencies[b]) throw new Error('FAIL: '+b+' still in frontend deps') }); console.log('PASS')"
+```
+Commit: `chore: audit package.json, remove dead deps, fix classifications, add scripts, replace xlsx`
+---
+Phase 4 — Testing (Testing 0→10)
+Task 4.1 — Install Vitest (frontend)
+```bash
+npm install -D vitest @vitest/coverage-v8 @testing-library/react @testing-library/user-event jsdom
+```
+Task 4.2 — Create `vitest.config.ts` (resolves the ghost tsconfig reference)
+```typescript
+import { defineConfig } from 'vitest/config';
+import react from '@vitejs/plugin-react';
+export default defineConfig({
+  plugins: [react()],
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'lcov', 'html'],
+      thresholds: { lines: 60, functions: 60, branches: 50 },
+      exclude: ['node_modules', 'dist', 'src/test']
+    },
+    include: ['src/**/*.test.{ts,tsx}']
+  }
+});
+```
+Task 4.3 — Create `src/test/setup.ts`
+```typescript
+import '@testing-library/jest-dom';
+import { vi } from 'vitest';
+const orig = console.error;
+beforeEach(() => { console.error = vi.fn(); });
+afterEach(() => { console.error = orig; });
+```
+Task 4.4 — Write frontend tests (minimum 21 test cases)
+`src/test/auth.test.ts` — 3 cases: expired token detection, valid token detection, missing exp field rejection
+`src/test/rbac.test.ts` — 6 cases: admin has all permissions, registrar cannot delete/manage-users, registrar can read/write, staff is read-only, staff cannot write, unknown role has no permissions
+`src/test/certificate.test.ts` — 4 cases: deterministic 64-char hex hash, same inputs = same hash, different studentId = different hash, different courseCode = different hash
+`src/test/validation.test.ts` — 5 cases: valid email accepted, malformed email rejected, valid student ID format accepted, invalid student ID rejected, XSS script tag stripped
+`src/test/sanitise.test.ts` — 5 cases: HTML angle brackets removed, null bytes stripped, whitespace trimmed, >500 chars truncated, non-string input returns empty string
+All tests use `describe/it/expect` with real implementations — do not mock the utility under test.
+Task 4.5 — Install Vitest in backend and write backend tests
+```bash
+cd backend && npm install -D vitest @vitest/coverage-v8
+```
+Create `backend/vitest.config.ts` with `environment: 'node'`, 60% thresholds.
+Add `"test": "vitest run"`, `"test:coverage": "vitest run --coverage"` to backend `package.json` scripts.
+Write `backend/src/test/jwt.test.ts` — 3 cases: no auth header rejected, malformed bearer rejected, valid bearer format accepted.
+Write `backend/src/test/sanitise.test.ts` — 5 cases matching frontend sanitise tests.
+Verification — Phase 4
+```bash
+npm run test              # all 21+ frontend tests pass
+npm run test:coverage     # coverage ≥ 60% lines and functions
+cd backend && npm test    # backend tests pass
+```
+Commit: `test: install Vitest, write 21+ tests for auth, RBAC, certificates, validation, sanitisation`
+---
+Phase 5 — CI/CD (CI/CD 2→10)
+Task 5.1 — Create `.github/workflows/ci.yml`
+```yaml
+name: CI
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  frontend:
+    name: Frontend — type-check, lint, test, build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm' }
+      - run: npm ci
+      - run: npm run type-check
+      - run: npm run lint
+      - run: npm run test
+      - run: npm run build
+      - uses: actions/upload-artifact@v4
+        with: { name: frontend-coverage, path: coverage/ }
+
+  backend:
+    name: Backend — lint, test, build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20', cache: 'npm', cache-dependency-path: backend/package-lock.json }
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - run: npm run build
+
+  docker:
+    name: Docker build and non-root verification
+    runs-on: ubuntu-latest
+    needs: [frontend, backend]
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker compose -f docker-compose.yml build
+      - name: Verify API container runs as non-root
+        run: |
+          docker compose -f docker-compose.yml up -d api pocketbase
+          sleep 15
+          USER=$(docker exec bmi-api whoami 2>/dev/null || echo root)
+          [ "$USER" != "root" ] || (echo "FAIL: API running as root" && exit 1)
+          echo "PASS: API running as $USER"
+          docker compose -f docker-compose.yml down
+```
+Task 5.2 — Create `.github/workflows/security.yml`
+```yaml
+name: Security scan
+on:
+  schedule:
+    - cron: '0 7 * * 1'
+  push:
+    branches: [main]
+    paths: ['**/package*.json', 'docker-compose.yml']
+jobs:
+  npm-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: '20' }
+      - run: npm audit --audit-level=high
+      - run: cd backend && npm audit --audit-level=high
+
+  codeql:
+    runs-on: ubuntu-latest
+    permissions: { security-events: write, actions: read, contents: read }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with: { languages: 'typescript,javascript' }
+      - uses: github/codeql-action/autobuild@v3
+      - uses: github/codeql-action/analyze@v3
+```
+Task 5.3 — Create `.github/dependabot.yml`
+```yaml
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    labels: [dependencies, frontend]
+
+  - package-ecosystem: npm
+    directory: /backend
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    labels: [dependencies, backend]
+
+  - package-ecosystem: docker
+    directory: /
+    schedule: { interval: monthly }
+    labels: [dependencies, docker]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: monthly }
+    labels: [dependencies, github-actions]
+```
+Task 5.4 — Create `.github/CODEOWNERS`
+```
+* @KIAI-JOSEPH
+.github/ @KIAI-JOSEPH
+docker-compose.yml @KIAI-JOSEPH
+Caddyfile* @KIAI-JOSEPH
+litestream.yml @KIAI-JOSEPH
+```
+Task 5.5 — Create `.github/pull_request_template.md`
+```markdown
+## What does this PR do?
+
+## Type of change
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Refactor / cleanup
+- [ ] Documentation
+- [ ] CI/CD change
+
+## Checklist
+- [ ] Tests added or updated
+- [ ] `npm run test` passes locally
+- [ ] `npm run lint` passes locally
+- [ ] `npm run build` passes locally
+- [ ] No secrets committed
+- [ ] No new `unsafe-inline` in CSP
+```
+Commit: `ci: add full CI pipeline, security scan, CodeQL, Dependabot, PR template, CODEOWNERS`
+---
+Phase 6 — Repository hygiene (Hygiene 8→10)
+Task 6.1 — Move legacy debug scripts from root to `scripts/legacy/`
+Move: fix-and-restart.sh, force-restart-backend.sh, restart-backend-fixed.sh, restart-backend.sh, check-all-services.sh, check-pocketbase-data.sh, check-services.sh, cleanup-repo.sh, fix-pocketbase-version.sh, install-certificate-packages.sh, install-packages.sh, quick-restart.sh, prepare-push.sh, setup-pocketbase-admin.sh, run-add-mock-students.sh, apply-fixes.ps1
+Task 6.2 — Move dev utilities to `scripts/utils/`
+Move: parse_excel.js, generate_template.cjs, test-student-api.html
+Task 6.3 — Move 7 internal dev docs to `docs/internal/`
+Move: FIX_POCKETBASE_VERSION.md, IMPLEMENTATION_CHECKLIST.md, INSTALL_PACKAGES_INSTRUCTIONS.md, REPOSITORY_PREPARATION.md, TODO.md, teaching_guide.md, COURSE_CODES_QUICK_REFERENCE.md
+Task 6.4 — Update Makefile with working targets
+Add:
+```makefile
+preflight:
+	@bash scripts/preflight-check.sh
+
+test-all:
+	@npm run test && cd backend && npm test
+
+lint-all:
+	@npm run lint && cd backend && npm run lint
+
+verify:
+	@echo "Running full verification..."
+	@npm run type-check
+	@npm run lint
+	@npm run test
+	@npm run build
+	@cd backend && npm run lint && npm test && npm run build
+	@echo "All checks passed."
+```
+Task 6.5 — Update CONTRIBUTING.md
+Replace all references to commands that don't exist (`npm test`, `npm run lint`) with commands that do (`make verify`, `make test-all`, `make lint-all`).
+Verification — Phase 6
+```bash
+ls -1 *.sh *.ps1 *.bat *.js *.cjs *.html 2>/dev/null | wc -l
+# Should be ≤ 7: start-all.sh stop-all.sh start-dev.sh stop-dev.sh start-all.bat start-all.ps1 start-backend.bat
+```
+Commit: `chore: move legacy scripts to scripts/legacy, internal docs to docs/internal, update Makefile`
+---
+Phase 7 — Architecture & documentation (Architecture 7→10, Docs 8→10)
+Task 7.1 — Create `shared/types/` package
+Create `shared/types/student.ts`, `shared/types/auth.ts` (UserRole, JWTPayload, AuthTokens), `shared/types/certificate.ts`, `shared/types/index.ts`. Update `tsconfig.json` paths to add `@shared` alias pointing to `./shared`. Update `vite.config.ts` resolve aliases.
+Task 7.2 — Create `docs/api/openapi.yml` — OpenAPI 3.1 spec
+Document all Hono.js endpoints: `GET /health`, `POST /api/auth/login`, `POST /api/auth/refresh`, `POST /api/auth/logout`, `GET /api/students`, `POST /api/students`, `GET /api/students/:id`, `PUT /api/students/:id`, `DELETE /api/students/:id`, `GET /api/certificates/:hash`. Include request/response schemas, authentication requirements, and error formats.
+Task 7.3 — Add `ErrorBoundary` component
+Create `src/components/ErrorBoundary.tsx` as a class component with `getDerivedStateFromError`, `componentDidCatch`, and a clean fallback UI with a retry button. Wrap the root app in `src/main.tsx` with `<ErrorBoundary>`.
+Task 7.4 — Implement JWT refresh token rotation in backend
+Create `backend/src/services/tokenService.ts`:
+Access token: 15-minute TTL, signed with `JWT_SECRET`
+Refresh token: 7-day TTL, signed with `REFRESH_SECRET`, stored in HttpOnly cookie
+Add `POST /api/auth/refresh` endpoint that validates the cookie and issues new tokens
+Add `POST /api/auth/logout` that clears the cookie
+Task 7.5 — Add structured Pino logging to backend
+```bash
+cd backend && npm install pino pino-pretty
+```
+Create `backend/src/lib/logger.ts` with JSON output in production, pretty output in development. Replace all `console.log`/`console.error` calls in backend with `logger.info`/`logger.error`.
+Task 7.6 — Add PocketBase binary checksum verification to `make setup`
+Find the SHA-256 hash of the pinned PocketBase binary version. Add to Makefile `setup` target:
+```bash
+EXPECTED_SHA="<sha256-of-pinned-version>"
+ACTUAL=$(sha256sum bin/pocketbase | awk '{print $1}')
+[ "$ACTUAL" = "$EXPECTED_SHA" ] || (echo "CHECKSUM MISMATCH — aborting" && exit 1)
+```
+Task 7.7 — Create `docs/ARCHITECTURE.md` with Mermaid diagram
+Document: component relationships, network security model (what is and isn't publicly reachable), the SQLite scalability ceiling (~5,000 concurrent users), and a pointer to a PostgreSQL migration path.
+Task 7.8 — Update SECURITY.md
+Replace `nissimasher2019@gmail.com` with `security@youruniversity.edu`. Add a note explaining this should be an institutional address.
+Task 7.9 — Add warning to QUICK_START.md about LITESTREAM_S3_BUCKET
+Add a highlighted warning: "Before going live, replace `bmi-ums-backup-CHANGEME` in `litestream.yml` with your actual S3 bucket name. Litestream will start and appear healthy without this change — but all off-site backup will silently fail."
+Commit: `feat: shared types, OpenAPI spec, ErrorBoundary, JWT refresh, Pino logging, architecture docs`
+---
+Final definition of done — all 7 dimensions at 10/10
+Architecture 10/10
+[ ] `shared/types/` package exists with Student, Auth, Certificate types
+[ ] `vitest.config.ts` exists (not a ghost tsconfig reference)
+[ ] `ErrorBoundary` wraps the React app root
+[ ] JWT refresh token endpoint implemented and tested
+[ ] Structured Pino logging in backend
+[ ] PocketBase binary checksum verified in `make setup`
+[ ] OpenAPI spec covers all endpoints
+Testing 10/10
+[ ] `npm run test` exits 0 in frontend
+[ ] `cd backend && npm test` exits 0
+[ ] ≥ 21 test cases across auth/RBAC/certificate/validation/sanitisation paths
+[ ] Coverage ≥ 60% lines and functions in both packages
+[ ] `npm run lint` exits 0 in both packages
+[ ] `npm run type-check` exits 0
+Security 10/10
+[ ] No `unsafe-inline` in `Caddyfile.prod`
+[ ] `auto_https off` does not appear in `Caddyfile.prod`
+[ ] `X-XSS-Protection` removed from all Caddyfiles
+[ ] HSTS only in the HTTPS production block
+[ ] No `/pb/*` public route in `Caddyfile.prod`
+[ ] `bucket: bmi-ums-backup-CHANGEME` replaced with `${LITESTREAM_S3_BUCKET}`
+[ ] `preflight-check.sh` validates all required env vars
+[ ] All Docker images pinned to explicit version tags
+[ ] `cors`/`helmet`/`express-rate-limit` not in frontend `package.json`
+CI/CD 10/10
+[ ] `.github/workflows/ci.yml` runs on every push: type-check + lint + test + build + docker non-root check
+[ ] `.github/workflows/security.yml` runs weekly: npm audit + CodeQL
+[ ] `.github/dependabot.yml` configured for npm (root + backend) + Docker + Actions
+[ ] `.github/pull_request_template.md` exists
+[ ] `.github/CODEOWNERS` exists
+[ ] All CI jobs pass on a push to a test branch
+Hygiene 10/10
+[ ] Root has ≤ 7 shell/script/utility files
+[ ] `scripts/legacy/` contains all 16 debug scripts
+[ ] `scripts/utils/` contains dev utilities
+[ ] `docs/internal/` contains dev working notes
+[ ] `backend/.dockerignore` exists
+[ ] `docker-compose.override.yml` exists for dev and is in `.gitignore`
+[ ] `@vitejs/plugin-react-swc` (unused) removed
+Docs 10/10
+[ ] `docs/ARCHITECTURE.md` with Mermaid diagram
+[ ] `docs/api/openapi.yml` covers all endpoints
+[ ] CONTRIBUTING.md references commands that actually exist
+[ ] SECURITY.md uses institutional email address
+[ ] QUICK_START.md warns about LITESTREAM_S3_BUCKET placeholder
+Docker 10/10
+[ ] `./backend:/app` source mount removed from production `docker-compose.yml`
+[ ] Backend Dockerfile is multi-stage, runs as non-root `bmiuser`
+[ ] `docker exec bmi-api whoami` returns non-root
+[ ] All 4 images pinned to explicit semver tags
+[ ] Resource limits set on all 5 services
+[ ] `restart: unless-stopped` on all 5 services including Caddy
+[ ] `docker-compose.override.yml` handles dev source mounts
+[ ] All 5 health checks pass after `docker compose up`
+---
+Agent output format
+For each task:
+```
+TASK [PHASE.NUMBER] — [title]
+Status: DONE | BLOCKED | SKIPPED
+Files changed:
+  - [path]: [description of change]
+Verification: [command] → exit 0
+Next: [PHASE.NEXT_NUMBER]
+```
+If blocked:
+```
+BLOCKER [PHASE.NUMBER]: [precise description of conflict]
+Options: [A] | [B]
+Awaiting decision.
+```
+After each phase:
+```
+PHASE [N] COMPLETE
+Score change: [dimension] [old]/10 → [new]/10
+Commit: [conventional commit message]
+```
+---
+Built from direct live reads of: package.json · docker-compose.yml · Caddyfile · litestream.yml · root directory listing  
+Repo: https://github.com/KIAI-JOSEPH/BMI-PORTAL · 12 commits · May 2026
