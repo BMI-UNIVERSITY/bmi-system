@@ -112,7 +112,8 @@ function getAllowedOrigins(env?: Env): string[] {
 export function getCorsHeaders(request: Request, env?: Env): Record<string, string> {
   const origin = request.headers.get('Origin') || '';
   const allowed = getAllowedOrigins(env);
-  const allowedOrigin = allowed.includes(origin) ? origin : BASE_ALLOWED_ORIGINS[0];
+  const isAllowed = allowed.includes(origin) || origin.endsWith('.pages.dev');
+  const allowedOrigin = isAllowed ? origin : BASE_ALLOWED_ORIGINS[0];
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
     'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
