@@ -55,14 +55,14 @@ export async function handlePublicPrograms(request: Request, env: Env): Promise<
   }
 
   let programs = PROGRAMS.map((p) => ({
-    id: p.value,
-    code: p.value,
+    id: p.label,
+    code: p.label,
     label: p.label,
     level: p.level,
     description: p.description,
     credits: 120, // default — courses table doesn't have per-program credits yet
     term: 'Fall 2026',
-    available_seats: seatMap.get(p.value) ?? null,
+    available_seats: seatMap.get(p.label) ?? null,
   }));
 
   if (level) {

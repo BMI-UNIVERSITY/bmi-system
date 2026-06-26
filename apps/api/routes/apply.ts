@@ -37,7 +37,7 @@ export async function handleSubmitApplication(request: Request, env: Env, userId
     return error('Invalid program selected');
   }
 
-  if (!VALID_LEVELS.includes(degree_level)) {
+  if (!VALID_LEVELS.includes(degree_level as typeof VALID_LEVELS[number])) {
     return error(`Degree level must be one of: ${VALID_LEVELS.join(', ')}`);
   }
 

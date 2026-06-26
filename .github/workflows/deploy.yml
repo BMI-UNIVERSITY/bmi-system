@@ -22,10 +22,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: 'npm'
 
       - name: Install dependencies (workspace)
-        run: npm install
+        run: |
+          rm -f package-lock.json
+          npm install
         working-directory: .
 
       - name: Deploy to Cloudflare Workers
@@ -51,10 +52,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: 'npm'
 
       - name: Install dependencies (workspace)
-        run: npm install
+        run: |
+          rm -f package-lock.json
+          npm install
         working-directory: .
 
       - name: Build portal
@@ -85,10 +87,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: 'npm'
 
       - name: Install dependencies (workspace)
-        run: npm install
+        run: |
+          rm -f package-lock.json
+          npm install
         working-directory: .
 
       - name: Build UMS
@@ -116,10 +119,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: 'npm'
 
       - name: Install all workspace dependencies
-        run: npm install
+        run: |
+          rm -f package-lock.json
+          npm install
 
       - name: Type check shared package
         run: npm run typecheck

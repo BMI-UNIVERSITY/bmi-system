@@ -90,7 +90,7 @@ export async function exchangeCodeForToken(
     body,
   });
 
-  const data = await response.json();
+  const data: Record<string, any> = await response.json();
   if (!response.ok) {
     throw new Error(data.error || 'Failed to exchange code');
   }
@@ -106,7 +106,7 @@ export async function getUserInfo(
     headers: { 'Authorization': `Bearer ${accessToken}` },
   });
 
-  const data = await response.json();
+  const data: Record<string, any> = await response.json();
   if (!response.ok) {
     throw new Error('Failed to fetch user info');
   }
