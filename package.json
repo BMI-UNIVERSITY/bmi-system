@@ -5,5 +5,8 @@
     "apps/*",
     "bmi-university",
     "packages/*"
-  ]
+  ],
+  "scripts": {
+    "prepare": "npm run build --workspace=@bmi/shared"
+  }
 }
