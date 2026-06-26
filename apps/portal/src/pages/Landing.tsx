@@ -1,7 +1,7 @@
 // src/pages/Landing.tsx
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { PROGRAMS } from '../../worker/lib/programs';
+import { PROGRAMS } from "@bmi/shared";
 
 const features = [
   { icon: '📋', title: 'Easy Online Application', desc: 'Complete your application in minutes with our guided multi-step form.' },

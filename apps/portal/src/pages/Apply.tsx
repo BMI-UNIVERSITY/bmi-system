@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
-import { PROGRAMS } from '../../worker/lib/programs';
+import { PROGRAMS } from '@bmi/shared';
 
 const STEPS = ['Program', 'Personal Info', 'Background', 'Statement', 'Review & Submit'];
 
