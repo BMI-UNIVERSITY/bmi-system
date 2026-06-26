@@ -1,0 +1,65 @@
+name: Cross-Repo Smoke Test
+
+on:
+  schedule:
+    # Run nightly at midnight UTC
+    - cron: '0 0 * * *'
+  pull_request:
+    paths:
+      - 'worker/routes/auth.ts'
+      - 'worker/lib/types.ts'
+      - 'packages/bmi-shared/**'
+
+jobs:
+  smoke-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Smoke Test Registration and Login
+        run: |
+          # Use a random UUID email for the test
+          TEST_EMAIL="smoke-test-$(uuidgen)@example.com"
+          STAGING_URL="https://staging.apply.bmiuniversity.org"
+          
+          echo "Testing registration with $TEST_EMAIL against $STAGING_URL..."
+          
+          # 1. Test successful registration (HTTP 200/201 expected)
+          # Note: Our API returns 200 on success currently, but OpenAPI contract allows 201.
+          # We'll check for the success field.
+          REGISTER_RES=$(curl -s -X POST "$STAGING_URL/api/auth/register" \
+            -H "Content-Type: application/json" \
+            -d "{\"email\":\"$TEST_EMAIL\",\"password\":\"TestPass123!@#\",\"first_name\":\"Smoke\",\"last_name\":\"Test\"}")
+          
+          echo "Register Response: $REGISTER_RES"
+          
+          if [[ $(echo $REGISTER_RES | jq -r '.success') != "true" ]]; then
+            echo "::error::Registration failed"
+            exit 1
+          fi
+          
+          # 2. Test duplicate registration (HTTP 409 expected)
+          # Note: curl doesn't expose HTTP status code easily inline with body without extra flags,
+          # but we can check the error message in the body which is the contract we care about.
+          DUPE_RES=$(curl -s -X POST "$STAGING_URL/api/auth/register" \
+            -H "Content-Type: application/json" \
+            -d "{\"email\":\"$TEST_EMAIL\",\"password\":\"TestPass123!@#\",\"first_name\":\"Smoke\",\"last_name\":\"Test\"}")
+            
+          echo "Duplicate Register Response: $DUPE_RES"
+          
+          if [[ $(echo $DUPE_RES | jq -r '.error') != "An account with this email already exists" ]]; then
+            echo "::error::Duplicate registration did not return expected 409 error string"
+            exit 1
+          fi
+          
+          # 3. Test successful login
+          LOGIN_RES=$(curl -s -X POST "$STAGING_URL/api/auth/login" \
+            -H "Content-Type: application/json" \
+            -d "{\"email\":\"$TEST_EMAIL\",\"password\":\"TestPass123!@#\"}")
+            
+          echo "Login Response: $LOGIN_RES"
+          
+          if [[ $(echo $LOGIN_RES | jq -r '.success') != "true" ]]; then
+            echo "::error::Login failed"
+            exit 1
+          fi
+          
+          echo "Smoke test passed successfully!"

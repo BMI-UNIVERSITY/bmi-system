@@ -122,7 +122,7 @@ jobs:
         run: npm install
 
       - name: Type check shared package
-        run: npm run type-check
+        run: npm run typecheck
         working-directory: packages/shared
         continue-on-error: true
 

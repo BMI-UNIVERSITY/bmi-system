@@ -1,0 +1,11 @@
+# BMI Portal — Gitignore
+node_modules/
+dist/
+.dev.vars
+.wrangler/
+*.log
+.env
+.env.local
+dump.rdb
+
+seed-admin.sql

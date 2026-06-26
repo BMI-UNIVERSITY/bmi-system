@@ -1,0 +1,8 @@
+# Environment variables for local development
+# Copy this file to .dev.vars and fill in your values
+# NEVER commit .dev.vars to git
+
+JWT_SECRET=change_me_to_a_long_random_secret_at_least_32_chars
+RESEND_API_KEY=re_your_resend_api_key_here
+ADMIN_EMAIL=admin@bmiuniversity.org
+ENVIRONMENT=development
