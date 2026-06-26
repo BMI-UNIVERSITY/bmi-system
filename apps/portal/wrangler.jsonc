@@ -1,43 +1,6 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
+  // Cloudflare Pages configuration for the BMI Portal frontend.
+  // The API (Worker) is in apps/api and deployed separately.
   "name": "bmi-portal",
-  "compatibility_date": "2025-01-01",
-  "main": "worker/index.ts",
-  "assets": {
-    "directory": "./dist/client",
-    "binding": "ASSETS",
-    "not_found_handling": "single-page-application",
-    "run_worker_first": ["/api/*"]
-  },
-  "account_id": "2557f2f143734abc82bd4c80be750eb6",
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "bmi-portal-db",
-      "database_id": "a5e26ad9-5d8e-4afa-9ad9-8cd55c1cbf1a"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "DOCUMENTS",
-      "bucket_name": "bmi-portal-documents"
-    },
-    {
-      "binding": "BACKUP_BUCKET",
-      "bucket_name": "bmi-portal-backups"
-    }
-  ],
-  "kv_namespaces": [
-    {
-      "binding": "SESSIONS",
-      "id": "56ec1de36fb5404fbb2044e7e649401c"
-    }
-  ],
-  "vars": {
-    "ENVIRONMENT": "production"
-  },
-  /* IMPORTANT: ADMIN_SETUP_KEY must be set via `npx wrangler secret put ADMIN_SETUP_KEY` */
-  "triggers": {
-    "crons": ["0 0 * * *"]
-  }
+  "pages_build_output_dir": "./dist"
 }
