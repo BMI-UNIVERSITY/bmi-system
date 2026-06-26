@@ -1,0 +1,22 @@
+{
+  "name": "@bmi/api",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev --local",
+    "deploy": "wrangler deploy",
+    "db:migrate": "wrangler d1 execute bmi-portal-db --file=db/schema.sql --remote",
+    "db:migrate:local": "wrangler d1 execute bmi-portal-db --file=db/schema.sql --local",
+    "type-check": "tsc --noEmit",
+    "secrets:set": "node scripts/set-secrets.mjs"
+  },
+  "dependencies": {
+    "@bmi/shared": "*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260625.1",
+    "typescript": "^5.7.2",
+    "wrangler": "^4.104.0"
+  }
+}
