@@ -63,6 +63,7 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
+          VITE_API_URL: ${{ secrets.UMS_API_URL }}
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
