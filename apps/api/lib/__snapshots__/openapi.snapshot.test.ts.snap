@@ -1,0 +1,71 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`OpenAPI Contract Snapshots > matches the expected shape for /api/auth/login 1`] = `
+{
+  "request": {
+    "body": {
+      "email": "string (email)",
+      "password": "string",
+    },
+    "headers": {
+      "Content-Type": "application/json",
+    },
+    "method": "POST",
+  },
+  "responses": {
+    "200": {
+      "data": {
+        "token": "string (jwt)",
+        "user": {
+          "email": "string",
+          "first_name": "string",
+          "id": "string",
+          "is_verified": "number (0 or 1)",
+          "last_name": "string",
+          "role": "enum: applicant | student | staff | admin",
+        },
+      },
+      "success": true,
+    },
+    "401": {
+      "error": "Invalid credentials",
+      "success": false,
+    },
+  },
+}
+`;
+
+exports[`OpenAPI Contract Snapshots > matches the expected shape for /api/auth/register 1`] = `
+{
+  "request": {
+    "body": {
+      "email": "string (email)",
+      "first_name": "string",
+      "last_name": "string",
+      "password": "string (strong)",
+      "phone": "string (optional)",
+    },
+    "headers": {
+      "Content-Type": "application/json",
+    },
+    "method": "POST",
+  },
+  "responses": {
+    "201": {
+      "data": {
+        "message": "string",
+        "user_id": "string (uuid)",
+      },
+      "success": true,
+    },
+    "400": {
+      "error": "string (validation message)",
+      "success": false,
+    },
+    "409": {
+      "error": "An account with this email already exists",
+      "success": false,
+    },
+  },
+}
+`;

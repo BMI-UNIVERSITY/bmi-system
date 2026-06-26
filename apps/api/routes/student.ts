@@ -1,0 +1,203 @@
+// worker/routes/student.ts
+// Student Portal API Routes
+
+import { error, ok } from '../lib/types';
+import type { Env } from '../lib/types';
+
+export async function handleGetDashboard(request: Request, env: Env, userId: string): Promise<Response> {
+  // Get upcoming invoices
+  const { results: invoices } = await env.DB.prepare(
+    'SELECT id, amount, due_date, status FROM invoices WHERE student_id = ? AND status = "unpaid" ORDER BY due_date ASC'
+  ).bind(userId).all();
+
+  // Get current enrollments
+  const { results: enrollments } = await env.DB.prepare(
+    `SELECT e.id, c.code, c.title, c.credits, c.term, e.grade 
+     FROM enrollments e 
+     JOIN courses c ON e.course_id = c.id 
+     WHERE e.student_id = ? AND e.status = 'enrolled'`
+  ).bind(userId).all();
+
+  // Compute total balance
+  const balance = invoices.reduce((sum: number, inv: any) => sum + inv.amount, 0);
+
+  return ok({
+    balance,
+    upcoming_invoices: invoices,
+    current_classes: enrollments,
+    announcements: [
+      { id: '1', title: 'Welcome to Fall 2026', date: '2026-08-15', content: 'Classes begin September 1st.' },
+      { id: '2', title: 'Course Registration Open', date: '2026-08-20', content: 'Enroll in your classes before the deadline.' }
+    ]
+  });
+}
+
+export async function handleGetCourses(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const term = url.searchParams.get('term') || 'Fall 2026';
+  
+  const { results: courses } = await env.DB.prepare(
+    'SELECT id, code, title, description, credits, term, capacity FROM courses WHERE term = ? ORDER BY code ASC'
+  ).bind(term).all();
+  
+  return ok(courses);
+}
+
+export async function handleEnroll(request: Request, env: Env, userId: string): Promise<Response> {
+  let body: { course_id: string };
+  try {
+    body = await request.json();
+  } catch {
+    return error('Invalid JSON');
+  }
+
+  if (!body.course_id) return error('course_id is required');
+
+  try {
+    // Generate invoice for 1000 per class (mock logic)
+    const invoiceId = crypto.randomUUID();
+    
+    // Enroll the student
+    await env.DB.prepare(
+      'INSERT INTO enrollments (id, student_id, course_id, status) VALUES (?, ?, ?, ?)'
+    ).bind(crypto.randomUUID(), userId, body.course_id, 'enrolled').run();
+    
+    // Create an invoice
+    await env.DB.prepare(
+      'INSERT INTO invoices (id, student_id, amount, status, due_date) VALUES (?, ?, ?, ?, ?)'
+    ).bind(invoiceId, userId, 1000, 'unpaid', '2026-09-15').run();
+
+    return ok({ success: true, message: 'Enrolled successfully' });
+  } catch (e: any) {
+    if (e.message?.includes('UNIQUE constraint failed')) {
+      return error('Already enrolled in this course', 400);
+    }
+    return error('Enrollment failed', 500);
+  }
+}
+
+export async function handleGetFinances(request: Request, env: Env, userId: string): Promise<Response> {
+  const { results: invoices } = await env.DB.prepare(
+    'SELECT id, amount, due_date, status, created_at FROM invoices WHERE student_id = ? ORDER BY due_date DESC'
+  ).bind(userId).all();
+  
+  const balance = invoices.filter((i: any) => i.status === 'unpaid').reduce((sum: number, inv: any) => sum + inv.amount, 0);
+
+  return ok({
+    balance,
+    invoices
+  });
+}
+
+export async function handlePayInvoice(request: Request, env: Env, userId: string, invoiceId: string): Promise<Response> {
+  // Mock payment gateway: Just mark it as paid
+  await env.DB.prepare(
+    'UPDATE invoices SET status = "paid" WHERE id = ? AND student_id = ?'
+  ).bind(invoiceId, userId).run();
+
+  return ok({ success: true, message: 'Payment successful' });
+}
+
+export async function handleDropCourse(request: Request, env: Env, userId: string, courseId: string): Promise<Response> {
+  const result = await env.DB.prepare(
+    'UPDATE enrollments SET status = "dropped" WHERE course_id = ? AND student_id = ? AND status = "enrolled"'
+  ).bind(courseId, userId).run();
+  
+  if (result.meta.changes === 0) {
+    return error('Course not found or not enrolled', 400);
+  }
+  return ok({ success: true, message: 'Course dropped successfully' });
+}
+
+export async function handleGetTranscript(request: Request, env: Env, userId: string): Promise<Response> {
+  const { results: classes } = await env.DB.prepare(
+    `SELECT c.code, c.title, c.credits, c.term, e.grade, e.status
+     FROM enrollments e 
+     JOIN courses c ON e.course_id = c.id 
+     WHERE e.student_id = ? AND e.status != 'waitlisted'
+     ORDER BY c.term DESC, c.code ASC`
+  ).bind(userId).all();
+  
+  // Calculate GPA
+  const gradePoints: Record<string, number> = {
+    'A+': 4.0, 'A': 4.0, 'A-': 3.7, 'B+': 3.3, 'B': 3.0, 'B-': 2.7,
+    'C+': 2.3, 'C': 2.0, 'C-': 1.7, 'D+': 1.3, 'D': 1.0, 'F': 0.0
+  };
+  
+  let totalPoints = 0;
+  let totalCredits = 0;
+  
+  for (const c of classes as any[]) {
+    if (c.grade && gradePoints[c.grade] !== undefined) {
+      totalPoints += gradePoints[c.grade] * c.credits;
+      totalCredits += c.credits;
+    }
+  }
+  
+  const gpa = totalCredits > 0 ? (totalPoints / totalCredits).toFixed(2) : null;
+  
+  return ok({ classes, gpa });
+}
+
+export async function handleGetSettings(request: Request, env: Env, userId: string): Promise<Response> {
+  let settings = await env.DB.prepare(
+    'SELECT directory_release, communications_opt_in FROM student_settings WHERE student_id = ?'
+  ).bind(userId).first();
+  
+  if (!settings) {
+    // Default settings
+    settings = { directory_release: 1, communications_opt_in: 1 };
+  }
+  
+  return ok(settings);
+}
+
+export async function handleUpdateSettings(request: Request, env: Env, userId: string): Promise<Response> {
+  let body: any;
+  try {
+    body = await request.json();
+  } catch {
+    return error('Invalid JSON');
+  }
+  
+  const dirRelease = body.directory_release ? 1 : 0;
+  const commOptIn = body.communications_opt_in ? 1 : 0;
+  
+  await env.DB.prepare(
+    `INSERT INTO student_settings (student_id, directory_release, communications_opt_in, updated_at)
+     VALUES (?, ?, ?, datetime('now'))
+     ON CONFLICT(student_id) DO UPDATE SET 
+       directory_release = excluded.directory_release,
+       communications_opt_in = excluded.communications_opt_in,
+       updated_at = excluded.updated_at`
+  ).bind(userId, dirRelease, commOptIn).run();
+  
+  return ok({ success: true, message: 'Settings updated' });
+}
+
+export async function handleGetTickets(request: Request, env: Env, userId: string): Promise<Response> {
+  const { results: tickets } = await env.DB.prepare(
+    'SELECT id, subject, status, created_at FROM support_tickets WHERE student_id = ? ORDER BY created_at DESC'
+  ).bind(userId).all();
+  return ok(tickets);
+}
+
+export async function handleCreateTicket(request: Request, env: Env, userId: string): Promise<Response> {
+  let body: { subject: string, description: string };
+  try {
+    body = await request.json();
+  } catch {
+    return error('Invalid JSON');
+  }
+  
+  if (!body.subject || !body.description) {
+    return error('Subject and description are required');
+  }
+  
+  const ticketId = crypto.randomUUID();
+  await env.DB.prepare(
+    'INSERT INTO support_tickets (id, student_id, subject, description) VALUES (?, ?, ?, ?)'
+  ).bind(ticketId, userId, body.subject, body.description).run();
+  
+  return ok({ success: true, message: 'Support ticket created successfully', ticket_id: ticketId });
+}

@@ -1,0 +1,9 @@
+{
+  "name": "bmi-system",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "bmi-university",
+    "packages/*"
+  ]
+}
