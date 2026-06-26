@@ -8,3 +8,14 @@ build/
 coverage/
 .wrangler/
 pb_data/
+
+# Workspace package-lock files (root lock file is canonical)
+apps/*/package-lock.json
+packages/*/package-lock.json
+bmi-*/package-lock.json
+
+# Generated tarballs
+*.tgz
+
+# Runtime data
+data/
