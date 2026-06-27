@@ -44,7 +44,7 @@
     "ENVIRONMENT": "production",
     // Comma-separated list of all frontend origins that may call this API.
     // Add your Cloudflare Pages URLs here after deployment.
-    "ALLOWED_ORIGINS_OVERRIDE": "https://bmi-portal.hkmministries.org,https://bmi-ums.hkmministries.org,https://bmi-portal.pages.dev,https://bmi-ums.pages.dev"
+    "ALLOWED_ORIGINS_OVERRIDE": "https://bmi-portal.hkmministries.org,https://bmi-ums.hkmministries.org,https://bmi-portal.pages.dev,https://bmi-ums.pages.dev,https://8b1de1e8.bmi-portal-7oo.pages.dev,https://d0bc4d88.bmi-ums.pages.dev"
   },
 
   "triggers": {
