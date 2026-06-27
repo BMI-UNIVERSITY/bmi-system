@@ -6,9 +6,11 @@
  */
 
 import { getToken } from './authService';
+import { API_URL } from './config';
 
-// Use relative path — Vite proxy handles dev, same-origin handles production
-const API_URL = ((import.meta as any).env.VITE_API_URL || '') + '/api/v1';
+// Single source of truth for the API base URL is `./config.ts`. In production
+// builds `config.ts` falls back to https://bmi-api.bmiuniversity107.workers.dev
+// unless VITE_API_URL is provided at build time.
 
 export interface ChatMessage {
   role: 'user' | 'assistant' | 'system';

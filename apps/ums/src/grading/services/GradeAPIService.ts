@@ -6,14 +6,13 @@
  */
 
 import { authFetch } from '../../services/authService';
+import { API_URL } from '../../services/config';
 import {
   Grade,
   APIResponse,
   PaginatedResponse,
   GradeFilters,
 } from '../types';
-
-const API_URL = ((import.meta as any).env.VITE_API_URL || '') + '/api/v1';
 
 /**
  * Create a new grade

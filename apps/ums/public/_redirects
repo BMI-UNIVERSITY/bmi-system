@@ -1,2 +1,2 @@
-/api/* https://bmi-api-server.duckdns.org/api/:splat 200
+/api/* https://bmi-api.bmiuniversity107.workers.dev/api/:splat 200
 /* /index.html 200

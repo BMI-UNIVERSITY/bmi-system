@@ -120,7 +120,7 @@ jobs:
 
             # ── Pull pre-built images that we don't build locally ──────────────
             echo "==> Pulling base images..."
-            $COMPOSE pull --quiet pocketbase litestream caddy
+            $COMPOSE pull --quiet caddy
 
             # ── Build application images ONE AT A TIME to stay within RAM ──────
             echo "==> Building API image..."
@@ -129,9 +129,9 @@ jobs:
             # ── CRITICAL: Tear down ALL containers before starting ─────────────
             # This is the key step that was missing. Without `down`, Docker keeps
             # the old crashed container and just tries to restart it — meaning
-            # updated volume-mounted files like pb_migrations/*.js are NEVER read
-            # by a fresh process. `down` preserves named volumes (pb_data stays),
-            # but recreates every container from scratch.
+            # updated volume-mounted files like migrations are NEVER read by a
+            # fresh process. `down` preserves named volumes, but recreates every
+            # container from scratch.
             echo "==> Stopping and removing all containers (preserving data volumes)..."
             $COMPOSE down --remove-orphans --timeout 30 || true
 
@@ -142,9 +142,6 @@ jobs:
               echo "════════════════════════════════════════════"
               echo "  STARTUP FAILED — container logs follow:"
               echo "════════════════════════════════════════════"
-              echo ""
-              echo "── PocketBase logs (last 100 lines) ──"
-              $COMPOSE logs pocketbase --tail 100 || true
               echo ""
               echo "── API logs (last 30 lines) ──"
               $COMPOSE logs api --tail 30 || true
@@ -162,7 +159,7 @@ jobs:
           echo "Waiting for service to become healthy (up to 150s)..."
           MAX_ATTEMPTS=30   # 30 × 5 s = 150 s
           ATTEMPT=0
-          until curl -sf --max-time 8 "https://bmi-api-server.duckdns.org/health" \
+          until curl -sf --max-time 8 "https://bmi-api.bmiuniversity107.workers.dev/health" \
                   | grep -q '"ok"'; do
             ATTEMPT=$((ATTEMPT + 1))
             if [ "$ATTEMPT" -ge "$MAX_ATTEMPTS" ]; then

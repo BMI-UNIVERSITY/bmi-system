@@ -50,8 +50,6 @@ docker-compose.override.yml
 
 # Runtime data and databases
 bin/
-pb_data/
-data/pb_data/
 .ollama/
 *.db
 *.db-wal

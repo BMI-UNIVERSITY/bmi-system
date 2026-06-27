@@ -9,9 +9,11 @@
  */
 
 import { ApiResponse } from '../types/index';
+import { API_URL } from './config';
 
-// Use relative path so Vite's proxy handles it in dev, and the same origin works in production
-const API_URL = ((import.meta as any).env.VITE_API_URL || '') + '/api/v1';
+// Single source of truth for the API base URL is `./config.ts`. In production
+// builds `config.ts` falls back to https://bmi-api.bmiuniversity107.workers.dev
+// unless VITE_API_URL is provided at build time.
 
 export interface User {
   id: string;
@@ -372,12 +374,17 @@ export async function verifySession(): Promise<boolean> {
 }
 
 /**
- * Quick health check for backend availability
+ * Quick health check for backend availability.
+ * Strips the `/api/v1` suffix from API_URL so we can hit the `/health`
+ * endpoint on the API origin (not under the versioned prefix).
  */
 export async function isBackendAvailable(): Promise<boolean> {
   try {
+    const healthUrl = API_URL.endsWith('/api/v1')
+      ? `${API_URL.slice(0, -'/api/v1'.length)}/health`
+      : `${API_URL}/health`;
     const response = await fetchWithTimeout(
-      `${API_URL.replace(((import.meta as any).env.VITE_API_URL || '') + '/api/v1', '')}/health`,
+      healthUrl,
       { method: 'GET' },
       2000
     );

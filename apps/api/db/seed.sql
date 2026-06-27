@@ -30,4 +30,4 @@ DELETE FROM users;
 
 -- Insert SuperAdmin
 INSERT INTO users (id, email, password_hash, first_name, last_name, role, is_verified)
-VALUES ('9209cd38-fb39-439f-a80f-3ee844d03c5c', 'superadmin@bmi.edu', 'pbkdf2:6a933d6df4ddc7732d80292d3b27f8ea:6587113b7e0834a9f69b90ac31c020051c5a588434008e8403a0212337f445b6', 'Super', 'Admin', 'admin', 1);
+VALUES ('34001b3c-9828-4608-b801-ead96ba7b5c0', 'bmiuniversity8@gmail.com', 'pbkdf2:49dd852941f4997b08c9975725dfef4c:eee1e060f023d7f6938fff1dad2f1df86624caba67705ec45fd8d21b6c22fc92', 'Super', 'Admin', 'admin', 1);

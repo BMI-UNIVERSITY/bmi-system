@@ -31,6 +31,7 @@ import type {
 // QR Code generation (using free API or local implementation)
 import QRCode from "qrcode";
 import { getHtml2Pdf } from "./pdfService";
+import { API_URL as SHARED_API_URL } from "./config";
 
 /**
  * Document Service - Central hub for all document operations
@@ -44,11 +45,11 @@ export class DocumentService {
   private readonly TEMPLATES_KEY = "bmi_document_templates";
 
   private constructor() {
-    let base = import.meta.env.VITE_API_URL || "/api/v1";
-    if (base.startsWith("http") && !base.includes("/api/v1")) {
-      base = `${base}/api/v1`;
-    }
-    this.API_BASE = base;
+    // Strip the `/api/v1` suffix from the shared base if present, then
+    // append it again — keeps behavior identical to the previous logic
+    // but routes through the single source-of-truth `config.ts`.
+    const base = SHARED_API_URL;
+    this.API_BASE = base.endsWith("/api/v1") ? base : `${base}/api/v1`;
   }
 
   static getInstance(): DocumentService {

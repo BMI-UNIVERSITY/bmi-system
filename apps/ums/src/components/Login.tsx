@@ -63,7 +63,12 @@ const Login: React.FC<LoginProps> = ({ onLogin, logo }) => {
       }
       
       if (typeof errorMsg === 'string' && (errorMsg.includes('Network error') || errorMsg.includes('Failed to fetch'))) {
-        setError('Unable to connect to the server. Please ensure the backend service is running (make start).');
+        const isProd = (import.meta as any).env?.PROD;
+        setError(
+          isProd
+            ? 'Unable to reach the authentication server. The site administrator has been notified — please try again shortly.'
+            : 'Unable to connect to the server. Please ensure the backend service is running (npm run start).'
+        );
       } else if (typeof errorMsg === 'string' && errorMsg.includes('timeout')) {
         setError('Server is not responding. Please try again or contact IT support.');
       } else {

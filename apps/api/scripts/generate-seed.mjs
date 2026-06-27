@@ -26,7 +26,7 @@ async function hashPassword(password, pepper) {
 
 async function run() {
   const pepper = process.env.JWT_SECRET || 'dev_secret_key_change_me_in_prod';
-  const email = 'superadmin@bmi.edu';
+  const email = 'bmiuniversity8@gmail.com';
   const password = 'SuperAdmin!2026';
   
   const hash = await hashPassword(password, pepper);
