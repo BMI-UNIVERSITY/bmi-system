@@ -131,7 +131,7 @@ export function flattenRecord(r: AcademicRecord | any): AcademicRecordFlat {
     campusName:    campus?.name ?? r.campusName ?? r.campus_name ?? '',
     courseId:      r.courseId || r.course_id,
     courseCode:    (course?.code ?? course?.course_code) ?? r.courseCode ?? r.course_code ?? '',
-    courseTitle:   (course?.title ?? r.courseName) || r.courseTitle || r.course_name ?? r.title ?? '',
+    courseTitle:   (course?.title ?? r.courseName ?? r.courseTitle ?? r.course_name ?? r.title ?? ''),
     creditHours:   (course?.credit_hours ?? course?.credits ?? r.creditHours ?? r.credits ?? r.credit_hours) ?? 0,
     category:      course?.category ?? r.category ?? '',
     module:        module?.name ?? r.module ?? '',
