@@ -21,11 +21,10 @@ export async function handleAdminSetup(request: Request, env: Env): Promise<Resp
     return error('Email and password are required');
   }
 
-  // Temporarily bypass admin limit to allow setup:
-  // const existing = await env.DB.prepare('SELECT id FROM users WHERE role = ?').bind('admin').first();
-  // if (existing) {
-  //   return error('An admin already exists. Use the admin panel to promote additional users.', 409);
-  // }
+  const existing = await env.DB.prepare('SELECT id FROM users WHERE role = ?').bind('admin').first();
+  if (existing) {
+    return error('An admin already exists. Use the admin panel to promote additional users.', 409);
+  }
 
   const existingUser = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(body.email.toLowerCase()).first();
   if (existingUser) {
