@@ -43,13 +43,11 @@ describe('Auth Service', () => {
 
   describe('login', () => {
     it('should store token in memory and user in localStorage on successful login', async () => {
-      const mockUser = { id: '1', email: 'test@example.com', name: 'Test User', role: 'admin', isActive: true };
+      const mockUser = { id: '1', email: 'test@example.com', first_name: 'Test', last_name: 'User', role: 'admin' };
       const mockResponse = {
         success: true,
-        data: {
-          token: 'test-token',
-          user: mockUser,
-        },
+        csrf_token: 'test-token',
+        user: mockUser,
       };
 
       (global.fetch as any).mockResolvedValueOnce({
@@ -64,7 +62,8 @@ describe('Auth Service', () => {
       // Token is now stored in memory (not localStorage) for XSS protection
       expect(getToken()).toBe('test-token');
       // User info (non-sensitive) is stored in localStorage
-      expect(localStorage.setItem).toHaveBeenCalledWith('bmi_user', JSON.stringify(mockUser));
+      const expectedStoredUser = { id: '1', email: 'test@example.com', name: 'Test User', role: 'admin', isActive: true };
+      expect(localStorage.setItem).toHaveBeenCalledWith('bmi_user', JSON.stringify(expectedStoredUser));
     });
 
     it('should return error on failed login', async () => {
@@ -95,13 +94,11 @@ describe('Auth Service', () => {
     });
 
     it('should pass rememberMe to backend', async () => {
-      const mockUser = { id: '1', email: 'test@example.com', name: 'Test User', role: 'admin', isActive: true };
+      const mockUser = { id: '1', email: 'test@example.com', first_name: 'Test', last_name: 'User', role: 'admin' };
       const mockResponse = {
         success: true,
-        data: {
-          token: 'test-token',
-          user: mockUser,
-        },
+        csrf_token: 'test-token',
+        user: mockUser,
       };
 
       (global.fetch as any).mockResolvedValueOnce({
@@ -129,10 +126,11 @@ describe('Auth Service', () => {
   describe('logout', () => {
     it('should clear memory token and localStorage user data', async () => {
       // First login to set state
-      const mockUser = { id: '1', email: 'test@example.com', name: 'Test User', role: 'admin', isActive: true };
+      const mockUser = { id: '1', email: 'test@example.com', first_name: 'Test', last_name: 'User', role: 'admin' };
       const mockResponse = {
         success: true,
-        data: { token: 'test-token', user: mockUser },
+        csrf_token: 'test-token', 
+        user: mockUser,
       };
 
       (global.fetch as any).mockResolvedValueOnce({
@@ -161,10 +159,11 @@ describe('Auth Service', () => {
     });
 
     it('should return token from memory after login', async () => {
-      const mockUser = { id: '1', email: 'test@example.com', name: 'Test', role: 'admin', isActive: true };
+      const mockUser = { id: '1', email: 'test@example.com', first_name: 'Test', last_name: 'User', role: 'admin' };
       const mockResponse = {
         success: true,
-        data: { token: 'memory-token', user: mockUser },
+        csrf_token: 'memory-token', 
+        user: mockUser,
       };
 
       (global.fetch as any).mockResolvedValueOnce({
@@ -188,10 +187,11 @@ describe('Auth Service', () => {
     });
 
     it('should return true when token exists in memory', async () => {
-      const mockUser = { id: '1', email: 'test@example.com', name: 'Test', role: 'admin', isActive: true };
+      const mockUser = { id: '1', email: 'test@example.com', first_name: 'Test', last_name: 'User', role: 'admin' };
       const mockResponse = {
         success: true,
-        data: { token: 'auth-token', user: mockUser },
+        csrf_token: 'auth-token', 
+        user: mockUser,
       };
 
       (global.fetch as any).mockResolvedValueOnce({
