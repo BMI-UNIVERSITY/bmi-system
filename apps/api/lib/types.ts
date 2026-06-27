@@ -4,7 +4,6 @@ export interface Env {
   DB: D1Database;
   DOCUMENTS: R2Bucket;
   BACKUP_BUCKET: R2Bucket;
-  SESSIONS: KVNamespace;
   JWT_SECRET: string;
   RESEND_API_KEY: string;
   ADMIN_EMAIL: string;

@@ -12,7 +12,6 @@ const mockEnv: Env = {
   DB: mockDB as unknown as any,
   DOCUMENTS: {} as any,
   BACKUP_BUCKET: {} as any,
-  SESSIONS: {} as any,
   JWT_SECRET: 'test-secret',
   RESEND_API_KEY: '',
   ADMIN_EMAIL: 'admin@test.com',

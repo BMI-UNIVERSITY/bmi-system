@@ -32,12 +32,7 @@
   ],
 
   // ─── KV (Session Store & Rate Limiting) ───────────────────────────
-  "kv_namespaces": [
-    {
-      "binding": "SESSIONS",
-      "id": "${CLOUDFLARE_KV_ID}"
-    }
-  ],
+  // Note: Sessions and Rate Limits have been fully migrated to D1.
 
   // ─── Public Environment Variables ─────────────────────────────────
   // Secrets (JWT_SECRET, RESEND_API_KEY, etc.) must be set via:
