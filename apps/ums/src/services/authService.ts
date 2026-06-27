@@ -30,7 +30,7 @@ export interface User {
 export interface AuthResponse {
   success: boolean;
   data?: {
-    token: string;
+    token?: string;
     user: User;
     mfaRequired?: boolean;
     mfaSetupRequired?: boolean;

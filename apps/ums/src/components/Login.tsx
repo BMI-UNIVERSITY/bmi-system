@@ -43,7 +43,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, logo }) => {
         });
         setShowMfa(true);
       } else {
-        onLogin(result.data.token, result.data.user);
+        onLogin(result.data.token || '', result.data.user);
       }
     } else {
       // Safely extract string error message
@@ -224,7 +224,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, logo }) => {
           setupRequired={mfaData.setupRequired}
           onSuccess={(result: AuthResponse) => {
             if (result.success && result.data) {
-              onLogin(result.data.token, result.data.user);
+              onLogin(result.data.token || '', result.data.user);
             }
           }}
         />
