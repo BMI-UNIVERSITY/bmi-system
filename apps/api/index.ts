@@ -19,8 +19,8 @@ import { handleListGrades, handleCreateGrade, handleUpdateGrade } from './routes
 import { handleListUmsCourses, handleCreateCourse, handleUpdateCourse, handleDeleteCourse, handleListPrograms, handleListFaculties, handleListDepartments, handleListTerms, handleListEnrollments, handleCreateEnrollment } from './routes/ums-courses';
 import { handleListStaff, handleGetStaff, handleCreateStaff, handleUpdateStaff } from './routes/ums-staff';
 
-function withCors(response: Response, request: Request): Response {
-  const corsHeaders = getCorsHeaders(request);
+function withCors(response: Response, request: Request, env: Env): Response {
+  const corsHeaders = getCorsHeaders(request, env);
   const newHeaders = new Headers(response.headers);
   for (const [key, value] of Object.entries(corsHeaders)) {
     newHeaders.set(key, value);
@@ -48,7 +48,7 @@ export default withSentry(
     const method = request.method;
 
     if (method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: getCorsHeaders(request) });
+      return new Response(null, { status: 204, headers: getCorsHeaders(request, env) });
     }
 
     if (!path.startsWith('/api/')) {
@@ -57,7 +57,7 @@ export default withSentry(
 
     try {
       const rateLimitResult = await rateLimit(request, env);
-      if (rateLimitResult) return withCors(rateLimitResult, request);
+      if (rateLimitResult) return withCors(rateLimitResult, request, env);
 
       // Validate CSRF token for state-changing requests
       const stateChangingMethods = ['POST', 'PUT', 'DELETE', 'PATCH'];
@@ -95,49 +95,49 @@ export default withSentry(
         response = await handleResetPassword(request, env);
       } else if (path === '/api/auth/me' && method === 'GET') {
         const auth = await requireAuth(request, env);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleMe(request, env, auth.user.sub);
       } else if (path === '/api/auth/mfa/setup' && method === 'POST') {
         const auth = await requireAuth(request, env);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleMfaSetup(request, env, auth.user.sub);
       } else if (path === '/api/auth/mfa/enable' && method === 'POST') {
         const auth = await requireAuth(request, env);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleMfaEnable(request, env, auth.user.sub);
       } else if (path === '/api/auth/mfa/disable' && method === 'POST') {
         const auth = await requireAuth(request, env);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleMfaDisable(request, env, auth.user.sub);
       } else if (path === '/api/applications' && method === 'POST') {
         const auth = await requireAuth(request, env, ['applicant', 'student', 'staff', 'admin']);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleSubmitApplication(request, env, auth.user.sub);
       } else if (path === '/api/applications/me' && method === 'GET') {
         const auth = await requireAuth(request, env);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleGetMyApplication(request, env, auth.user.sub);
       } else if (path.match(/^\/api\/applications\/[^/]+\/logs$/) && method === 'GET') {
         const auth = await requireAuth(request, env);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         const appId = path.split('/')[3];
         response = await handleGetStatusLogs(request, env, appId, auth.user.sub, auth.user.role);
       } else if (path === '/api/documents/upload' && method === 'POST') {
         const auth = await requireAuth(request, env);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleUploadDocument(request, env, auth.user.sub);
       } else if (path.match(/^\/api\/documents\/[^/]+\/download$/) && method === 'GET') {
         const auth = await requireAuth(request, env);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         const docId = path.split('/')[3];
         response = await handleDownloadDocument(request, env, docId, auth.user.sub, auth.user.role);
       } else if (path.match(/^\/api\/applications\/[^/]+\/recommendations$/) && method === 'POST') {
         const auth = await requireAuth(request, env);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleRequestRecommendation(request, env, path.split('/')[3], auth.user.sub);
       } else if (path.match(/^\/api\/applications\/[^/]+\/recommendations$/) && method === 'GET') {
         const auth = await requireAuth(request, env);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleListRecommendations(request, env, path.split('/')[3], auth.user.sub);
       } else if (path.match(/^\/api\/recommendations\/[^/]+$/) && method === 'GET') {
         response = await handleGetRecommendationInfo(request, env, path.split('/')[3]);
@@ -147,48 +147,48 @@ export default withSentry(
       // ─── Student Only Routes ───────────────────────────────────────
       } else if (path === '/api/student/dashboard' && method === 'GET') {
         const auth = await requireAuth(request, env, ['student']);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleGetDashboard(request, env, auth.user.sub);
       } else if (path === '/api/student/courses' && method === 'GET') {
         const auth = await requireAuth(request, env, ['student']);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleGetCourses(request, env);
       } else if (path === '/api/student/enroll' && method === 'POST') {
         const auth = await requireAuth(request, env, ['student']);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleEnroll(request, env, auth.user.sub);
       } else if (path.match(/^\/api\/student\/courses\/[^/]+\/drop$/) && method === 'POST') {
         const auth = await requireAuth(request, env, ['student']);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         const courseId = path.split('/')[4];
         response = await handleDropCourse(request, env, auth.user.sub, courseId);
       } else if (path === '/api/student/transcript' && method === 'GET') {
         const auth = await requireAuth(request, env, ['student']);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleGetTranscript(request, env, auth.user.sub);
       } else if (path === '/api/student/settings' && method === 'GET') {
         const auth = await requireAuth(request, env, ['student']);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleGetSettings(request, env, auth.user.sub);
       } else if (path === '/api/student/settings' && method === 'PUT') {
         const auth = await requireAuth(request, env, ['student']);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleUpdateSettings(request, env, auth.user.sub);
       } else if (path === '/api/student/support' && method === 'GET') {
         const auth = await requireAuth(request, env, ['student']);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleGetTickets(request, env, auth.user.sub);
       } else if (path === '/api/student/support' && method === 'POST') {
         const auth = await requireAuth(request, env, ['student']);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleCreateTicket(request, env, auth.user.sub);
       } else if (path === '/api/student/finances' && method === 'GET') {
         const auth = await requireAuth(request, env, ['student']);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleGetFinances(request, env, auth.user.sub);
       } else if (path.match(/^\/api\/student\/invoices\/[^/]+\/pay$/) && method === 'POST') {
         const auth = await requireAuth(request, env, ['student']);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         const invoiceId = path.split('/')[4];
         response = await handlePayInvoice(request, env, auth.user.sub, invoiceId);
 
@@ -197,40 +197,40 @@ export default withSentry(
         response = await handleAdminSetup(request, env);
       } else if (path === '/api/admin/users' && method === 'GET') {
         const auth = await requireAuth(request, env, ['admin']);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleListUsers(request, env);
       } else if (path.match(/^\/api\/admin\/users\/[^/]+\/role$/) && method === 'PUT') {
         const auth = await requireAuth(request, env, ['admin']);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleUpdateUserRole(request, env, auth.user.sub);
       } else if (path.match(/^\/api\/admin\/users\/[^/]+$/) && method === 'DELETE') {
         const auth = await requireAuth(request, env, ['admin']);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleDeleteUser(request, env, auth.user.sub);
       } else if (path.match(/^\/api\/admin\/users\/[^/]+\/reset-password$/) && method === 'POST') {
         const auth = await requireAuth(request, env, ['admin']);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleAdminResetPassword(request, env, auth.user.sub);
       } else if (path === '/api/admin/audit-logs' && method === 'GET') {
         const auth = await requireAuth(request, env, ['admin']);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleGetAuditLogs(request, env);
       } else if (path === '/api/admin/applications' && method === 'GET') {
         const auth = await requireAuth(request, env, ['staff', 'admin']);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleListApplications(request, env);
       } else if (path.match(/^\/api\/admin\/applications\/[^/]+$/) && method === 'GET') {
         const auth = await requireAuth(request, env, ['staff', 'admin']);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         response = await handleGetApplication(request, env);
       } else if (path.match(/^\/api\/admin\/applications\/[^/]+\/status$/) && method === 'PUT') {
         const auth = await requireAuth(request, env, ['staff', 'admin']);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         const appId = path.split('/')[4];
         response = await handleUpdateStatus(request, env, appId, auth.user.sub, ctx);
       } else if (path.match(/^\/api\/admin\/documents\/[^/]+$/) && method === 'DELETE') {
         const auth = await requireAuth(request, env, ['admin']);
-        if (auth instanceof Response) return withCors(auth, request);
+        if (auth instanceof Response) return withCors(auth, request, env);
         const docId = path.split('/')[4];
         response = await handleDeleteDocument(request, env, docId, auth.user.sub);
       } else if (path.match(/^\/api\/auth\/oauth\/(google|github|microsoft)$/) && method === 'GET') {
@@ -261,31 +261,31 @@ export default withSentry(
   // ─── CMS Routes (admin/staff) ─────────────────────────────────────
   } else if (path === '/api/cms/posts' && method === 'GET') {
     const auth = await requireAuth(request, env, ['admin', 'staff']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleListPosts(request, env);
   } else if (path === '/api/cms/posts' && method === 'POST') {
     const auth = await requireAuth(request, env, ['admin', 'staff']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleCreatePost(request, env, auth.user.sub);
   } else if (path.match(/^\/api\/cms\/posts\/[^/]+$/) && method === 'PUT') {
     const auth = await requireAuth(request, env, ['admin', 'staff']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleUpdatePost(request, env, path.split('/')[4], auth.user.sub);
   } else if (path.match(/^\/api\/cms\/posts\/[^/]+$/) && method === 'DELETE') {
     const auth = await requireAuth(request, env, ['admin']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleDeletePost(request, env, path.split('/')[4], auth.user.sub);
   } else if (path === '/api/cms/pages' && method === 'GET') {
     const auth = await requireAuth(request, env, ['admin', 'staff']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleListPages(request, env);
   } else if (path === '/api/cms/pages' && method === 'POST') {
     const auth = await requireAuth(request, env, ['admin', 'staff']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleCreatePage(request, env, auth.user.sub);
   } else if (path.match(/^\/api\/cms\/pages\/[^/]+$/) && method === 'DELETE') {
     const auth = await requireAuth(request, env, ['admin']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleDeletePage(request, env, path.split('/')[4], auth.user.sub);
 
   // ─── Webhook Routes ───────────────────────────────────────────────
@@ -293,15 +293,15 @@ export default withSentry(
     response = await handleInboundWebhook(request, env);
   } else if (path === '/api/webhooks/events' && method === 'GET') {
     const auth = await requireAuth(request, env, ['admin']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleListEvents(request, env);
   } else if (path === '/api/webhooks/dead-letters' && method === 'GET') {
     const auth = await requireAuth(request, env, ['admin']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleListDeadLetters(request, env);
   } else if (path.match(/^\/api\/webhooks\/retry\/[^/]+$/) && method === 'POST') {
     const auth = await requireAuth(request, env, ['admin']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleRetryDeadLetter(request, env, path.split('/')[4], ctx);
 
   // ─── UMS Routes (v1 prefix — used by UMS frontend) ─────────────────
@@ -312,7 +312,7 @@ export default withSentry(
     response = await handleLogout(request, env);
   } else if (path === '/api/v1/auth/me' && method === 'GET') {
     const auth = await requireAuth(request, env);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleMe(request, env, auth.user.sub);
   } else if (path === '/api/v1/auth/refresh' && method === 'POST') {
     response = await handleLogin(request, env); // Handled by re-auth
@@ -320,108 +320,108 @@ export default withSentry(
   // Students
   } else if (path === '/api/v1/students' && method === 'GET') {
     const auth = await requireAuth(request, env, ['admin', 'staff']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleListStudents(request, env);
   } else if (path === '/api/v1/students' && method === 'POST') {
     const auth = await requireAuth(request, env, ['admin', 'staff']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleCreateStudent(request, env);
   } else if (path.match(/^\/api\/v1\/students\/[^/]+$/) && method === 'GET') {
     const auth = await requireAuth(request, env, ['admin', 'staff', 'student']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleGetStudent(request, env, path.split('/')[4]);
   } else if (path.match(/^\/api\/v1\/students\/[^/]+$/) && method === 'PUT') {
     const auth = await requireAuth(request, env, ['admin', 'staff']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleUpdateStudent(request, env, path.split('/')[4]);
   } else if (path.match(/^\/api\/v1\/students\/[^/]+$/) && method === 'DELETE') {
     const auth = await requireAuth(request, env, ['admin']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleDeleteStudent(request, env, path.split('/')[4]);
 
   // Grades
   } else if (path === '/api/v1/grades' && method === 'GET') {
     const auth = await requireAuth(request, env, ['admin', 'staff', 'student']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleListGrades(request, env);
   } else if (path === '/api/v1/grades' && method === 'POST') {
     const auth = await requireAuth(request, env, ['admin', 'staff']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleCreateGrade(request, env, auth.user.sub);
   } else if (path.match(/^\/api\/v1\/grades\/[^/]+$/) && (method === 'PUT' || method === 'PATCH')) {
     const auth = await requireAuth(request, env, ['admin', 'staff']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleUpdateGrade(request, env, path.split('/')[4]);
 
   // Courses
   } else if (path === '/api/v1/courses' && method === 'GET') {
     const auth = await requireAuth(request, env);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleListUmsCourses(request, env);
   } else if (path === '/api/v1/courses' && method === 'POST') {
     const auth = await requireAuth(request, env, ['admin', 'staff']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleCreateCourse(request, env);
   } else if (path.match(/^\/api\/v1\/courses\/[^/]+$/) && method === 'PUT') {
     const auth = await requireAuth(request, env, ['admin', 'staff']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleUpdateCourse(request, env, path.split('/')[4]);
   } else if (path.match(/^\/api\/v1\/courses\/[^/]+$/) && method === 'DELETE') {
     const auth = await requireAuth(request, env, ['admin']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleDeleteCourse(request, env, path.split('/')[4]);
 
   // Programs, Faculties, Departments, Terms
   } else if (path === '/api/v1/programs' && method === 'GET') {
     const auth = await requireAuth(request, env);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleListPrograms(request, env);
   } else if (path === '/api/v1/faculties' && method === 'GET') {
     const auth = await requireAuth(request, env);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleListFaculties(request, env);
   } else if (path === '/api/v1/departments' && method === 'GET') {
     const auth = await requireAuth(request, env);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleListDepartments(request, env);
   } else if (path === '/api/v1/terms' && method === 'GET') {
     const auth = await requireAuth(request, env);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleListTerms(request, env);
 
   // Enrollments
   } else if (path === '/api/v1/enrollments' && method === 'GET') {
     const auth = await requireAuth(request, env, ['admin', 'staff', 'student']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleListEnrollments(request, env);
   } else if (path === '/api/v1/enrollments' && method === 'POST') {
     const auth = await requireAuth(request, env, ['admin', 'staff']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleCreateEnrollment(request, env);
 
   // Staff
   } else if (path === '/api/v1/staff' && method === 'GET') {
     const auth = await requireAuth(request, env, ['admin', 'staff']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleListStaff(request, env);
   } else if (path === '/api/v1/staff' && method === 'POST') {
     const auth = await requireAuth(request, env, ['admin']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleCreateStaff(request, env);
   } else if (path.match(/^\/api\/v1\/staff\/[^/]+$/) && method === 'GET') {
     const auth = await requireAuth(request, env, ['admin', 'staff']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleGetStaff(request, env, path.split('/')[4]);
   } else if (path.match(/^\/api\/v1\/staff\/[^/]+$/) && (method === 'PUT' || method === 'PATCH')) {
     const auth = await requireAuth(request, env, ['admin']);
-    if (auth instanceof Response) return withCors(auth, request);
+    if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleUpdateStaff(request, env, path.split('/')[4]);
 
   } else {
     response = error('Route not found', 404);
   }
 
-      return withCors(response, request);
+      return withCors(response, request, env);
     } catch (e) {
       console.error('Worker error:', e);
       return withCors(error('Internal server error', 500), request);
