@@ -63,6 +63,7 @@ export async function login(email: string, password: string, rememberMe: boolean
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({ email, password, rememberMe }),
+      credentials: 'include',
     }, 8000);
 
     // Handle rate limiting (429) — returns plain text, not JSON
@@ -82,9 +83,9 @@ export async function login(email: string, password: string, rememberMe: boolean
       };
     }
 
-    let data: AuthResponse;
+    let data: any;
     try {
-      data = JSON.parse(text) as AuthResponse;
+      data = JSON.parse(text);
     } catch (error) {
       return {
         success: false,
@@ -92,18 +93,43 @@ export async function login(email: string, password: string, rememberMe: boolean
       };
     }
 
-    if (data.success && data.data) {
-      // If MFA is not required, store the session
-      if (!data.data.mfaRequired && !data.data.mfaSetupRequired) {
-        // Store access token in MEMORY only (not localStorage — XSS protection)
-        _memoryToken = data.data.token;
-        // Store non-sensitive user info and preferences in localStorage
-        localStorage.setItem(USER_KEY, JSON.stringify(data.data.user));
-        localStorage.setItem(REMEMBER_KEY, JSON.stringify(rememberMe));
-        // Calculate and store token expiry (8 hours from now, matching backend)
-        const expiryTime = Date.now() + (8 * 60 * 60 * 1000);
-        localStorage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString());
+    if (data.success) {
+      // Handle MFA case
+      if (data.requires_mfa) {
+        return {
+          success: true,
+          data: {
+            mfaRequired: true,
+            user: data.user,
+          }
+        };
       }
+      // Regular login success - store user info
+      const user = {
+        id: data.user.id,
+        email: data.user.email,
+        name: `${data.user.first_name} ${data.user.last_name}`,
+        role: data.user.role,
+        isActive: true,
+      };
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
+      localStorage.setItem(REMEMBER_KEY, JSON.stringify(rememberMe));
+      const expiryTime = Date.now() + (7 * 24 * 60 * 60 * 1000); // 7 days (matches backend cookie)
+      localStorage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString());
+      _memoryToken = data.csrf_token; // Store CSRF token in memory
+
+      return {
+        success: true,
+        data: {
+          token: data.csrf_token,
+          user,
+        }
+      };
+    } else {
+      return {
+        success: false,
+        error: data.error || 'Login failed',
+      };
     }
 
     return data;
@@ -135,7 +161,7 @@ export function wasRememberMeSelected(): boolean {
  */
 export async function logout(): Promise<void> {
   try {
-    await fetchWithTimeout(`${API_URL}/auth/logout`, { method: 'POST' }, 3000);
+    await fetchWithTimeout(`${API_URL}/auth/logout`, { method: 'DELETE' }, 3000);
   } catch (error) {
     console.error('Logout request failed:', error);
   } finally {
@@ -144,6 +170,7 @@ export async function logout(): Promise<void> {
     // Clear localStorage
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem(TOKEN_EXPIRY_KEY);
+    localStorage.removeItem(REMEMBER_KEY);
     // Do NOT redirect here — let the App component handle navigation via state
   }
 }
@@ -208,58 +235,25 @@ export function getCurrentUser(): User | null {
  * Check if user is authenticated
  */
 export function isAuthenticated(): boolean {
-  return !!_memoryToken;
+  return !!_memoryToken || !!localStorage.getItem(USER_KEY);
 }
 
 /**
- * Refresh the access token using the refresh token cookie
+ * Refresh the access token (not used with cookie auth)
  */
 export async function refreshAccessToken(): Promise<string | null> {
-  // Don't attempt refresh if we don't even have a user record locally
-  if (!localStorage.getItem(USER_KEY)) return null;
-
-  try {
-    const response = await fetchWithTimeout(
-      `${API_URL}/auth/refresh`,
-      { method: 'POST' },
-      3000
-    );
-
-    let data: any = {};
-    const text = await response.text();
-    if (text) {
-      try {
-        data = JSON.parse(text);
-      } catch (error) {
-        console.warn('Failed to parse refresh token response JSON:', error);
-      }
-    }
-
-    if (data && data.success && data.data?.token) {
-      _memoryToken = data.data.token;
-      return data.data.token;
-    }
-
-    // Refresh failed — clear memory token and localStorage
-    _memoryToken = null;
-    localStorage.removeItem(USER_KEY);
-    localStorage.removeItem(TOKEN_EXPIRY_KEY);
-    return null;
-  } catch (error) {
-    console.error('Refresh token error:', error);
-    return null;
-  }
+  return null;
 }
 
 /**
  * Fetch with authentication and automatic retry on 401 (Token Refresh)
  */
 export async function authFetch(url: string, options: RequestInit = {}, timeoutMs: number = 5000): Promise<Response> {
-  let token = getToken();
+  const csrfToken = getToken();
   
   const headers = {
     'Content-Type': 'application/json',
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
     ...options.headers,
   };
 
@@ -271,6 +265,7 @@ export async function authFetch(url: string, options: RequestInit = {}, timeoutM
     let response = await fetch(url, {
       ...options,
       headers,
+      credentials: 'include',
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
@@ -315,6 +310,7 @@ async function fetchWithTimeout(
   try {
     const response = await fetch(url, {
       ...options,
+      credentials: 'include',
       signal: controller.signal,
     });
     clearTimeout(timeoutId);
@@ -332,25 +328,9 @@ async function fetchWithTimeout(
  * Verify session on app startup
  */
 export async function verifySession(): Promise<boolean> {
-  // Check if token is expired first
-  if (isTokenExpired()) {
-    console.log('Token expired, attempting refresh...');
-    const newToken = await refreshAccessToken();
-    if (!newToken) {
-      console.log('Token refresh failed, clearing session');
-      _memoryToken = null;
-      localStorage.removeItem(USER_KEY);
-      localStorage.removeItem(TOKEN_EXPIRY_KEY);
-      return false;
-    }
-    // refreshAccessToken already sets _memoryToken
-  }
-
-  const token = getToken();
-  if (!token) {
-    // Try to refresh even if no token (maybe access token expired but cookie exists)
-    const newToken = await refreshAccessToken();
-    return !!newToken;
+  const storedUser = localStorage.getItem(USER_KEY);
+  if (!storedUser) {
+    return false;
   }
 
   try {
@@ -359,16 +339,19 @@ export async function verifySession(): Promise<boolean> {
     const data = await response.json();
 
     if (data.success) {
-      localStorage.setItem(USER_KEY, JSON.stringify(data.data));
-      // Update token expiry on successful verification (8 hours)
-      const expiryTime = Date.now() + (8 * 60 * 60 * 1000);
-      localStorage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString());
+      const user = {
+        id: data.id,
+        email: data.email,
+        name: `${data.first_name} ${data.last_name}`,
+        role: data.role,
+        isActive: true,
+      };
+      localStorage.setItem(USER_KEY, JSON.stringify(user));
       return true;
     }
     return false;
   } catch (error) {
     console.warn('Session verification failed:', error);
-    // Return false instead of throwing so app continues to login page
     return false;
   }
 }
