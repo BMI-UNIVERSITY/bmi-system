@@ -104,7 +104,7 @@ Set these in your GitHub repo → **Settings → Secrets → Actions**:
 | Secret | Value |
 |---|---|
 | `CLOUDFLARE_API_TOKEN` | Your Cloudflare API token (with Workers & Pages permissions) |
-| `CLOUDFLARE_ACCOUNT_ID` | `2557f2f143734abc82bd4c80be750eb6` |
+| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare Account ID |
 | `UMS_API_URL` | `https://bmi-api.bmiuniversity.workers.dev` (your worker URL) |
 
 ---

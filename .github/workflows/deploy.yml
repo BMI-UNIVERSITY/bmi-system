@@ -11,7 +11,8 @@ jobs:
   deploy-api:
     name: Deploy API Worker
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
+    needs: test
+    if: github.event_name == 'push' && needs.test.outputs.api == 'true'
     defaults:
       run:
         working-directory: apps/api
@@ -25,9 +26,12 @@ jobs:
 
       - name: Install dependencies (workspace)
         run: |
-          rm -f package-lock.json
-          npm install
+          npm ci
         working-directory: .
+
+      - name: Inject Cloudflare IDs
+        run: |
+          sed -i 's/${CLOUDFLARE_D1_ID}/'${{ secrets.CLOUDFLARE_D1_ID }}'/g' apps/api/wrangler.jsonc
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
@@ -41,7 +45,8 @@ jobs:
   deploy-portal:
     name: Deploy Portal (Cloudflare Pages)
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
+    needs: test
+    if: github.event_name == 'push' && needs.test.outputs.portal == 'true'
     defaults:
       run:
         working-directory: apps/portal
@@ -55,8 +60,7 @@ jobs:
 
       - name: Install dependencies (workspace)
         run: |
-          rm -f package-lock.json
-          npm install
+          npm ci
         working-directory: .
 
       - name: Build portal
@@ -77,7 +81,8 @@ jobs:
   deploy-ums:
     name: Deploy UMS (Cloudflare Pages)
     runs-on: ubuntu-latest
-    if: github.event_name == 'push'
+    needs: test
+    if: github.event_name == 'push' && needs.test.outputs.ums == 'true'
     defaults:
       run:
         working-directory: apps/ums
@@ -91,8 +96,7 @@ jobs:
 
       - name: Install dependencies (workspace)
         run: |
-          rm -f package-lock.json
-          npm install
+          npm ci
         working-directory: .
 
       - name: Build UMS
@@ -113,8 +117,27 @@ jobs:
   test:
     name: Type Check & Test
     runs-on: ubuntu-latest
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      portal: ${{ steps.filter.outputs.portal }}
+      ums: ${{ steps.filter.outputs.ums }}
     steps:
       - uses: actions/checkout@v4
+
+      - name: Path Filters
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'apps/api/**'
+              - 'packages/shared/**'
+            portal:
+              - 'apps/portal/**'
+              - 'packages/shared/**'
+            ums:
+              - 'apps/ums/**'
+              - 'packages/shared/**'
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -123,20 +146,27 @@ jobs:
 
       - name: Install all workspace dependencies
         run: |
-          rm -f package-lock.json
-          npm install
+          npm ci
 
       - name: Type check shared package
         run: npm run typecheck
         working-directory: packages/shared
-        continue-on-error: true
 
       - name: Type check UMS frontend
         run: npm run type-check
         working-directory: apps/ums
-        continue-on-error: true
 
       - name: Run UMS tests
         run: npm test
         working-directory: apps/ums
-        continue-on-error: true
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+        working-directory: apps/ums
+
+      - name: Run UMS E2E tests
+        run: npm run test:e2e
+        working-directory: apps/ums
+
+      - name: Run npm audit
+        run: npm audit --audit-level=high

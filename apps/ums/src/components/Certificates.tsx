@@ -119,7 +119,7 @@ const MicroBorder: React.FC = () => (
       <p className="text-[3.5px] leading-none whitespace-nowrap text-[#4B0082] opacity-40 tracking-[0.05em]">
         {Array(300)
           .fill(
-            "BMI UNIVERSITY · NAIROBI KENYA · CHARTERED 2005 · CUE ACCREDITED · VERIFY AT WWW.BMI.AC.KE/VERIFY · ",
+            "BMI UNIVERSITY · NAIROBI KENYA · CHARTERED 2005 · CUE ACCREDITED · VERIFY AT WWW.HKMMINISTRIES.ORG/VERIFY · ",
           )
           .join("")}
       </p>
@@ -202,7 +202,7 @@ const CertificateDocument: React.FC<CertDocProps> = ({
     new Date(cert.issue_date).toISOString().replace("T", " ").substring(0, 19) +
     "Z";
   const verifyUrl =
-    qrData?.url || `https://bmi.ac.ke/verify?id=${cert.serial_number}`;
+    qrData?.url || `https://hkmministries.org/verify?id=${cert.serial_number}`;
 
   const isLandscape = orientation === "landscape";
 
@@ -506,7 +506,7 @@ const CertificateDocument: React.FC<CertDocProps> = ({
             <p className="text-[6px] font-bold text-[#C9A84C] uppercase tracking-widest mb-0.5">
               Verify Authenticity
             </p>
-            <p className="text-[6px] text-white">www.bmi.ac.ke/verify</p>
+            <p className="text-[6px] text-white">www.hkmministries.org/verify</p>
             <p className="text-[6px] text-gray-300">
               registrar@bmiuniversity.org
             </p>

@@ -6,16 +6,16 @@
  */
 
 /** The public URL of the admissions / student portal. */
-export const PORTAL_URL = 'https://apply.bmiuniversity.org' as const;
+export const PORTAL_URL = 'https://bmi-portal.hkmministries.org' as const;
 
 /** The public URL of the University Management System (internal staff & students). */
-export const UMS_URL = 'https://ums.bmiuniversity.org' as const;
+export const UMS_URL = 'https://bmi-ums.hkmministries.org' as const;
 
 /** The public URL of the marketing / university website. */
-export const MARKETING_URL = 'https://bmiuniversity.org' as const;
+export const MARKETING_URL = 'https://hkmministries.org' as const;
 
 /** The www-prefixed URL of the marketing site. */
-export const MARKETING_URL_WWW = 'https://www.bmiuniversity.org' as const;
+export const MARKETING_URL_WWW = 'https://www.hkmministries.org' as const;
 
 /** The Cloudflare Pages preview URL of the portal (used as a fallback origin). */
 export const PORTAL_PAGES_URL = 'https://bmi-portal.pages.dev' as const;

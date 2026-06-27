@@ -1,19 +1,4 @@
 /* eslint-disable */
-//
-// ╔══════════════════════════════════════════════════════════════════════════════╗
-// ║  🔒 LOCKED FILE — DO NOT SIMPLIFY GRADE FIELD RESOLUTION                  ║
-// ║                                                                              ║
-// ║  This service talks to GET /api/v1/grades on the backend.                  ║
-// ║  That endpoint merges data from TWO PocketBase collections:                ║
-// ║                                                                              ║
-// ║    • 'academic_records'  →  g.grade       / g.grade_point / g.total_score  ║
-// ║    • 'grades'            →  g.letterGrade / g.gradePoints / g.numericGrade ║
-// ║                                                                              ║
-// ║  flattenRecord() must resolve ALL aliases from BOTH shapes.                ║
-// ║  Do NOT remove any ?? fallback chain in flattenRecord().                   ║
-// ║                                                                              ║
-// ║  Last locked: 2026-06-02  |  Author: BMI UMS System                       ║
-// ╚══════════════════════════════════════════════════════════════════════════════╝
 /**
  * BMI UMS — Academic Records Service
  * ─────────────────────────────────────────────────────────────────────────────
@@ -124,68 +109,43 @@ export interface AcademicRecordsFilters {
 
 // ─── Normaliser ───────────────────────────────────────────────────────────────
 
-/**
- * 🔒 [LOCKED] flattenRecord
- * ─────────────────────────────────────────────────────────────────────────────
- * Converts a raw API item (from either 'grades' or 'academic_records' shape)
- * into the AcademicRecordFlat shape used by every UI component.
- *
- * Field resolution order — DO NOT CHANGE:
- *
- *   grade      : r.letterGrade  (backend pre-flattened from 'grades')
- *              ?? r.grade       (raw 'academic_records' field)         ← DO NOT REMOVE
- *              ?? r.letter_grade (legacy 'grades' alias)
- *
- *   gradePoint : r.gradePoints  (backend pre-flattened from 'grades')
- *              ?? r.gradePoint  (raw 'academic_records' field)         ← DO NOT REMOVE
- *              ?? r.grade_point (raw 'academic_records' alias)
- *              ?? r.gpa         ('grades' collection field)
- *
- *   totalScore : r.numericGrade (backend pre-flattened)
- *              ?? r.total_score (raw 'academic_records' field)         ← DO NOT REMOVE
- *              ?? r.totalScore  (camelCase alias)
- *              ?? r.percentage  ('grades' field)
- *
- * Removing any fallback will silently render blank grades for one of the
- * two data sources. Both sources are ALWAYS present in the API response.
- */
 export function flattenRecord(r: AcademicRecord | any): AcademicRecordFlat {
-  // Expand relations (present when backend returns expanded PocketBase records)
+  // Expand relations (present when backend returns expanded records)
   const student  = r.expand?.student_id;
   const course   = r.expand?.course_id;
   const module   = course?.expand?.module_id;
   const campus   = student?.expand?.study_center_id;
+
+  let totalScore = r.score ?? 0;
+  let grade = r.letter_grade ?? '';
+  let gradePoint = r.grade_point ?? 0;
 
   return {
     id:            r.id,
     studentId:     r.studentId || r.student_id,
     regNo:         student?.reg_no ?? r.regNo ?? r.reg_no ?? r.studentCode ?? r.student_code ?? '',
     studentName:   (student?.full_name ??
-                   `${student?.first_name ?? ''} ${student?.last_name ?? ''}`.trim()) ||
+                   `${student?.first_name ?? r.first_name ?? ''} ${student?.last_name ?? r.last_name ?? ''}`.trim()) ||
                    r.studentName || r.student_name || 'Unknown',
     gender:        student?.gender ?? r.gender ?? '',
     campusName:    campus?.name ?? r.campusName ?? r.campus_name ?? '',
     courseId:      r.courseId || r.course_id,
     courseCode:    (course?.code ?? course?.course_code) ?? r.courseCode ?? r.course_code ?? '',
-    courseTitle:   (course?.title ?? r.courseName) || r.courseTitle || r.course_name || '',
+    courseTitle:   (course?.title ?? r.courseName) || r.courseTitle || r.course_name ?? r.title ?? '',
     creditHours:   (course?.credit_hours ?? course?.credits ?? r.creditHours ?? r.credits ?? r.credit_hours) ?? 0,
     category:      course?.category ?? r.category ?? '',
     module:        module?.name ?? r.module ?? '',
     semester:      r.semester || module?.semester || '',
-    // 🔒 LOCKED: all aliases for numeric score — from both collections
-    totalScore:    (r.numericGrade ?? r.total_score ?? r.totalScore ?? r.percentage) ?? 0,
-    caScore:       r.ca_score ?? r.caScore ?? null,
-    examScore:     r.exam_score ?? r.examScore ?? null,
-    // 🔒 LOCKED: grade letter — r.grade is 'academic_records' field, r.letterGrade is 'grades' pre-flatten
-    grade:         r.letterGrade ?? r.grade ?? r.letter_grade ?? '',
-    // 🔒 LOCKED: grade point — r.gradePoint is 'academic_records' field, r.gradePoints is 'grades' pre-flatten
-    gradePoint:    (r.gradePoints ?? r.gradePoint ?? r.grade_point ?? r.gpa) ?? 0,
-    remarks:       r.remarks ?? '',
+    totalScore:    totalScore,
+    caScore:       null,
+    examScore:     null,
+    grade:         grade,
+    gradePoint:    gradePoint,
+    remarks:       grade === 'F' ? 'Fail' : (grade === 'N/A' ? '' : 'Pass'),
     academicYear:  r.academic_year ?? r.academicYear ?? '',
-    // Preserve backend pre-flattened fields for downstream robustness
-    numericGrade:  r.numericGrade,
-    letterGrade:   r.letterGrade,
-    gradePoints:   r.gradePoints,
+    numericGrade:  totalScore,
+    letterGrade:   grade,
+    gradePoints:   gradePoint,
     credits:       r.credits,
   };
 }

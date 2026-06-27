@@ -393,7 +393,7 @@ export const Transcripts: React.FC<TranscriptsProps> = (props) => {
     return toSafeNumber(value).toFixed(digits);
   };
 
-  // Fetch grades when a student is selected — source of truth: PocketBase academic_records
+  // Fetch grades when a student is selected — source of truth: unified D1 backend
   useEffect(() => {
     if (!selectedStudent) {
       setStudentGrades([]);

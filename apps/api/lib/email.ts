@@ -1,6 +1,6 @@
 import { PORTAL_URL } from '@bmi/shared';
 
-const FROM_ADDRESS = 'BMI University <onboarding@resend.dev>';
+const FROM_ADDRESS = 'BMI University <admissions@hkmministries.org>';
 // Brand token cross-reference: colors sourced from @bmi/shared/src/tokens.ts (BrandColors.gold / BrandColors.navy)
 
 interface EmailPayload {

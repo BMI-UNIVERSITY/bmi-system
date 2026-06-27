@@ -362,7 +362,7 @@ export const GoodStandingLetter: React.FC<GoodStandingLetterProps> = ({ students
                   <div className="mt-8 pt-4 border-t border-slate-200">
                     <p className="text-[10px] text-slate-400 text-center">
                       This is an official document issued by BMI University. The authenticity of this document can be verified 
-                      by scanning the QR code above or visiting www.bmi.ac.ke/verify and entering the reference number.
+                      by scanning the QR code above or visiting www.hkmministries.org/verify and entering the reference number.
                     </p>
                   </div>
                 </div>

@@ -15,7 +15,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { useAuthStore } from "./stores/authStore";
 import { useDataStore } from "./stores/dataStore";
 import { useUIStore } from "./stores/uiStore";
-import { useRealtimeSync } from "./hooks/useRealtime";
+
 
 /** Public routes (no auth required) */
 function PublicRoutes() {
@@ -55,7 +55,7 @@ function AuthenticatedLayout() {
   } = useUIStore();
 
   // Activate real-time synchronization
-  useRealtimeSync();
+
 
   // Data freshness is now managed by TanStack Query (staleTime + refetchOnWindowFocus).
   // See src/hooks/useEntityQueries.ts. Components that need paginated data should use

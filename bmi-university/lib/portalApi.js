@@ -2,7 +2,7 @@
  * lib/portalApi.js
  *
  * Thin server-side client for fetching public data from the BMI Portal API.
- * Used by Next.js pages for ISR (Incremental Static Regeneration).
+ * Fetched at build time; rebuild to refresh.
  *
  * All calls are server-side only — no secrets required for public endpoints.
  */

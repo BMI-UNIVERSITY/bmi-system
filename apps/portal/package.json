@@ -15,7 +15,6 @@
     "test:ui": "vitest --ui"
   },
   "devDependencies": {
-    
     "@cloudflare/workers-types": "^4.20260625.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
@@ -34,6 +33,8 @@
   },
   "dependencies": {
     "@bmi/shared": "*",
+    "@sentry/browser": "^10.62.0",
+    "@sentry/react": "^10.62.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.18.0"
@@ -42,4 +43,3 @@
     "@rolldown/binding-linux-x64-gnu": "1.1.3"
   }
 }
-

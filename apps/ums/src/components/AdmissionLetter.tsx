@@ -71,10 +71,10 @@ export const AdmissionLetter: React.FC<AdmissionLetterProps> = ({ students, logo
       currency: 'KES',
       paymentDeadline: '2025-01-10',
       requiredDocuments: ['ID/Passport', 'Academic Certificates', 'Birth Certificate'],
-      registrationUrl: 'https://bmi.ac.ke/register',
+      registrationUrl: 'https://bmi-portal.hkmministries.org/register',
       contactInfo: {
         phone: '+254 700 123 456',
-        email: 'admissions@bmi.ac.ke',
+        email: 'admissions@hkmministries.org',
         address: 'Nairobi, Kenya'
       },
       status: 'draft',
@@ -398,7 +398,7 @@ export const AdmissionLetter: React.FC<AdmissionLetterProps> = ({ students, logo
                     <div className="flex justify-center gap-6 text-xs text-slate-500">
                       <span className="flex items-center gap-1"><MapPin size={12} /> Nairobi, Kenya</span>
                       <span className="flex items-center gap-1"><Phone size={12} /> +254 700 123 456</span>
-                      <span className="flex items-center gap-1"><Globe size={12} /> www.bmi.ac.ke</span>
+                      <span className="flex items-center gap-1"><Globe size={12} /> www.hkmministries.org</span>
                     </div>
                   </div>
                 </div>

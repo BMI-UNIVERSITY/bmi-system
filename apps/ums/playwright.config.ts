@@ -6,7 +6,7 @@
  *
  * Tests run against a locally-served frontend (http://localhost:3000) with the
  * backend API proxied through Vite.  In CI the frontend is built and served by
- * `vite preview` while a seed PocketBase instance provides the backend.
+ * `vite preview` while a D1 Worker handles the backend API.
  *
  * Usage:
  *   npx playwright test                   # run all e2e tests
@@ -23,7 +23,7 @@ export default defineConfig({
   fullyParallel: false,
   /* Retry once on CI to absorb timing flakes */
   retries: process.env.CI ? 1 : 0,
-  /* Limit workers to 1 on CI (single PocketBase instance) */
+  /* Limit workers to 1 on CI */
   workers: process.env.CI ? 1 : undefined,
   /* Pretty reporter locally; compact on CI */
   reporter: process.env.CI ? "github" : "list",

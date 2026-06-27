@@ -66,7 +66,7 @@ Include:
 4. **Database Security**
    - Regular backups
    - Restrict database access
-   - Use PocketBase admin rules
+
 
 5. **Network Security**
    - Use firewall rules
@@ -104,7 +104,7 @@ Include:
 
 - ✅ JWT-based authentication
 - ✅ Role-based access control (RBAC)
-- ✅ Password hashing (via PocketBase)
+- ✅ Password hashing
 - ✅ Session timeout warnings
 - ✅ Audit logging
 - ✅ Content Security Policy headers
@@ -121,7 +121,7 @@ Include:
 - [ ] Configured HTTPS/TLS
 - [ ] Set up firewall rules
 - [ ] Configured backup strategy
-- [ ] Reviewed PocketBase admin rules
+
 - [ ] Set up monitoring/logging
 - [ ] Configured rate limiting
 - [ ] Reviewed CORS settings
