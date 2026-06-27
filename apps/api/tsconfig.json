@@ -9,8 +9,9 @@
     "noEmit": true,
     "isolatedModules": true,
     "allowSyntheticDefaultImports": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "skipLibCheck": true
   },
   "include": ["**/*.ts"],
-  "exclude": ["node_modules", "**/*.test.ts", "**/*.snapshot.test.ts"]
+  "exclude": ["node_modules", "**/*.test.ts", "**/*.snapshot.test.ts", "vitest.config.ts"]
 }
