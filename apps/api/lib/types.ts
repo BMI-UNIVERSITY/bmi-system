@@ -112,7 +112,13 @@ function getAllowedOrigins(env?: Env): string[] {
 export function getCorsHeaders(request: Request, env?: Env): Record<string, string> {
   const origin = request.headers.get('Origin') || '';
   const allowed = getAllowedOrigins(env);
-  const isAllowed = allowed.includes(origin);
+  
+  // Allow preview deployments for our specific Pages projects only
+  const isProjectPreview = /^https:\/\/[a-z0-9]+\.bmi-ums\.pages\.dev$/.test(origin)
+    || /^https:\/\/[a-z0-9]+\.bmi-portal\.pages\.dev$/.test(origin)
+    || /^https:\/\/[a-z0-9]+\.bmi-portal-[a-z0-9]+\.pages\.dev$/.test(origin);
+  
+  const isAllowed = allowed.includes(origin) || isProjectPreview;
   const allowedOrigin = isAllowed ? origin : BASE_ALLOWED_ORIGINS[0];
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
