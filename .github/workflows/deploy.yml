@@ -31,7 +31,7 @@ jobs:
 
       - name: Inject Cloudflare IDs
         run: |
-          sed -i 's/${CLOUDFLARE_D1_ID}/'${{ secrets.CLOUDFLARE_D1_ID }}'/g' apps/api/wrangler.jsonc
+          sed -i 's/${CLOUDFLARE_D1_ID}/'${{ secrets.CLOUDFLARE_D1_ID }}'/g' wrangler.jsonc
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v3
