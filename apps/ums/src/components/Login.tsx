@@ -13,7 +13,7 @@ interface LoginProps {
 }
 
 const Login: React.FC<LoginProps> = ({ onLogin, logo }) => {
-  const [email, setEmail] = useState('admin@bmi.edu');
+  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
   const [loading, setLoading] = useState(false);
