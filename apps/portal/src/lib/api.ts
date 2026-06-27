@@ -1,15 +1,18 @@
 const BASE = ((import.meta as any).env.VITE_API_URL || '') + '/api';
 
+// Store CSRF token in memory only (not localStorage) for security
+let _memoryToken: string | null = null;
+
 function getCsrfToken(): string | null {
-  return localStorage.getItem('csrf_token');
+  return _memoryToken;
 }
 
 function setCsrfToken(token: string) {
-  localStorage.setItem('csrf_token', token);
+  _memoryToken = token;
 }
 
 function clearCsrfToken() {
-  localStorage.removeItem('csrf_token');
+  _memoryToken = null;
 }
 
 class ApiError extends Error {

@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS application_status_logs (
   changed_at      TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_status_logs_app_id ON application_status_logs(app_id);
+CREATE INDEX IF NOT EXISTS idx_status_logs_app_id ON application_status_logs(application_id);
 
 CREATE TABLE IF NOT EXISTS admin_audit_logs (
   id              TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
