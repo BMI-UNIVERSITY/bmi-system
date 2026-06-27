@@ -57,7 +57,7 @@ const WARNING_BEFORE_EXPIRY_MS = 30 * 60 * 1000; // Show warning 30 minutes befo
  */
 export async function login(email: string, password: string, rememberMe: boolean = false): Promise<AuthResponse> {
   try {
-    const response = await fetchWithTimeout(`${API_URL}/auth/login`, {
+    const response = await fetchWithTimeout(`${API_URL.replace('/v1', '')}/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -161,7 +161,7 @@ export function wasRememberMeSelected(): boolean {
  */
 export async function logout(): Promise<void> {
   try {
-    await fetchWithTimeout(`${API_URL}/auth/logout`, { method: 'DELETE' }, 3000);
+    await fetchWithTimeout(`\/auth/logout`, { method: 'DELETE' }, 3000);
   } catch (error) {
     console.error('Logout request failed:', error);
   } finally {
@@ -335,7 +335,7 @@ export async function verifySession(): Promise<boolean> {
 
   try {
     // Use a shorter timeout for the initial session check
-    const response = await authFetch(`${API_URL}/auth/me`, {}, 3000);
+    const response = await authFetch(`\/auth/me`, {}, 3000);
     const data = await response.json();
 
     if (data.success) {
@@ -382,7 +382,7 @@ export async function isBackendAvailable(): Promise<boolean> {
  */
 export async function verifyMfa(mfaToken: string, code: string): Promise<AuthResponse> {
   try {
-    const response = await fetchWithTimeout(`${API_URL}/auth/mfa/verify`, {
+    const response = await fetchWithTimeout(`\/auth/mfa/verify`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -414,7 +414,7 @@ export async function verifyMfa(mfaToken: string, code: string): Promise<AuthRes
  */
 export async function setupMfa(token: string): Promise<ApiResponse<{ secret: string; qrCode: string }>> {
   try {
-    const response = await fetchWithTimeout(`${API_URL}/auth/mfa/setup`, {
+    const response = await fetchWithTimeout(`\/auth/mfa/setup`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -436,7 +436,7 @@ export async function setupMfa(token: string): Promise<ApiResponse<{ secret: str
  */
 export async function enableMfa(token: string, secret: string, code: string): Promise<ApiResponse<{ recoveryCodes: string[] }>> {
   try {
-    const response = await fetchWithTimeout(`${API_URL}/auth/mfa/enable`, {
+    const response = await fetchWithTimeout(`\/auth/mfa/enable`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -459,7 +459,7 @@ export async function enableMfa(token: string, secret: string, code: string): Pr
  */
 export async function requestPasswordReset(email: string): Promise<AuthResponse> {
   try {
-    const response = await fetchWithTimeout(`${API_URL}/auth/forgot-password`, {
+    const response = await fetchWithTimeout(`${API_URL.replace('/v1', '')}/auth/forgot-password`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -486,7 +486,7 @@ export async function resetPassword(
   passwordConfirm: string
 ): Promise<AuthResponse> {
   try {
-    const response = await fetchWithTimeout(`${API_URL}/auth/reset-password`, {
+    const response = await fetchWithTimeout(`\/auth/reset-password`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
