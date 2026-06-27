@@ -8,5 +8,8 @@
   ],
   "scripts": {
     "prepare": "npm run build --workspace=@bmi/shared"
+  },
+  "optionalDependencies": {
+    "lightningcss-linux-x64-gnu": "1.32.0"
   }
 }
