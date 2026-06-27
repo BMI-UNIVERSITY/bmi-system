@@ -52,7 +52,8 @@
     "zustand": "^5.0.13"
   },
   "optionalDependencies": {
-    "@rolldown/binding-linux-x64-gnu": "1.0.2"
+    "@rolldown/binding-linux-x64-gnu": "1.0.2",
+    "@rollup/rollup-linux-x64-gnu": "4.60.2"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
