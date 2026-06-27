@@ -26,6 +26,7 @@ export interface Env {
   WEBHOOK_SECRET?: string;
   /** Email address for critical ops alerts via Resend. */
   OPS_ALERT_EMAIL?: string;
+  SENTRY_DSN?: string;
 }
 
 export interface User {
@@ -112,7 +113,7 @@ function getAllowedOrigins(env?: Env): string[] {
 export function getCorsHeaders(request: Request, env?: Env): Record<string, string> {
   const origin = request.headers.get('Origin') || '';
   const allowed = getAllowedOrigins(env);
-  const isAllowed = allowed.includes(origin) || origin.endsWith('.pages.dev');
+  const isAllowed = allowed.includes(origin);
   const allowedOrigin = isAllowed ? origin : BASE_ALLOWED_ORIGINS[0];
   return {
     'Access-Control-Allow-Origin': allowedOrigin,

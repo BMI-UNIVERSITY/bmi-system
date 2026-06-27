@@ -1,3 +1,4 @@
+import { withSentry } from '@sentry/cloudflare';
 import { handleRegister, handleLogin, handleLogout, handleMe, handleVerifyEmail, handleResendVerification, handleForgotPassword, handleResetPassword, handleMfaSetup, handleMfaEnable, handleMfaDisable, handleOAuthLogin, handleOAuthCallback } from './routes/auth';
 import { handleSubmitApplication, handleGetMyApplication, handleListApplications, handleGetApplication, handleUpdateStatus, handleGetStatusLogs } from './routes/apply';
 import { handleUploadDocument, handleDownloadDocument, handleDeleteDocument } from './routes/documents';
@@ -35,8 +36,13 @@ function withCors(response: Response, request: Request): Response {
 
 const PUBLIC_ROUTES = ['/api/auth/register', '/api/auth/login', '/api/health'];
 
-export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+export default withSentry(
+  (env: Env) => ({
+    dsn: env.SENTRY_DSN || '',
+    tracesSampleRate: 1.0,
+  }),
+  {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     const path = url.pathname;
     const method = request.method;
@@ -221,7 +227,7 @@ export default {
         const auth = await requireAuth(request, env, ['staff', 'admin']);
         if (auth instanceof Response) return withCors(auth, request);
         const appId = path.split('/')[4];
-        response = await handleUpdateStatus(request, env, appId, auth.user.sub);
+        response = await handleUpdateStatus(request, env, appId, auth.user.sub, ctx);
       } else if (path.match(/^\/api\/admin\/documents\/[^/]+$/) && method === 'DELETE') {
         const auth = await requireAuth(request, env, ['admin']);
         if (auth instanceof Response) return withCors(auth, request);
@@ -296,7 +302,7 @@ export default {
   } else if (path.match(/^\/api\/webhooks\/retry\/[^/]+$/) && method === 'POST') {
     const auth = await requireAuth(request, env, ['admin']);
     if (auth instanceof Response) return withCors(auth, request);
-    response = await handleRetryDeadLetter(request, env, path.split('/')[4]);
+    response = await handleRetryDeadLetter(request, env, path.split('/')[4], ctx);
 
   // ─── UMS Routes (v1 prefix — used by UMS frontend) ─────────────────
   // Auth bridge: UMS uses /api/v1/auth/* which maps to the same handlers
@@ -421,7 +427,7 @@ export default {
       return withCors(error('Internal server error', 500), request);
     }
   },
-  async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+  async scheduled(controller, env, ctx) {
     await backupWorker.scheduled(controller, env, ctx);
   },
-} satisfies ExportedHandler<Env>;
+} satisfies ExportedHandler<Env>);

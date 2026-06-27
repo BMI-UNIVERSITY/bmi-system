@@ -51,7 +51,7 @@ export async function handleRegister(request: Request, env: Env): Promise<Respon
     return error('An account with this email already exists', 409);
   }
 
-  const passwordHash = await hashPassword(password);
+  const passwordHash = await hashPassword(password, env.JWT_SECRET);
   const userId = crypto.randomUUID();
   // DEV_ONLY: auto-verify email (remove these lines to reinstate verification)
   const isVerified = 1;
@@ -182,7 +182,7 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
   //   return error('Please verify your email address before logging in. Check your inbox for the verification link.', 403);
   // }
 
-  const valid = await verifyPassword(password, user.password_hash);
+  const valid = await verifyPassword(password, user.password_hash, env.JWT_SECRET);
   if (!valid) {
     return error('Invalid email or password', 401);
   }
@@ -200,7 +200,11 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
   const token = await signJWT({ sub: user.id, email: user.email, role: user.role }, env.JWT_SECRET);
   const csrfToken = generateCsrfToken();
 
-  await env.SESSIONS.put(`session:${user.id}`, '1', { expirationTtl: 60 * 60 * 24 * 7 });
+  const expiresAt = new Date(Date.now() + 60 * 60 * 24 * 7 * 1000).toISOString();
+  await env.DB.prepare(
+    `INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET expires_at = excluded.expires_at`
+  ).bind(`session:${user.id}`, user.id, expiresAt).run();
 
   const response = ok({
     csrf_token: csrfToken,
@@ -233,7 +237,7 @@ export async function handleLogout(request: Request, env: Env): Promise<Response
     const { verifyJWT } = await import('../lib/jwt');
     const payload = await verifyJWT(token, env.JWT_SECRET);
     if (payload) {
-      await env.SESSIONS.delete(`session:${payload.sub}`);
+      await env.DB.prepare('DELETE FROM sessions WHERE id = ?').bind(`session:${payload.sub}`).run();
     }
   }
 
@@ -317,7 +321,7 @@ export async function handleResetPassword(request: Request, env: Env): Promise<R
   if (new Date(resetToken.expires_at) < new Date()) return error('Reset token has expired', 410);
 
   // Update password
-  const passwordHash = await hashPassword(body.new_password);
+  const passwordHash = await hashPassword(body.new_password, env.JWT_SECRET);
   await env.DB.prepare(
     `UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?`
   ).bind(passwordHash, resetToken.user_id).run();
@@ -328,7 +332,7 @@ export async function handleResetPassword(request: Request, env: Env): Promise<R
   ).bind(resetToken.id).run();
 
   // Invalidate all sessions for this user
-  await env.SESSIONS.delete(`session:${resetToken.user_id}`);
+  await env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(resetToken.user_id).run();
 
   return ok({ message: 'Password reset successfully. You can now log in with your new password.' });
 }
@@ -379,7 +383,7 @@ export async function handleMfaDisable(request: Request, env: Env, userId: strin
   const user = await env.DB.prepare('SELECT password_hash FROM users WHERE id = ?').bind(userId).first<{ password_hash: string }>();
   if (!user) return error('User not found', 404);
 
-  const valid = await verifyPassword(body.password, user.password_hash);
+  const valid = await verifyPassword(body.password, user.password_hash, env.JWT_SECRET);
   if (!valid) return error('Invalid password', 401);
 
   await env.DB.prepare('UPDATE users SET mfa_enabled = 0, mfa_secret = NULL, updated_at = datetime("now") WHERE id = ?').bind(userId).run();
@@ -439,7 +443,7 @@ export async function handleOAuthCallback(request: Request, env: Env, provider: 
     } else {
       userId = crypto.randomUUID();
       const tempPassword = crypto.randomUUID();
-      const passwordHash = await hashPassword(tempPassword);
+      const passwordHash = await hashPassword(tempPassword, env.JWT_SECRET);
       
       // DEV_ONLY: force is_verified = 1 (change back to `userInfo.emailVerified ? 1 : 0` to reinstate)
       await env.DB.prepare(
@@ -468,7 +472,11 @@ export async function handleOAuthCallback(request: Request, env: Env, provider: 
 
   const token = await signJWT({ sub: user.id, email: user.email, role: user.role }, env.JWT_SECRET);
   const csrfToken = generateCsrfToken();
-  await env.SESSIONS.put(`session:${user.id}`, '1', { expirationTtl: 60 * 60 * 24 * 7 });
+  const expiresAt = new Date(Date.now() + 60 * 60 * 24 * 7 * 1000).toISOString();
+  await env.DB.prepare(
+    `INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)
+     ON CONFLICT(id) DO UPDATE SET expires_at = excluded.expires_at`
+  ).bind(`session:${user.id}`, user.id, expiresAt).run();
   const baseUrl = getPortalUrl(env);
   
   const headers = new Headers({ Location: `${baseUrl}/dashboard` });

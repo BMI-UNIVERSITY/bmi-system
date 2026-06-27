@@ -47,7 +47,9 @@ export async function requireAuth(
 
   const user = payload as unknown as JWTPayload;
 
-  const sessionValid = await env.SESSIONS.get(`session:${user.sub}`);
+  const sessionValid = await env.DB.prepare(
+    `SELECT 1 FROM sessions WHERE id = ? AND expires_at > datetime('now')`
+  ).bind(`session:${user.sub}`).first();
   if (!sessionValid) {
     return error('Session expired. Please log in again.', 401);
   }
@@ -63,31 +65,26 @@ export async function rateLimit(request: Request, env: Env, maxRequests = RATE_L
   const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
   const url = new URL(request.url);
   const endpoint = url.pathname;
-  const now = getNow();
-  const windowStart = now - (RATE_LIMIT_WINDOW * 1000);
-  const key = `${ip}:${endpoint}`;
+  
+  // Use a fixed window string representation
+  const windowStart = Math.floor(Date.now() / (RATE_LIMIT_WINDOW * 1000)).toString();
 
-  // Lazily evict stale entries
-  if (rateLimitMap.size > 10000) {
-    for (const [k, entry] of rateLimitMap) {
-      if (entry.timestamp < windowStart) {
-        rateLimitMap.delete(k);
-      }
-    }
+  const res = await env.DB.prepare(
+    `INSERT INTO rate_limits (ip_address, endpoint, window_start, request_count) 
+     VALUES (?, ?, ?, 1) 
+     ON CONFLICT(ip_address, endpoint, window_start) 
+     DO UPDATE SET request_count = request_count + 1 
+     RETURNING request_count`
+  ).bind(ip, endpoint, windowStart).first<{ request_count: number }>();
+
+  // Occasionally evict stale entries to keep table small
+  if (Math.random() < 0.05) {
+    const oldWindow = (Math.floor(Date.now() / (RATE_LIMIT_WINDOW * 1000)) - 1).toString();
+    env.DB.prepare(`DELETE FROM rate_limits WHERE window_start < ?`).bind(oldWindow).run().catch(() => {});
   }
 
-  const entry = rateLimitMap.get(key);
-  if (entry) {
-    if (entry.timestamp < windowStart) {
-      // Window expired, reset
-      rateLimitMap.set(key, { count: 1, timestamp: now });
-    } else if (entry.count >= maxRequests) {
-      return error('Rate limit exceeded. Please try again later.', 429);
-    } else {
-      entry.count++;
-    }
-  } else {
-    rateLimitMap.set(key, { count: 1, timestamp: now });
+  if (res && res.request_count > maxRequests) {
+    return error('Rate limit exceeded. Please try again later.', 429);
   }
 
   return null;

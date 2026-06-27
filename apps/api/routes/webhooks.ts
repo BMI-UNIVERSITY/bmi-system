@@ -102,9 +102,10 @@ export async function handleListDeadLetters(_request: Request, env: Env): Promis
 
 /** POST /api/webhooks/retry/:id — admin: manually retry a dead-letter event */
 export async function handleRetryDeadLetter(
-  _request: Request,
+  request: Request,
   env: Env,
   deadLetterId: string,
+  ctx: ExecutionContext,
 ): Promise<Response> {
   const dl = await env.DB.prepare(
     `SELECT dl.payload, el.event_type
@@ -129,7 +130,7 @@ export async function handleRetryDeadLetter(
   await env.DB.prepare('DELETE FROM webhook_dead_letters WHERE id = ?').bind(deadLetterId).run();
 
   // Dispatch without awaiting (fire-and-forget retry)
-  dispatchWebhook(env, dl.event_type as WebhookEventType, data).catch(() => {});
+  ctx.waitUntil(dispatchWebhook(env, dl.event_type as WebhookEventType, data).catch(() => {}));
 
   return ok({ retrying: true, event_type: dl.event_type });
 }

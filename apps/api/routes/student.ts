@@ -90,6 +90,10 @@ export async function handleGetFinances(request: Request, env: Env, userId: stri
 }
 
 export async function handlePayInvoice(request: Request, env: Env, userId: string, invoiceId: string): Promise<Response> {
+  const invoice = await env.DB.prepare('SELECT status FROM invoices WHERE id = ? AND student_id = ?').bind(invoiceId, userId).first();
+  if (!invoice) return error('Invoice not found', 404);
+  if (invoice.status === 'paid') return error('Invoice is already paid', 400);
+
   // Mock payment gateway: Just mark it as paid
   await env.DB.prepare(
     'UPDATE invoices SET status = "paid" WHERE id = ? AND student_id = ?'

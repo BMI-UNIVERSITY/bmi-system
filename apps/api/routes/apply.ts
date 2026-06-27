@@ -201,7 +201,8 @@ export async function handleUpdateStatus(
   request: Request,
   env: Env,
   appId: string,
-  adminId: string
+  adminId: string,
+  ctx: ExecutionContext
 ): Promise<Response> {
   let body: { status: string; notes?: string };
   try {
@@ -254,14 +255,16 @@ export async function handleUpdateStatus(
   }
 
   // Fire outbound webhook — non-blocking, errors handled internally
-  dispatchWebhook(env, 'application.status_changed', {
-    application_id: appId,
-    old_status: oldStatus,
-    new_status: status,
-    program: app.program,
-    user_id: app.user_id,
-    changed_at: new Date().toISOString(),
-  }).catch(() => {});
+  ctx.waitUntil(
+    dispatchWebhook(env, 'application.status_changed', {
+      application_id: appId,
+      old_status: oldStatus,
+      new_status: status,
+      program: app.program,
+      user_id: app.user_id,
+      changed_at: new Date().toISOString(),
+    }).catch(() => {})
+  );
 
   return ok({ application_id: appId, old_status: oldStatus, new_status: status });
 }

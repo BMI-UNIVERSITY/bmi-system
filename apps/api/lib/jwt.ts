@@ -55,17 +55,21 @@ export async function verifyJWT(token: string, secret: string): Promise<Record<s
   }
 }
 
-export async function hashPassword(password: string): Promise<string> {
+export async function hashPassword(password: string, pepper: string): Promise<string> {
   const salt = crypto.getRandomValues(new Uint8Array(16));
+  
+  const pepperKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(pepper), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const pepperedPassword = await crypto.subtle.sign('HMAC', pepperKey, new TextEncoder().encode(password));
+
   const keyMaterial = await crypto.subtle.importKey(
     'raw',
-    new TextEncoder().encode(password),
+    pepperedPassword,
     { name: 'PBKDF2' },
     false,
     ['deriveBits']
   );
   const hashBuffer = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+    { name: 'PBKDF2', salt, iterations: 50000, hash: 'SHA-256' },
     keyMaterial,
     256
   );
@@ -74,24 +78,33 @@ export async function hashPassword(password: string): Promise<string> {
   return `pbkdf2:${saltHex}:${hashHex}`;
 }
 
-export async function verifyPassword(password: string, stored: string): Promise<boolean> {
+export async function verifyPassword(password: string, stored: string, pepper: string): Promise<boolean> {
   try {
     const [, saltHex, storedHash] = stored.split(':');
     const salt = new Uint8Array(saltHex.match(/.{2}/g)!.map(h => parseInt(h, 16)));
+    
+    const pepperKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(pepper), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const pepperedPassword = await crypto.subtle.sign('HMAC', pepperKey, new TextEncoder().encode(password));
+
     const keyMaterial = await crypto.subtle.importKey(
       'raw',
-      new TextEncoder().encode(password),
+      pepperedPassword,
       { name: 'PBKDF2' },
       false,
       ['deriveBits']
     );
     const hashBuffer = await crypto.subtle.deriveBits(
-      { name: 'PBKDF2', salt, iterations: 100000, hash: 'SHA-256' },
+      { name: 'PBKDF2', salt, iterations: 50000, hash: 'SHA-256' },
       keyMaterial,
       256
     );
     const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-    return hashHex === storedHash;
+    if (hashHex.length !== storedHash.length) return false;
+    let mismatch = 0;
+    for (let i = 0; i < hashHex.length; i++) {
+      mismatch |= hashHex.charCodeAt(i) ^ storedHash.charCodeAt(i);
+    }
+    return mismatch === 0;
   } catch {
     return false;
   }

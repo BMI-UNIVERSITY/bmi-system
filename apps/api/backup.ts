@@ -21,51 +21,59 @@ export default {
     const encryptionKey = env.BACKUP_ENCRYPTION_KEY;
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    const backupKey = `d1-backups/bmi-portal-db-${timestamp}.sql`;
+    const backupDir = `d1-backups/bmi-portal-db-${timestamp}`;
 
     const tables = [
       'users', 'applications', 'documents', 'recommendation_requests',
       'application_status_logs', 'password_reset_tokens', 'admin_audit_logs',
-      'courses', 'enrollments', 'invoices'
+      'sessions', 'rate_limits', 'email_verifications', 'oauth_accounts',
+      'app_config', 'courses', 'enrollments', 'invoices', 'cms_pages',
+      'cms_posts', 'cms_media', 'student_settings', 'support_tickets',
+      'sync_event_log', 'webhook_dead_letters', 'students', 'staff',
+      'faculties', 'departments', 'programs', 'academic_terms',
+      '_migrations', 'grades', 'certificates'
     ];
 
-    let backupSql = `-- BMI Portal D1 Backup - ${timestamp}\n\n`;
+    // Housekeeping: delete expired sessions and rate limits
+    ctx.waitUntil((async () => {
+      try {
+        await env.DB.prepare('DELETE FROM sessions WHERE expires_at < datetime("now")').run();
+        const oldWindow = (Math.floor(Date.now() / 60000) - 2).toString();
+        await env.DB.prepare('DELETE FROM rate_limits WHERE window_start < ?').bind(oldWindow).run();
+      } catch (e) {
+        console.error('Housekeeping error:', e);
+      }
+    })());
 
     for (const table of tables) {
-      backupSql += `-- Table: ${table}\n`;
-      const { results } = await env.DB.prepare(`SELECT * FROM ${table}`).all();
-      if (results.length > 0) {
-        backupSql += `INSERT INTO ${table} VALUES\n`;
-        backupSql += results.map(row => {
-          const values = Object.values(row).map(val => {
-            if (val === null) return 'NULL';
-            if (typeof val === 'string') return `'${val.replace(/'/g, "''")}'`;
-            return String(val);
-          }).join(', ');
-          return `  (${values})`;
-        }).join(',\n');
-        backupSql += ';\n\n';
+      try {
+        const { results } = await env.DB.prepare(`SELECT * FROM ${table}`).all();
+        if (results.length === 0) continue;
+
+        let body: ArrayBuffer | string = JSON.stringify(results);
+        const metadata: Record<string, string> = { table };
+
+        if (encryptionKey) {
+          body = await encryptBackup(body, encryptionKey);
+          metadata['encrypted'] = 'aes-256-gcm';
+        }
+
+        const backupKey = `${backupDir}/${table}.json`;
+        await env.BACKUP_BUCKET.put(backupKey, body, {
+          httpMetadata: {
+            contentType: encryptionKey ? 'application/octet-stream' : 'application/json',
+          },
+          customMetadata: metadata,
+        });
+      } catch (e) {
+        console.error(`Error backing up table ${table}:`, e);
       }
     }
 
-    let body: ArrayBuffer | string = backupSql;
-    const metadata: Record<string, string> = {};
-
-    if (encryptionKey) {
-      body = await encryptBackup(backupSql, encryptionKey);
-      metadata['encrypted'] = 'aes-256-gcm';
-      console.log(`Backup encrypted with AES-256-GCM: ${backupKey}`);
-    } else {
-      console.warn(`WARNING: Backup stored unencrypted: ${backupKey}. Set BACKUP_ENCRYPTION_KEY (64 hex chars) as a Cloudflare secret.`);
+    if (!encryptionKey) {
+      console.warn(`WARNING: Backup stored unencrypted: ${backupDir}. Set BACKUP_ENCRYPTION_KEY (64 hex chars) as a Cloudflare secret.`);
     }
 
-    await env.BACKUP_BUCKET.put(backupKey, body, {
-      httpMetadata: {
-        contentType: encryptionKey ? 'application/octet-stream' : 'text/plain',
-      },
-      customMetadata: metadata,
-    });
-
-    console.log(`Backup created: ${backupKey}`);
+    console.log(`Backup completed: ${backupDir}`);
   },
 };
