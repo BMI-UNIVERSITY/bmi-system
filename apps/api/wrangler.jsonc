@@ -2,11 +2,12 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "bmi-api",
   "compatibility_date": "2025-01-01",
+  "compatibility_flags": ["nodejs_compat"],
   "main": "index.ts",
 
   // ─── Cloudflare Account ───────────────────────────────────────────
   // Set this to your account ID: npx wrangler whoami
-
+  "account_id": "2557f2f143734abc82bd4c80be750eb6",
 
   // ─── D1 Database (Single Source of Truth) ─────────────────────────
   // This is the existing bmi-portal-db — now extended to serve both Portal & UMS.
@@ -15,7 +16,7 @@
     {
       "binding": "DB",
       "database_name": "bmi-portal-db",
-      "database_id": "${CLOUDFLARE_D1_ID}"
+      "database_id": "a5e26ad9-5d8e-4afa-9ad9-8cd55c1cbf1a"
     }
   ],
 
