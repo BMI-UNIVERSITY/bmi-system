@@ -53,17 +53,14 @@ export async function handleRegister(request: Request, env: Env): Promise<Respon
 
   const passwordHash = await hashPassword(password, env.JWT_SECRET);
   const userId = crypto.randomUUID();
-  // DEV_ONLY: auto-verify email (remove these lines to reinstate verification)
-  const isVerified = 1;
-  const verificationToken = null;
+  const isVerified = 0;
+  const verificationToken = crypto.randomUUID();
 
   await env.DB.prepare(
     `INSERT INTO users (id, email, password_hash, first_name, last_name, phone, role, is_verified)
      VALUES (?, ?, ?, ?, ?, ?, 'applicant', ?)`
   ).bind(userId, email.toLowerCase(), passwordHash, cleanFirstName, cleanLastName, phone || null, isVerified).run();
 
-  // DEV_ONLY: skip sending verification email (uncomment below to reinstate)
-  /*
   await env.DB.prepare(
     `INSERT INTO email_verifications (id, user_id, token, expires_at)
      VALUES (?, ?, ?, datetime('now', '+24 hours'))`
@@ -75,18 +72,38 @@ export async function handleRegister(request: Request, env: Env): Promise<Respon
       to: email.toLowerCase(),
       subject: 'BMI University — Verify Your Email Address',
       html: `
-        <h2>Welcome to BMI University!</h2>
-        <p>Thank you for creating an account, ${cleanFirstName}.</p>
-        <p>Please verify your email address by clicking the link below:</p>
-        <p><a href="${verifyUrl}" style="display:inline-block;padding:12px 24px;background:#d4af37;color:#0f172a;text-decoration:none;border-radius:6px;font-weight:bold;">Verify Email Address</a></p>
-        <p>Or copy this link: ${verifyUrl}</p>
-        <p>This link expires in 24 hours.</p>
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 40px 20px;">
+          <div style="background: #0f172a; padding: 24px; border-radius: 8px 8px 0 0; text-align: center;">
+            <h1 style="color: #d4af37; margin: 0; font-size: 24px;">BMI University</h1>
+            <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Email Verification</p>
+          </div>
+          <div style="background: #fff; padding: 32px; border-radius: 0 0 8px 8px; border: 1px solid #e2e8f0;">
+            <h2 style="color: #0f172a;">Welcome, ${cleanFirstName}!</h2>
+            <p style="color: #475569; line-height: 1.6;">
+              Thank you for creating an account at BMI University. Please verify your email address to activate your account.
+            </p>
+            <div style="margin: 32px 0; text-align: center;">
+              <a href="${verifyUrl}"
+                 style="display: inline-block; background: #d4af37; color: #0f172a; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px;">
+                Verify Email Address
+              </a>
+            </div>
+            <p style="color: #94a3b8; font-size: 13px;">
+              Or copy this link into your browser:<br>
+              <a href="${verifyUrl}" style="color: #d4af37; word-break: break-all;">${verifyUrl}</a>
+            </p>
+            <p style="color: #94a3b8; font-size: 13px;">This link expires in 24 hours.</p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
+            <p style="color: #94a3b8; font-size: 12px;">
+              If you did not create this account, you can safely ignore this email.
+            </p>
+          </div>
+        </div>
       `
     }, env.RESEND_API_KEY);
   }
-  */
 
-  return ok({ message: 'Account created successfully.', user_id: userId });
+  return ok({ message: 'Account created! Please check your email to verify your account before logging in.' });
 }
 
 export async function handleVerifyEmail(request: Request, env: Env): Promise<Response> {
