@@ -67,7 +67,7 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
-          VITE_API_URL: ${{ secrets.UMS_API_URL }}
+          VITE_API_URL: "https://bmi-api.bmiuniversity107.workers.dev"
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
@@ -103,7 +103,7 @@ jobs:
         run: npm run build
         env:
           NODE_ENV: production
-          VITE_API_URL: ${{ secrets.UMS_API_URL }}
+          VITE_API_URL: "https://bmi-api.bmiuniversity107.workers.dev"
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
