@@ -95,33 +95,41 @@ export async function login(email: string, password: string, rememberMe: boolean
 
     if (data.success) {
       // Handle MFA case
-      if (data.requires_mfa) {
+      if (data.requires_mfa || data.data?.requires_mfa) {
         return {
           success: true,
           data: {
             mfaRequired: true,
-            user: data.user,
+            user: data.data?.user || data.user,
           }
         };
       }
       // Regular login success - store user info
+      // API returns: { success: true, data: { csrf_token, user } }
+      const apiUser = data.data?.user || data.user;
+      if (!apiUser) {
+        return {
+          success: false,
+          error: 'Invalid server response: user data missing',
+        };
+      }
       const user = {
-        id: data.user.id,
-        email: data.user.email,
-        name: `${data.user.first_name} ${data.user.last_name}`,
-        role: data.user.role,
+        id: apiUser.id,
+        email: apiUser.email,
+        name: `${apiUser.first_name} ${apiUser.last_name}`,
+        role: apiUser.role,
         isActive: true,
       };
       localStorage.setItem(USER_KEY, JSON.stringify(user));
       localStorage.setItem(REMEMBER_KEY, JSON.stringify(rememberMe));
       const expiryTime = Date.now() + (7 * 24 * 60 * 60 * 1000); // 7 days (matches backend cookie)
       localStorage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString());
-      _memoryToken = data.csrf_token; // Store CSRF token in memory
+      _memoryToken = data.data?.csrf_token || data.csrf_token; // Store CSRF token in memory
 
       return {
         success: true,
         data: {
-          token: data.csrf_token,
+          token: data.data?.csrf_token || data.csrf_token,
           user,
         }
       };
