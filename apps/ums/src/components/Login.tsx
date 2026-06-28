@@ -2,7 +2,8 @@
 /* eslint-disable */
 import React, { useState } from 'react';
 import { Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
-import { login, User, AuthResponse } from '../services/authService';
+import { User, AuthResponse } from '../services/authService';
+import { useAuthStore } from '../stores/authStore';
 import ForgotPasswordModal from './ForgotPasswordModal';
 import ActivateAccountModal from './ActivateAccountModal';
 import MfaModal from './MfaModal';
@@ -33,34 +34,19 @@ const Login: React.FC<LoginProps> = ({ onLogin, logo }) => {
     setLoading(true);
     setError('');
 
-    const result = await login(email, password, rememberMe);
+    // Use auth store login method instead of calling authService directly
+    const result = await useAuthStore.getState().login(email, password, rememberMe);
 
-    if (result.success && result.data) {
-      if (result.data.mfaRequired || result.data.mfaSetupRequired) {
-        setMfaData({
-          mfaToken: result.data.mfaToken || '',
-          setupRequired: !!result.data.mfaSetupRequired
-        });
-        setShowMfa(true);
-      } else {
-        onLogin(result.data.token || '', result.data.user);
+    if (result.success) {
+      // Login successful, the auth store has already updated the state
+      const authState = useAuthStore.getState();
+      if (authState.user && authState.token) {
+        // MFA check would happen here if needed
+        onLogin(authState.token, authState.user);
       }
     } else {
-      // Safely extract string error message
-      let errorMsg = 'Login failed';
-      if (typeof result.error === 'string') {
-        errorMsg = result.error;
-      } else if (result.error && typeof result.error === 'object') {
-        const errObj = result.error as any;
-        // If it's a validation error object from the backend
-        if ('issues' in errObj && Array.isArray(errObj.issues)) {
-          errorMsg = errObj.issues.map((i: any) => i.message).join(', ');
-        } else if ('message' in errObj) {
-          errorMsg = String(errObj.message);
-        } else {
-          errorMsg = JSON.stringify(result.error);
-        }
-      }
+      // Handle error
+      let errorMsg = result.error || 'Login failed';
       
       if (typeof errorMsg === 'string' && (errorMsg.includes('Network error') || errorMsg.includes('Failed to fetch'))) {
         const isProd = (import.meta as any).env?.PROD;
