@@ -39,11 +39,8 @@ const Login: React.FC<LoginProps> = ({ onLogin, logo }) => {
 
     if (result.success) {
       // Login successful, the auth store has already updated the state
-      const authState = useAuthStore.getState();
-      if (authState.user && authState.token) {
-        // MFA check would happen here if needed
-        onLogin(authState.token, authState.user);
-      }
+      // The App component will automatically re-render when isLoggedIn changes
+      // No need to call onLogin callback
     } else {
       // Handle error
       let errorMsg = result.error || 'Login failed';

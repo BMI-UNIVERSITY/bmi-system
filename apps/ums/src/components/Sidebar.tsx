@@ -40,6 +40,8 @@ interface SidebarProps {
   logo: string;
   isOpen: boolean;
   onClose: () => void;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
 }
 
 // Map view IDs to route paths
@@ -78,12 +80,17 @@ const Sidebar: React.FC<SidebarProps> = ({
   logo,
   isOpen,
   onClose,
+  isCollapsed,
+  onToggleCollapse,
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { i18n } = useTranslation();
   const openAIModal = useUIStore((s) => s.openAIModal);
   const user = useAuthStore((s) => s.user);
+
+  console.log('[Sidebar] User object from authStore:', user);
+  console.log('[Sidebar] User role:', user?.role);
 
   // Role-specific portal items shown only for matching roles
   const roleItems: NavItem[] =
@@ -195,7 +202,6 @@ const Sidebar: React.FC<SidebarProps> = ({
       const route = viewToRoute[viewId] || `/${viewId}`;
       navigate(route);
     }
-    onClose();
   };
 
   // Determine active item from current URL path
@@ -212,44 +218,59 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <>
-      {/* Backdrop Overlay */}
+      {/* Mobile backdrop overlay - only show on mobile when open */}
       <div
-        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-[90] transition-opacity duration-300 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
+        className={`fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden transition-opacity duration-300 ${isOpen ? "opacity-100" : "opacity-0 pointer-events-none"}`}
         onClick={onClose}
         aria-hidden="true"
       />
 
-      {/* Floating Drawer */}
+      {/* Fixed Sidebar - Always visible on desktop, slides in on mobile */}
       <div
-        className={`h-[calc(100vh-2rem)] w-72 bg-[radial-gradient(circle_at_top_left,_var(--tw-gradient-stops))] from-[#7B1FA2] via-[#4B0082] to-[#1a0033] text-white flex flex-col shadow-2xl fixed left-4 top-4 z-[100] border border-[#FFD700]/20 dark:border-gray-800 transition-transform duration-300 ease-out rounded-3xl overflow-hidden ${isOpen ? "translate-x-0" : "-translate-x-[calc(100%+2rem)]"}`}
+        className={`fixed left-0 top-0 h-screen bg-[#1a1a1a] border-r border-gray-800 flex flex-col shadow-2xl z-50 transition-all duration-300 ease-out ${
+          isCollapsed ? "w-16" : "w-64"
+        } ${
+          isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        }`}
       >
         {/* Header Area */}
-        <div className="p-6 flex flex-col items-center border-b border-[#FFD700]/20 bg-black/10 backdrop-blur-sm relative">
+        <div className={`p-4 flex ${isCollapsed ? 'justify-center' : 'justify-between'} items-center border-b border-gray-800`}>
+          {!isCollapsed && (
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 relative">
+                <img
+                  src={logo}
+                  alt="BMI University"
+                  className="w-full h-full object-contain rounded-lg border border-[#FFD700]"
+                />
+              </div>
+              <div>
+                <h1 className="text-sm font-bold text-[#FFD700]">BMI University</h1>
+                <span className="text-[8px] text-gray-400 uppercase tracking-wider">ERP System</span>
+              </div>
+            </div>
+          )}
+          {isCollapsed && (
+            <div className="w-8 h-8 relative">
+              <img
+                src={logo}
+                alt="BMI"
+                className="w-full h-full object-contain rounded-lg border border-[#FFD700]"
+              />
+            </div>
+          )}
+          {/* Close button for mobile */}
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 p-2 text-purple-200 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+            className="lg:hidden p-1 text-gray-400 hover:text-white hover:bg-white/10 rounded transition-colors"
           >
             <X size={20} />
           </button>
-
-          <div className="w-16 h-16 mb-3 relative filter drop-shadow-lg transition-transform hover:scale-105 duration-300">
-            <img
-              src={logo}
-              alt="BMI University Logo"
-              className="w-full h-full object-contain rounded-xl border-2 border-[#FFD700] shadow-[0_0_15px_rgba(255,215,0,0.3)] bg-white"
-            />
-          </div>
-          <h1 className="text-md font-bold text-center leading-tight bg-gradient-to-r from-[#FFD700] to-[#FDB931] bg-clip-text text-transparent drop-shadow-sm">
-            BMI University
-          </h1>
-          <span className="text-[8px] text-purple-200 opacity-80 uppercase tracking-widest mt-1">
-            Institutional ERP
-          </span>
         </div>
 
         {/* Navigation */}
         <nav
-          className="flex-1 overflow-y-auto no-scrollbar py-4 px-3 space-y-1"
+          className="flex-1 overflow-y-auto py-2 px-2 space-y-1 no-scrollbar"
           aria-label="Main navigation"
         >
           {allMenuItems.map((item) => {
@@ -259,52 +280,59 @@ const Sidebar: React.FC<SidebarProps> = ({
               <button
                 key={item.id}
                 onClick={() => handleNavigate(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 group ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative ${
                   isActive
-                    ? "bg-gradient-to-r from-[#FFD700]/20 to-transparent border-l-4 border-[#FFD700] text-white shadow-lg backdrop-blur-md"
-                    : "text-purple-200 hover:bg-white/10 hover:text-[#FFD700]"
+                    ? "bg-[#2a2a2a] text-[#FFD700]"
+                    : "text-gray-400 hover:bg-[#2a2a2a] hover:text-white"
                 }`}
+                title={isCollapsed ? item.label : undefined}
                 aria-current={isActive ? "page" : undefined}
               >
                 <Icon
-                  size={18}
-                  className={`transition-colors duration-300 ${isActive ? "text-[#FFD700]" : "text-purple-300 group-hover:text-[#FFD700]"}`}
+                  size={20}
+                  className={`flex-shrink-0 transition-colors ${isActive ? "text-[#FFD700]" : "text-gray-400 group-hover:text-white"}`}
                 />
-                <span
-                  className={`text-[11px] tracking-wide font-medium ${isActive ? "translate-x-1 font-bold" : ""} transition-transform`}
-                >
-                  {item.label}
-                </span>
+                {!isCollapsed && (
+                  <span className="text-sm font-medium truncate">{item.label}</span>
+                )}
+                {isActive && (
+                  <div className="absolute left-0 top-0 bottom-0 w-1 bg-[#FFD700] rounded-r" />
+                )}
               </button>
             );
           })}
         </nav>
 
-        {/* Footer / Logout */}
-        <div className="p-4 border-t border-[#FFD700]/20 bg-black/20 backdrop-blur-sm space-y-3">
-          {/* Language Toggle */}
-          <div className="flex flex-col gap-2 px-3">
-            <span className="text-[9px] font-black uppercase tracking-widest text-purple-300">Language</span>
-            <div className="flex flex-wrap gap-1">
-              {['en', 'sw', 'es', 'fr', 'ar'].map((lang) => (
-                <button 
-                  key={lang}
-                  onClick={() => i18n.changeLanguage(lang)}
-                  className={`px-2 py-1 text-[9px] font-bold rounded-md transition-all ${i18n.language.startsWith(lang) ? 'bg-[#FFD700] text-[#4B0082]' : 'text-purple-300 hover:bg-white/10'}`}
-                >
-                  {lang.toUpperCase()}
-                </button>
-              ))}
-            </div>
-          </div>
+        {/* Footer */}
+        <div className={`p-2 border-t border-gray-800 space-y-2 ${isCollapsed ? '' : 'px-4'}`}>
+          {/* Toggle collapse button - desktop only */}
+          <button
+            onClick={onToggleCollapse}
+            className="hidden lg:flex w-full items-center gap-3 px-3 py-2 rounded-lg text-gray-400 hover:bg-[#2a2a2a] hover:text-white transition-colors"
+            title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            <LayoutDashboard size={20} className="flex-shrink-0" />
+            {!isCollapsed && <span className="text-sm font-medium">Collapse</span>}
+          </button>
 
+          {/* Logout */}
           <button
             onClick={onLogout}
-            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl text-purple-200 hover:bg-red-500/20 hover:text-red-100 transition-colors"
+            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-gray-400 hover:bg-red-500/20 hover:text-red-400 transition-colors ${isCollapsed ? 'justify-center' : ''}`}
+            title={isCollapsed ? "Log out" : undefined}
           >
-            <LogOut size={18} />
-            <span className="text-[11px] font-medium">Log Out</span>
+            <LogOut size={20} className="flex-shrink-0" />
+            {!isCollapsed && <span className="text-sm font-medium">Log Out</span>}
           </button>
+
+          {/* User info - only show when expanded */}
+          {!isCollapsed && user && (
+            <div className="px-3 py-2 text-xs text-gray-500 border-t border-gray-800 mt-2">
+              <div className="truncate font-medium text-gray-400">{user.name}</div>
+              <div className="truncate">{user.email}</div>
+              <div className="uppercase text-[10px] text-[#FFD700] mt-1">{user.role}</div>
+            </div>
+          )}
         </div>
       </div>
     </>

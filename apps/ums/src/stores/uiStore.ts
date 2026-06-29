@@ -11,6 +11,7 @@ interface UIState {
   theme: 'light' | 'dark';
   logo: string;
   isSidebarOpen: boolean;
+  isSidebarCollapsed: boolean;
   isAIModalOpen: boolean;
   isNotificationCenterOpen: boolean;
 
@@ -20,6 +21,7 @@ interface UIState {
   openSidebar: () => void;
   closeSidebar: () => void;
   toggleSidebar: () => void;
+  toggleSidebarCollapse: () => void;
   openAIModal: () => void;
   closeAIModal: () => void;
   openNotificationCenter: () => void;
@@ -31,6 +33,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   theme: 'light',
   logo: '/BMI.svg',
   isSidebarOpen: false,
+  isSidebarCollapsed: false,
   isAIModalOpen: false,
   isNotificationCenterOpen: false,
 
@@ -53,6 +56,7 @@ export const useUIStore = create<UIState>((set, get) => ({
   openSidebar: () => set({ isSidebarOpen: true }),
   closeSidebar: () => set({ isSidebarOpen: false }),
   toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
+  toggleSidebarCollapse: () => set((state) => ({ isSidebarCollapsed: !state.isSidebarCollapsed })),
 
   openAIModal: () => set({ isAIModalOpen: true }),
   closeAIModal: () => set({ isAIModalOpen: false }),

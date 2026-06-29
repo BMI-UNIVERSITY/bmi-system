@@ -45,10 +45,12 @@ function AuthenticatedLayout() {
     theme,
     logo,
     isSidebarOpen,
+    isSidebarCollapsed,
     isAIModalOpen,
     isNotificationCenterOpen,
     closeSidebar,
     openSidebar,
+    toggleSidebarCollapse,
     closeAIModal,
     openNotificationCenter,
     closeNotificationCenter,
@@ -74,10 +76,10 @@ function AuthenticatedLayout() {
 
   return (
     <div className="flex bg-[#F8F9FA] dark:bg-[#0a0015] h-screen font-sans transition-colors duration-300 relative overflow-hidden">
-      {/* Drawer Trigger Button */}
+      {/* Hamburger Menu Button - Mobile Only */}
       <button
         onClick={openSidebar}
-        className={`fixed top-3 left-4 z-50 p-2 bg-[#4B0082] text-white rounded-full shadow-lg hover:scale-110 transition-all border-2 border-[#FFD700] ${isSidebarOpen ? "opacity-0 pointer-events-none" : "opacity-100"}`}
+        className={`lg:hidden fixed top-3 left-4 z-30 p-2 bg-[#4B0082] text-white rounded-full shadow-lg hover:scale-110 transition-all border-2 border-[#FFD700] ${isSidebarOpen ? "opacity-0 pointer-events-none" : "opacity-100"}`}
         aria-label="Open Menu"
       >
         <Menu size={20} />
@@ -86,7 +88,7 @@ function AuthenticatedLayout() {
       {/* Notification Bell */}
       <button
         onClick={openNotificationCenter}
-        className={`fixed top-3 right-4 z-50 p-2 bg-white dark:bg-gray-800 text-[#4B0082] dark:text-[#FFD700] rounded-full shadow-lg hover:scale-110 transition-all border-2 border-[#4B0082] dark:border-[#FFD700]`}
+        className={`fixed top-3 right-4 z-30 p-2 bg-white dark:bg-gray-800 text-[#4B0082] dark:text-[#FFD700] rounded-full shadow-lg hover:scale-110 transition-all border-2 border-[#4B0082] dark:border-[#FFD700]`}
         aria-label="Notifications"
       >
         <Bell size={20} />
@@ -104,15 +106,19 @@ function AuthenticatedLayout() {
         logo={logo}
         isOpen={isSidebarOpen}
         onClose={closeSidebar}
+        isCollapsed={isSidebarCollapsed}
+        onToggleCollapse={toggleSidebarCollapse}
       />
 
-      {/* Main Content Area */}
-      <div className="flex-1 w-full p-2 md:p-4 lg:p-6 h-full overflow-hidden box-border">
-        <main className="h-full rounded-3xl bg-white/50 dark:bg-black/10 border border-white/20 dark:border-gray-800 shadow-sm relative backdrop-blur-sm overflow-y-auto no-scrollbar flex flex-col">
-          <ErrorBoundary>
-            <AppRoutes />
-          </ErrorBoundary>
-        </main>
+      {/* Main Content Area - adjust margin based on sidebar state */}
+      <div className={`flex-1 h-full overflow-hidden transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
+        <div className="w-full p-2 md:p-4 lg:p-6 h-full">
+          <main className="h-full rounded-3xl bg-white/50 dark:bg-black/10 border border-white/20 dark:border-gray-800 shadow-sm relative backdrop-blur-sm overflow-y-auto no-scrollbar flex flex-col">
+            <ErrorBoundary>
+              <AppRoutes />
+            </ErrorBoundary>
+          </main>
+        </div>
       </div>
 
       <AIModal isOpen={isAIModalOpen} onClose={closeAIModal} />

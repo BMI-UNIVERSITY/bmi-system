@@ -120,12 +120,14 @@ export async function login(email: string, password: string, rememberMe: boolean
         role: apiUser.role,
         isActive: true,
       };
+      console.log('[authService] Login success - User object:', user);
       localStorage.setItem(USER_KEY, JSON.stringify(user));
       localStorage.setItem(REMEMBER_KEY, JSON.stringify(rememberMe));
       const expiryTime = Date.now() + (7 * 24 * 60 * 60 * 1000); // 7 days (matches backend cookie)
       localStorage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString());
       _memoryToken = data.data?.csrf_token || data.csrf_token; // Store CSRF token in memory
 
+      console.log('[authService] Returning success with user role:', user.role);
       return {
         success: true,
         data: {
