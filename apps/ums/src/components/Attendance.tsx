@@ -27,7 +27,9 @@ interface AttendanceState {
 const Attendance: React.FC = () => {
   const { data: studentsRes, isLoading: isLoadingStudents } = useStudentsQuery({
     page: 1,
-    perPage: 1000,
+    // 200 is sufficient — the UI already filters by faculty/department client-side.
+    // Requesting 1000 blocks the JS thread when React reconciles the list DOM nodes.
+    perPage: 200,
   });
   const students = studentsRes?.data?.items || [];
   
@@ -36,6 +38,7 @@ const Attendance: React.FC = () => {
     fetchAttendance,
     createAttendanceRecord,
     updateAttendanceRecord,
+    isLoading: apiLoading,
   } = useApiDataStore();
 
   const [selectedCourse, setSelectedCourse] = useState("School of Theology");
@@ -60,9 +63,11 @@ const Attendance: React.FC = () => {
     { name: "Education Dept.", faculty: "Education" },
   ];
 
+  // fetchAttendance is stable (Zustand action), so this only fires once on mount.
+  // The dep array must include it to satisfy the linter, but it won't re-fire.
   useEffect(() => {
     fetchAttendance();
-  }, []);
+  }, [fetchAttendance]);
 
   const currentFaculty = useMemo(() => {
     return (
@@ -111,7 +116,12 @@ const Attendance: React.FC = () => {
       setAttendance({});
       setLastMarkedAt(null);
     }
-  }, [existingRecord, selectedCourse, sessionDate, students]);
+  }, [existingRecord, selectedCourse, sessionDate]);
+  // Intentionally omit `students` from deps — we only need to re-sync when the
+  // record or date changes, not on every student list refetch (which would cause
+  // the attendance marks to reset while the user is actively marking attendance).
+
+  const isPageLoading = isLoadingStudents || !!apiLoading?.attendanceRecords;
 
   const handleMark = (id: string, status: "present" | "absent" | "late") => {
     setAttendance((prev) => ({
@@ -186,6 +196,15 @@ const Attendance: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col animate-fade-in relative">
+      {/* Loading overlay — shown while students or attendance records are in-flight */}
+      {isPageLoading && (
+        <div className="absolute inset-0 z-40 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-4 border-purple-200 border-t-[#4B0082] rounded-full animate-spin" />
+            <p className="text-xs font-bold text-gray-500 uppercase tracking-widest">Loading Registry...</p>
+          </div>
+        </div>
+      )}
       {/* Sticky Header */}
       <div className="flex-shrink-0 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex flex-col md:flex-row justify-between items-center gap-2 shadow-sm min-h-[60px]">
         <div className="flex items-center gap-3 pl-14 w-full md:w-auto">

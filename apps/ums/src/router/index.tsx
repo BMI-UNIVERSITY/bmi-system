@@ -12,6 +12,7 @@
 import React, { Suspense, lazy } from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 import { useAuthStore } from "../stores/authStore";
+import { ScrollToTop } from "../components/ScrollToTop";
 
 // Lazy-loaded page components for code splitting
 const Dashboard = lazy(() => import("../components/Dashboard"));
@@ -89,6 +90,7 @@ function RoleGuard({
 export function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader />}>
+      <ScrollToTop />
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/dashboard" element={<Dashboard />} />

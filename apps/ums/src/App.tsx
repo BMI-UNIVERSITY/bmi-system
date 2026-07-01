@@ -1,7 +1,7 @@
 /* eslint-disable */
 /* eslint-disable */
 import React, { useEffect } from "react";
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { Menu, Bell } from "lucide-react";
 import Sidebar from "./components/Sidebar";
 import AIModal from "./components/AIModal";
@@ -41,6 +41,7 @@ function PublicRoutes() {
 function AuthenticatedLayout() {
   const { logout: authLogout } = useAuthStore();
   const { fetchAllCoreData, clearAll } = useDataStore();
+  const { pathname } = useLocation();
   const {
     theme,
     logo,
@@ -95,7 +96,7 @@ function AuthenticatedLayout() {
       </button>
 
       <Sidebar
-        currentView={window.location.pathname.slice(1) || "dashboard"}
+        currentView={pathname.slice(1) || "dashboard"}
         onChangeView={() => {
           /* Navigation handled by Sidebar using useNavigate */
         }}
@@ -113,7 +114,7 @@ function AuthenticatedLayout() {
       {/* Main Content Area - adjust margin based on sidebar state */}
       <div className={`flex-1 h-full overflow-hidden transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
         <div className="w-full p-2 md:p-4 lg:p-6 h-full">
-          <main className="h-full rounded-3xl bg-white/50 dark:bg-black/10 border border-white/20 dark:border-gray-800 shadow-sm relative backdrop-blur-sm overflow-y-auto no-scrollbar flex flex-col">
+          <main key={pathname} className="h-full rounded-3xl bg-white/50 dark:bg-black/10 border border-white/20 dark:border-gray-800 shadow-sm relative backdrop-blur-sm overflow-y-auto no-scrollbar flex flex-col">
             <ErrorBoundary>
               <AppRoutes />
             </ErrorBoundary>
