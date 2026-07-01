@@ -41,7 +41,7 @@ export async function handleGetRevenueTrend(request: Request, env: Env): Promise
     });
   }
 
-  return ok({
-    data: result
-  });
+  // ok(result) produces { success: true, data: result }
+  // Dashboard checks Array.isArray(d.data) so data must be the array itself
+  return ok(result);
 }

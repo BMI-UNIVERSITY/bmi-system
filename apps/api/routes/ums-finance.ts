@@ -61,7 +61,10 @@ export async function handleListTransactions(request: Request, env: Env): Promis
     reference: inv.id.substring(0, 8).toUpperCase()
   }));
 
-  return ok({
+  // Use json() directly (not ok()) so `data` is the items array itself,
+  // matching what the frontend expects: `transactionsRes?.data || []`
+  return json({
+    success: true,
     data: items,
     total,
     page,
