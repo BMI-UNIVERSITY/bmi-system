@@ -36,7 +36,7 @@ jobs:
   deploy-api:
     name: Deploy API Worker
     runs-on: ubuntu-latest
-    needs: changes
+    needs: [changes, test]
     if: github.event_name == 'push' && needs.changes.outputs.api == 'true'
     defaults:
       run:
@@ -70,7 +70,7 @@ jobs:
   deploy-portal:
     name: Deploy Portal (Cloudflare Pages)
     runs-on: ubuntu-latest
-    needs: changes
+    needs: [changes, test]
     if: github.event_name == 'push' && needs.changes.outputs.portal == 'true'
     defaults:
       run:
@@ -106,7 +106,7 @@ jobs:
   deploy-ums:
     name: Deploy UMS (Cloudflare Pages)
     runs-on: ubuntu-latest
-    needs: changes
+    needs: [changes, test]
     if: github.event_name == 'push' && needs.changes.outputs.ums == 'true'
     defaults:
       run:
@@ -166,7 +166,6 @@ jobs:
       - name: Type check API
         run: npm run type-check
         working-directory: apps/api
-        continue-on-error: true
 
       - name: Run API tests (includes contract tests)
         run: npm test
@@ -175,12 +174,10 @@ jobs:
       - name: Type check UMS frontend
         run: npm run type-check
         working-directory: apps/ums
-        continue-on-error: true
 
       - name: Run UMS tests
         run: npm test
         working-directory: apps/ums
-        continue-on-error: true
 
       - name: Install Playwright Browsers
         run: npx playwright install --with-deps
@@ -189,7 +186,6 @@ jobs:
       - name: Run UMS E2E tests
         run: npm run test:e2e
         working-directory: apps/ums
-        continue-on-error: true
 
       - name: Run npm audit
         run: npm audit --audit-level=high || true

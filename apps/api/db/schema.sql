@@ -10,7 +10,7 @@ CREATE TABLE IF NOT EXISTS users (
   first_name  TEXT NOT NULL,
   last_name   TEXT NOT NULL,
   phone       TEXT,
-  role        TEXT NOT NULL DEFAULT 'applicant' CHECK(role IN ('applicant', 'student', 'staff', 'admin')),
+  role        TEXT NOT NULL DEFAULT 'applicant' CHECK(role IN ('applicant', 'student', 'staff', 'admin', 'verifier')),
   is_verified INTEGER NOT NULL DEFAULT 0,
   verification_token TEXT,
   mfa_secret  TEXT,
@@ -22,9 +22,39 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role  ON users(role);
 
+CREATE TABLE IF NOT EXISTS persons (
+  id              TEXT PRIMARY KEY,
+  uid             TEXT UNIQUE NOT NULL,
+  national_id     TEXT,
+  passport_no     TEXT,
+  first_name      TEXT,
+  middle_name     TEXT,
+  last_name       TEXT,
+  gender          TEXT,
+  date_of_birth   TEXT,
+  nationality     TEXT,
+  created_at      TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at      TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_persons_uid ON persons(uid);
+
+CREATE TABLE IF NOT EXISTS uid_counters (
+  id              INTEGER PRIMARY KEY CHECK (id = 1),
+  last_serial     INTEGER NOT NULL DEFAULT 0
+);
+
+INSERT OR IGNORE INTO uid_counters (id, last_serial) VALUES (1, 10000);
+
+CREATE TABLE IF NOT EXISTS application_number_counters (
+  year            INTEGER PRIMARY KEY,
+  last_serial     INTEGER NOT NULL DEFAULT 0
+);
+
 CREATE TABLE IF NOT EXISTS applications (
   id              TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
   user_id         TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  application_number TEXT UNIQUE,
   program         TEXT NOT NULL,
   degree_level    TEXT NOT NULL CHECK(degree_level IN ('undergraduate','graduate','doctorate','certificate')),
   status          TEXT NOT NULL DEFAULT 'draft' CHECK(status IN ('draft','submitted','under_review','accepted','rejected','waitlisted')),
@@ -214,6 +244,7 @@ INSERT OR IGNORE INTO courses (code, title, description, credits, term, capacity
 ('PHY101', 'Physics for Engineers', 'Mechanics, heat, and sound.', 4, 'Fall 2026', 80);
 
 -- CMS Tables
+
 CREATE TABLE IF NOT EXISTS cms_pages (
   id              TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
   title           TEXT NOT NULL,
@@ -332,6 +363,70 @@ CREATE TABLE IF NOT EXISTS students (
 CREATE INDEX IF NOT EXISTS idx_students_reg_no ON students(reg_no);
 CREATE INDEX IF NOT EXISTS idx_students_status ON students(status);
 
+CREATE TABLE IF NOT EXISTS student_programmes (
+  id                  TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  uid                 TEXT NOT NULL REFERENCES persons(uid) ON DELETE CASCADE,
+  registration_number TEXT,
+  programme_id        TEXT NOT NULL REFERENCES programs(id) ON DELETE RESTRICT,
+  admission_year      INTEGER NOT NULL,
+  enrollment_date     TEXT NOT NULL,
+  completion_date     TEXT,
+  status              TEXT NOT NULL DEFAULT 'active' CHECK(status IN ('active', 'transferred', 'withdrawn', 'graduated', 'suspended')),
+  current_flag        INTEGER NOT NULL DEFAULT 1 CHECK(current_flag IN (0, 1)),
+  graduated_flag      INTEGER NOT NULL DEFAULT 0 CHECK(graduated_flag IN (0, 1)),
+  cgpa                REAL,
+  classification      TEXT,
+  created_at          TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_student_progs_uid       ON student_programmes(uid);
+CREATE INDEX IF NOT EXISTS idx_student_progs_programme ON student_programmes(programme_id);
+CREATE INDEX IF NOT EXISTS idx_student_progs_current   ON student_programmes(uid, current_flag);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_student_progs_one_current
+  ON student_programmes(uid)
+  WHERE current_flag = 1;
+
+CREATE TABLE IF NOT EXISTS regno_counters (
+  programme_id    TEXT    NOT NULL,
+  admission_year  INTEGER NOT NULL,
+  last_serial     INTEGER NOT NULL DEFAULT 0,
+  PRIMARY KEY (programme_id, admission_year)
+);
+
+CREATE TABLE IF NOT EXISTS lifecycle_events (
+  id               TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  uid              TEXT REFERENCES persons(uid) ON DELETE SET NULL,
+  application_id   TEXT REFERENCES applications(id) ON DELETE SET NULL,
+  stage            TEXT NOT NULL,
+  status           TEXT NOT NULL DEFAULT 'pending'
+                     CHECK(status IN ('pending','in_progress','completed','failed','skipped')),
+  idempotency_key  TEXT UNIQUE NOT NULL,
+  actor_id         TEXT REFERENCES users(id) ON DELETE SET NULL,
+  notes            TEXT,
+  error_detail     TEXT,
+  created_at       TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_lifecycle_uid     ON lifecycle_events(uid);
+CREATE INDEX IF NOT EXISTS idx_lifecycle_app_id  ON lifecycle_events(application_id);
+CREATE INDEX IF NOT EXISTS idx_lifecycle_stage   ON lifecycle_events(stage, status);
+CREATE INDEX IF NOT EXISTS idx_lifecycle_created ON lifecycle_events(created_at);
+
+CREATE TABLE IF NOT EXISTS provisioning_jobs (
+  id           TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+  uid          TEXT NOT NULL REFERENCES persons(uid) ON DELETE CASCADE,
+  job_type     TEXT NOT NULL CHECK(job_type IN ('finance', 'library', 'lms', 'portal', 'email', 'id_card')),
+  status       TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'processing', 'completed', 'failed', 'dead')),
+  attempts     INTEGER NOT NULL DEFAULT 0,
+  last_error   TEXT,
+  created_at   TEXT NOT NULL DEFAULT (datetime('now')),
+  completed_at TEXT
+);
+
+CREATE INDEX IF NOT EXISTS idx_provisioning_uid ON provisioning_jobs(uid);
+CREATE INDEX IF NOT EXISTS idx_provisioning_status ON provisioning_jobs(status);
+
 -- 2. Staff Profiles (Extends users table for faculty and admins)
 CREATE TABLE IF NOT EXISTS staff (
   user_id         TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
@@ -406,6 +501,7 @@ INSERT OR IGNORE INTO _migrations (name) VALUES ('add_department_id_to_courses')
 INSERT OR IGNORE INTO _migrations (name) VALUES ('add_is_active_to_courses');
 INSERT OR IGNORE INTO _migrations (name) VALUES ('add_term_id_to_enrollments');
 INSERT OR IGNORE INTO _migrations (name) VALUES ('add_registration_date_to_enrollments');
+INSERT OR IGNORE INTO _migrations (name) VALUES ('add_person_id_to_users');
 
 -- NOTE: These ALTER statements are intentionally left here for first-time schema
 -- application only. On subsequent runs, D1 will error if the columns exist.
@@ -417,6 +513,8 @@ ALTER TABLE courses ADD COLUMN is_active INTEGER NOT NULL DEFAULT 1;
 
 ALTER TABLE enrollments ADD COLUMN term_id TEXT REFERENCES academic_terms(id);
 ALTER TABLE enrollments ADD COLUMN registration_date TEXT NOT NULL DEFAULT (datetime('now'));
+
+ALTER TABLE users ADD COLUMN person_id TEXT REFERENCES persons(id);
 
 -- 5. Grades
 CREATE TABLE IF NOT EXISTS grades (

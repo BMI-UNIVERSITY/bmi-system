@@ -41,7 +41,7 @@ export async function handleListGrades(request: Request, env: Env): Promise<Resp
 
   const rows = await env.DB.prepare(
     `SELECT g.*, e.student_id, e.course_id, e.term_id,
-            c.code as course_code, c.title as course_name,
+            c.code as course_code, c.title as course_name, c.credits,
             s.reg_no, u.first_name, u.last_name
      FROM grades g
      INNER JOIN enrollments e ON g.enrollment_id = e.id

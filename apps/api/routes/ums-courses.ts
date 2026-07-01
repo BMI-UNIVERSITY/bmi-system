@@ -4,6 +4,7 @@
  */
 import { ok, error, json } from '../lib/types';
 import type { Env } from '../lib/types';
+import { generateRegNo } from '../lib/reg_number';
 
 function paginate(url: URL) {
   const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
@@ -178,11 +179,92 @@ export async function handleCreateEnrollment(request: Request, env: Env): Promis
 
   if (!student_id || !course_id) return error('student_id and course_id are required');
 
-  const id = crypto.randomUUID().replace(/-/g, '');
-  await env.DB.prepare(
-    `INSERT INTO enrollments (id, student_id, course_id, term_id) VALUES (?, ?, ?, ?)`
-  ).bind(id, student_id, course_id, term_id || null).run();
+  // ── Resolve student → programme → career for RegNo generation ──────────────
+  const studentInfo = await env.DB.prepare(
+    `SELECT s.user_id, s.programme_id, s.reg_no,
+            u.person_id, p.uid,
+            pr.code as programme_code, pr.level as career
+     FROM students s
+     JOIN users u ON s.user_id = u.id
+     LEFT JOIN persons p ON u.person_id = p.id
+     LEFT JOIN programs pr ON s.programme_id = pr.id
+     WHERE s.user_id = ?`
+  ).bind(student_id).first<{
+    user_id: string;
+    programme_id: string | null;
+    reg_no: string | null;
+    person_id: string | null;
+    uid: string | null;
+    programme_code: string | null;
+    career: string | null;
+  }>();
 
-  const created = await env.DB.prepare(`SELECT * FROM enrollments WHERE id = ?`).bind(id).first();
-  return json({ success: true, data: created }, 201);
+  if (!studentInfo) return error('Student not found', 404);
+
+  const enrollmentId = crypto.randomUUID().replace(/-/g, '');
+
+  // Determine admission year from the term or fall back to current year
+  let admissionYear = new Date().getUTCFullYear();
+  if (term_id) {
+    const term = await env.DB.prepare(
+      `SELECT academic_year FROM academic_terms WHERE id = ?`
+    ).bind(term_id).first<{ academic_year: string }>();
+    if (term?.academic_year) {
+      const parsed = parseInt(term.academic_year.split('/')[0] ?? term.academic_year);
+      if (!isNaN(parsed)) admissionYear = parsed;
+    }
+  }
+
+  // ── Generate Registration Number if student has a programme and no reg_no yet ─
+  let regNo: string | null = studentInfo.reg_no;
+  const batchOps: ReturnType<typeof env.DB.prepare>[] = [
+    env.DB.prepare(
+      `INSERT INTO enrollments (id, student_id, course_id, term_id) VALUES (?, ?, ?, ?)`
+    ).bind(enrollmentId, student_id, course_id, term_id || null),
+  ];
+
+  if (
+    !regNo &&
+    studentInfo.programme_id &&
+    studentInfo.programme_code &&
+    studentInfo.career &&
+    studentInfo.uid
+  ) {
+    try {
+      regNo = await generateRegNo(
+        env.DB,
+        studentInfo.programme_id,
+        studentInfo.programme_code,
+        admissionYear,
+        studentInfo.career
+      );
+
+      // Write reg_no to students table (only if not already in BMI format)
+      batchOps.push(
+        env.DB.prepare(
+          `UPDATE students SET reg_no = ?, updated_at = datetime('now')
+           WHERE user_id = ? AND (reg_no IS NULL OR reg_no NOT LIKE 'BMI/%')`
+        ).bind(regNo, student_id)
+      );
+
+      // Write registration_number to active student_programmes row (Phase 3 column)
+      batchOps.push(
+        env.DB.prepare(
+          `UPDATE student_programmes
+           SET registration_number = ?, updated_at = datetime('now')
+           WHERE uid = ? AND current_flag = 1 AND registration_number IS NULL`
+        ).bind(regNo, studentInfo.uid)
+      );
+    } catch (e) {
+      // Non-fatal: log and continue without RegNo — ops can re-run generator
+      console.error('[reg_number] Failed to generate registration number:', e);
+      regNo = null;
+    }
+  }
+
+  // Execute enrollment (+ optional reg_no updates) atomically
+  await env.DB.batch(batchOps);
+
+  const created = await env.DB.prepare(`SELECT * FROM enrollments WHERE id = ?`).bind(enrollmentId).first();
+  return json({ success: true, data: { ...created, registration_number: regNo } }, 201);
 }

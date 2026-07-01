@@ -3,6 +3,9 @@ import { sendEmail, applicationSubmittedEmail, statusUpdateEmail } from '../lib/
 import type { Env } from '../lib/types';
 import { VALID_PROGRAMS, VALID_LEVELS } from '../lib/programs';
 import { dispatchWebhook } from '../lib/webhook';
+import { generateApplicationNumber } from '../lib/app_number';
+import { runAdmissionPipeline, appendLifecycleEvent, getLifecycleHistory, STAGES } from '../lib/lifecycle';
+import { dispatchPendingJobs } from '../lib/provisioning';
 
 function sanitizeHtml(input: string): string {
   return input
@@ -95,6 +98,20 @@ export async function handleSubmitApplication(request: Request, env: Env, userId
      VALUES (?, ?, ?, ?, 'submitted', ?, ?, datetime('now'))`
   ).bind(appId, userId, program, degree_level, sanitizedStatement, sanitizedEducation ? JSON.stringify(sanitizedEducation) : null).run();
 
+  // Generate a sequential, human-facing Application Number immediately after insertion.
+  // Runs as a separate atomic statement — safe under D1 concurrency.
+  const year = new Date().getUTCFullYear();
+  let applicationNumber: string | null = null;
+  try {
+    applicationNumber = await generateApplicationNumber(env.DB, year);
+    await env.DB.prepare(
+      `UPDATE applications SET application_number = ? WHERE id = ?`
+    ).bind(applicationNumber, appId).run();
+  } catch (e) {
+    // Non-fatal: log failure but don't block submission. Ops can backfill from the script.
+    console.error('[app_number] Failed to generate application number:', e);
+  }
+
   await env.DB.prepare(
     `INSERT INTO application_status_logs (id, application_id, changed_by, old_status, new_status, notes)
      VALUES (?, ?, ?, NULL, 'submitted', 'Initial submission')`
@@ -107,7 +124,7 @@ export async function handleSubmitApplication(request: Request, env: Env, userId
     await sendEmail({
       to: user.email,
       subject: 'BMI University — Application Received',
-      html: applicationSubmittedEmail(user.first_name, program, appId),
+      html: applicationSubmittedEmail(user.first_name, program, applicationNumber ?? appId),
     }, env.RESEND_API_KEY);
 
     if (env.ADMIN_EMAIL) {
@@ -117,12 +134,13 @@ export async function handleSubmitApplication(request: Request, env: Env, userId
         html: `<p>A new application has been submitted.</p>
                <p><b>Applicant:</b> ${user.first_name} (${user.email})</p>
                <p><b>Program:</b> ${program}</p>
+               <p><b>Application Number:</b> ${applicationNumber ?? 'PENDING'}</p>
                <p><b>Application ID:</b> ${appId}</p>`,
       }, env.RESEND_API_KEY);
     }
   }
 
-  return ok({ application_id: appId, status: 'submitted' });
+  return ok({ application_id: appId, application_number: applicationNumber, status: 'submitted' });
 }
 
 export async function handleGetMyApplication(request: Request, env: Env, userId: string): Promise<Response> {
@@ -226,6 +244,7 @@ export async function handleUpdateStatus(
   if (!app) return error('Application not found', 404);
 
   const oldStatus = app.status;
+  let pipelineResult: { uid: string | null; registration_number: string | null } | null = null;
 
   const sanitizedNotes = notes ? notes.replace(/<[^>]*>/g, '').substring(0, 2000) : null;
 
@@ -244,6 +263,27 @@ export async function handleUpdateStatus(
   if (status === 'accepted') {
     await env.DB.prepare(`UPDATE users SET role = 'student', updated_at = datetime('now') WHERE id = ?`)
       .bind(app.user_id).run();
+
+    // ── Trigger the full admission lifecycle pipeline ──────────────────────
+    // Non-blocking per step: each stage logs its own success/failure row.
+    // ctx.waitUntil is not available here, but pipeline is fast enough for
+    // synchronous execution within Worker CPU time budget.
+    try {
+      const { uid, regNo } = await runAdmissionPipeline(env.DB, {
+        applicationId: appId,
+        userId: app.user_id,
+        actorId: adminId,
+        program: app.program,
+      });
+      // Attach outputs to response for admin visibility
+      pipelineResult = { uid, registration_number: regNo };
+
+      // Kick off background processing of provisioning jobs
+      ctx.waitUntil(dispatchPendingJobs(env).catch(console.error));
+    } catch (e) {
+      // Pipeline errors are already logged in lifecycle_events — don't surface to client
+      console.error('[lifecycle] Admission pipeline error:', e);
+    }
   }
 
   if (env.RESEND_API_KEY) {
@@ -266,7 +306,31 @@ export async function handleUpdateStatus(
     }).catch(() => {})
   );
 
-  return ok({ application_id: appId, old_status: oldStatus, new_status: status });
+  return ok({
+    application_id: appId,
+    old_status: oldStatus,
+    new_status: status,
+    ...(pipelineResult ? { admission: pipelineResult } : {}),
+  });
+}
+
+// ─── GET lifecycle history for an application ─────────────────────────────────
+
+export async function handleGetLifecycle(
+  _request: Request,
+  env: Env,
+  appId: string,
+  userId: string,
+  userRole: string
+): Promise<Response> {
+  const app = await env.DB.prepare('SELECT id, user_id FROM applications WHERE id = ?')
+    .bind(appId).first<{ id: string; user_id: string }>();
+  if (!app) return error('Application not found', 404);
+  if (userRole !== 'admin' && userRole !== 'staff' && app.user_id !== userId) {
+    return error('Access denied', 403);
+  }
+  const events = await getLifecycleHistory(env.DB, { applicationId: appId });
+  return ok(events);
 }
 
 export async function handleGetStatusLogs(request: Request, env: Env, appId: string, userId: string, userRole: string): Promise<Response> {

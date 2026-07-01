@@ -32,12 +32,14 @@ export interface Env {
   SENTRY_DSN?: string;
 }
 
+export type Role = 'applicant' | 'student' | 'staff' | 'admin' | 'verifier';
+
 export interface User {
   id: string;
   email: string;
   first_name: string;
   last_name: string;
-  role: 'applicant' | 'student' | 'staff' | 'admin';
+  role: Role;
   is_verified: number;
   created_at: string;
 }
@@ -117,12 +119,7 @@ export function getCorsHeaders(request: Request, env?: Env): Record<string, stri
   const origin = request.headers.get('Origin') || '';
   const allowed = getAllowedOrigins(env);
   
-  // Allow preview deployments for our specific Pages projects only
-  const isProjectPreview = /^https:\/\/[a-z0-9]+\.bmi-ums\.pages\.dev$/.test(origin)
-    || /^https:\/\/[a-z0-9]+\.bmi-portal\.pages\.dev$/.test(origin)
-    || /^https:\/\/[a-z0-9]+\.bmi-portal-[a-z0-9]+\.pages\.dev$/.test(origin);
-  
-  const isAllowed = allowed.includes(origin) || isProjectPreview;
+  const isAllowed = allowed.includes(origin);
   const allowedOrigin = isAllowed ? origin : BASE_ALLOWED_ORIGINS[0];
   return {
     'Access-Control-Allow-Origin': allowedOrigin,

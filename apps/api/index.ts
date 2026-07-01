@@ -1,6 +1,6 @@
 import { withSentry } from '@sentry/cloudflare';
 import { handleRegister, handleLogin, handleRefresh, handleLogout, handleMe, handleVerifyEmail, handleResendVerification, handleForgotPassword, handleResetPassword, handleMfaSetup, handleMfaEnable, handleMfaDisable, handleOAuthLogin, handleOAuthCallback } from './routes/auth';
-import { handleSubmitApplication, handleGetMyApplication, handleListApplications, handleGetApplication, handleUpdateStatus, handleGetStatusLogs } from './routes/apply';
+import { handleSubmitApplication, handleGetMyApplication, handleListApplications, handleGetApplication, handleUpdateStatus, handleGetStatusLogs, handleGetLifecycle } from './routes/apply';
 import { handleUploadDocument, handleDownloadDocument, handleDeleteDocument } from './routes/documents';
 import { handleRequestRecommendation, handleGetRecommendationInfo, handleUploadRecommendation, handleListRecommendations } from './routes/recommendations';
 import { requireAuth, rateLimit } from './middleware/auth';
@@ -20,6 +20,7 @@ import { handleListStudents, handleGetStudent, handleCreateStudent, handleUpdate
 import { handleListGrades, handleCreateGrade, handleUpdateGrade } from './routes/ums-grades';
 import { handleListUmsCourses, handleCreateCourse, handleUpdateCourse, handleDeleteCourse, handleListPrograms, handleListFaculties, handleListDepartments, handleListTerms, handleListEnrollments, handleCreateEnrollment } from './routes/ums-courses';
 import { handleListStaff, handleGetStaff, handleCreateStaff, handleUpdateStaff } from './routes/ums-staff';
+import { handleGetStudentProgrammes, handleProgrammeTransfer } from './routes/programmes';
 import { handleListTransactions } from './routes/ums-finance';
 import { handleGetRevenueTrend } from './routes/ums-dashboard';
 import {
@@ -337,7 +338,12 @@ export default withSentry(
     response = await handleRetryDeadLetter(request, env, path.split('/')[4], ctx);
 
   // ─── UMS Routes (v1 prefix — used by UMS frontend) ─────────────────
-  // Auth bridge: UMS uses /api/v1/auth/* which maps to the same handlers
+  } else if (path.match(/^\/api\/applications\/[^/]+\/lifecycle$/) && method === 'GET') {
+    const auth = await requireAuth(request, env);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleGetLifecycle(request, env, path.split('/')[3], auth.user.sub, auth.user.role);
+
+  // ─── Auth bridge: UMS uses /api/v1/auth/* which maps to the same handlers
   } else if (path === '/api/v1/auth/login' && method === 'POST') {
     response = await handleLogin(request, env);
   } else if (path === '/api/v1/auth/logout' && (method === 'POST' || method === 'DELETE')) {
@@ -370,6 +376,16 @@ export default withSentry(
     const auth = await requireAuth(request, env, ['admin']);
     if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleDeleteStudent(request, env, path.split('/')[4]);
+
+  // Programme history & transfer
+  } else if (path.match(/^\/api\/v1\/students\/[^/]+\/programmes$/) && method === 'GET') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleGetStudentProgrammes(request, env, path.split('/')[4]);
+  } else if (path.match(/^\/api\/v1\/students\/[^/]+\/transfer$/) && method === 'POST') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleProgrammeTransfer(request, env, path.split('/')[4], auth.user.sub);
 
   // Grades
   } else if (path === '/api/v1/grades' && method === 'GET') {
