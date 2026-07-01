@@ -7,6 +7,7 @@ import { requireAuth, rateLimit } from './middleware/auth';
 import { handleGetDashboard, handleGetCourses, handleEnroll, handleGetFinances, handlePayInvoice, handleDropCourse, handleGetTranscript, handleGetSettings, handleUpdateSettings, handleGetTickets, handleCreateTicket } from './routes/student';
 import { handleAdminSetup, handleListUsers, handleUpdateUserRole, handleDeleteUser, handleAdminResetPassword, handleGetAuditLogs } from './routes/admin';
 import { handleListTimetabling, handleCreateTimetabling } from './routes/ums-timetabling';
+import { handleListRubrics, handleCreateRubric, handleDeleteRubric } from './routes/ums-rubrics';
 import { error, getCorsHeaders, validateCsrfToken } from './lib/types';
 import type { Env } from './lib/types';
 import backupWorker from './backup';
@@ -401,6 +402,20 @@ export default withSentry(
     const auth = await requireAuth(request, env, ['admin']);
     if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleDeleteCourse(request, env, path.split('/')[4]);
+
+  // ─── Rubrics ─────────────────────────────────────────────────────────────────
+  } else if (path === '/api/v1/rubrics' && method === 'GET') {
+    const auth = await requireAuth(request, env);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleListRubrics(request, env);
+  } else if (path === '/api/v1/rubrics' && method === 'POST') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleCreateRubric(request, env);
+  } else if (path.match(/^\/api\/v1\/rubrics\/[^/]+$/) && method === 'DELETE') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleDeleteRubric(request, env, path.split('/')[4]);
 
   // Programs, Faculties, Departments, Terms
   } else if (path === '/api/v1/programs' && method === 'GET') {

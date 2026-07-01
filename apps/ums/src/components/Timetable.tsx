@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { Calendar, Clock, MapPin, User, BookOpen, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import { authFetch } from '../services/authService';
+import { API_URL } from '../services/config';
 
 interface Schedule {
   id: string;
@@ -26,7 +27,7 @@ const Timetable: React.FC = () => {
   useEffect(() => {
     const load = async () => {
       try {
-        const res = await authFetch('/api/v1/timetabling');
+        const res = await authFetch(`${API_URL}/timetabling`);
         if (res.ok) {
           const data = await res.json();
           if (data.success) setSchedules(data.data);
