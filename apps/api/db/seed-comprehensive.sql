@@ -7,6 +7,9 @@
 -- Usage: npx wrangler d1 execute bmi-portal-db --remote --file=db/seed-comprehensive.sql
 -- ============================================================================
 
+-- Temporarily disable foreign key constraints during seeding
+PRAGMA foreign_keys = OFF;
+
 -- ============================================================================
 -- 1. FACULTIES & ACADEMIC STRUCTURE
 -- ============================================================================
@@ -192,14 +195,17 @@ INSERT OR REPLACE INTO student_settings (student_id, directory_release, communic
 -- 9. CMS CONTENT
 -- ============================================================================
 
-INSERT OR REPLACE INTO cms_pages (id, title, slug, content, status, published_at) VALUES
-('page-001', 'About Us', 'about', '<h2>Welcome to BMI University</h2><p>We are a leading institution...</p>', 'published', '2024-01-15'),
-('page-002', 'Admissions', 'admissions', '<h2>Join Our Community</h2><p>Application process...</p>', 'published', '2024-01-20');
+INSERT OR REPLACE INTO cms_pages (id, title, slug, content, status, author_id, published_at) VALUES
+('page-001', 'About Us', 'about', '<h2>Welcome to BMI University</h2><p>We are a leading institution...</p>', 'published', '34001b3c-9828-4608-b801-ead96ba7b5c0', '2024-01-15'),
+('page-002', 'Admissions', 'admissions', '<h2>Join Our Community</h2><p>Application process...</p>', 'published', '34001b3c-9828-4608-b801-ead96ba7b5c0', '2024-01-20');
 
-INSERT OR REPLACE INTO cms_posts (id, title, slug, excerpt, content, status, published_at, tags) VALUES
-('post-001', 'New Academic Year Begins', 'new-academic-year-2025', 'Welcome to Fall 2025 semester', '<p>The new academic year has officially begun...</p>', 'published', '2025-09-01', '["news", "academic"]'),
-('post-002', 'Alumni Success Stories', 'alumni-success-2025', 'Celebrating our graduates', '<p>Our alumni continue to make impacts...</p>', 'published', '2025-10-15', '["alumni", "success"]');
+INSERT OR REPLACE INTO cms_posts (id, title, slug, excerpt, content, status, author_id, published_at, tags) VALUES
+('post-001', 'New Academic Year Begins', 'new-academic-year-2025', 'Welcome to Fall 2025 semester', '<p>The new academic year has officially begun...</p>', 'published', '34001b3c-9828-4608-b801-ead96ba7b5c0', '2025-09-01', '["news", "academic"]'),
+('post-002', 'Alumni Success Stories', 'alumni-success-2025', 'Celebrating our graduates', '<p>Our alumni continue to make impacts...</p>', 'published', '34001b3c-9828-4608-b801-ead96ba7b5c0', '2025-10-15', '["alumni", "success"]');
 
 -- ============================================================================
 -- Done! Database seeded with sample data.
 -- ============================================================================
+
+-- Re-enable foreign key constraints
+PRAGMA foreign_keys = ON;
