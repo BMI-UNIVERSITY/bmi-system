@@ -18,7 +18,7 @@ const DEFAULT_API_URL =
   ((import.meta as any).env?.PROD ? 'https://bmi-api.bmiuniversity107.workers.dev' : '');
 
 export const API_URL =
-  ((import.meta as any).env.VITE_API_URL || DEFAULT_API_URL) + '/api';
+  ((import.meta as any).env.VITE_API_URL || DEFAULT_API_URL) + '/api/v1';
 
 export const API_TIMEOUT = 30000; // 30 seconds
 export const MAX_RETRIES = 2;

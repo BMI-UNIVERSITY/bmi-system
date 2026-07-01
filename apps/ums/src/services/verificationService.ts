@@ -14,7 +14,7 @@
  *   BMI-VERIFY::BMI-2026-123456::eyJ…   (certificate offline JWT)
  */
 
-const API_URL = "/api/v1";
+import { API_URL } from './config';
 
 // ─── Shared result type ───────────────────────────────────────────────────────
 export interface DocumentVerifyResult {

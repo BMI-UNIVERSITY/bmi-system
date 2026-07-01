@@ -84,8 +84,9 @@ const Dashboard: React.FC = () => {
   useEffect(() => {
     let cancelled = false;
     import("../services/authService").then(({ authFetch }) => {
-      authFetch("/api/v1/dashboard/revenue-trend?months=6")
-        .then((r) => r.json())
+      import("../services/config").then(({ API_URL }) => {
+        authFetch(`${API_URL}/dashboard/revenue-trend?months=6`)
+          .then((r) => r.json())
         .then((d: any) => {
           if (!cancelled && d.success && Array.isArray(d.data)) {
             setApiRevenueTrend(d.data);
@@ -94,6 +95,7 @@ const Dashboard: React.FC = () => {
         .catch((error) => {
           console.error("Failed to load statistics:", error);
         });
+      });
     });
     return () => {
       cancelled = true;
