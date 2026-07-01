@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Save, FileText, ChevronRight } from 'lucide-react';
 import { authFetch } from '../../services/authService';
+import { API_URL } from '../../services/config';
 
 interface Criterion {
   id: string;
@@ -31,7 +32,7 @@ const RubricBuilder: React.FC = () => {
 
   const loadRubrics = async () => {
     try {
-      const res = await authFetch('/api/v1/rubrics');
+      const res = await authFetch(`${API_URL}/rubrics`);
       if (res.ok) {
         const data = await res.json();
         if (data.success) setRubrics(data.data);
@@ -58,7 +59,7 @@ const RubricBuilder: React.FC = () => {
     if (!activeRubric) return;
     setIsLoading(true);
     try {
-      const res = await authFetch('/api/v1/rubrics', {
+      const res = await authFetch(`${API_URL}/rubrics`, {
         method: 'POST',
         body: JSON.stringify(activeRubric),
       });
