@@ -1,0 +1,15 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`@bmi/shared — domains > snapshot — allowed origins list has not changed (domain drift guard) 1`] = `
+[
+  "https://hkmministries.org",
+  "https://www.hkmministries.org",
+  "https://bmi-portal.hkmministries.org",
+  "https://bmi-portal.pages.dev",
+  "https://bmi-ums.hkmministries.org",
+  "https://bmi-ums.pages.dev",
+  "http://localhost:5173",
+  "http://localhost:3000",
+  "http://localhost:4173",
+]
+`;

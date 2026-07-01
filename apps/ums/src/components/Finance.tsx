@@ -58,8 +58,8 @@ const Finance: React.FC = () => {
     perPage: 1000,
   });
 
-  const students = studentsRes?.data || [];
-  const staff = staffRes?.data || [];
+  const students = studentsRes?.data?.items || [];
+  const staff = staffRes?.data?.items || [];
   const transactions = transactionsRes?.data || [];
 
   const _setTransactions = useDataStore((s) => s.setTransactions);

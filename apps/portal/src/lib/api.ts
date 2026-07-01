@@ -75,12 +75,16 @@ export const api = {
       request<{ message: string; user_id: string }>('/auth/register', { method: 'POST', body: JSON.stringify(body) }),
 
     login: (email: string, password: string, mfa_token?: string) =>
-      request<{ csrf_token?: string; user?: User; requires_mfa?: boolean }>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password, mfa_token }) })
+      request<{ csrf_token?: string; expires_at?: string; user?: User; requires_mfa?: boolean }>('/auth/login', { method: 'POST', body: JSON.stringify({ email, password, mfa_token }) })
         .then(res => { if (res.csrf_token) setCsrfToken(res.csrf_token); return res; }),
 
     logout: () =>
       request<void>('/auth/logout', { method: 'DELETE' })
         .then(res => { clearCsrfToken(); return res; }),
+
+    refresh: () =>
+      request<{ csrf_token: string; expires_at: string }>('/auth/refresh', { method: 'POST' })
+        .then(res => { if (res.csrf_token) setCsrfToken(res.csrf_token); return res; }),
 
     me: () =>
       request<User>('/auth/me'),

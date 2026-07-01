@@ -1,4 +1,5 @@
 import { authFetch } from './authService';
+import type { PaginatedData } from '@bmi/shared';
 
 import { API_URL } from './config';
 
@@ -30,12 +31,7 @@ export interface GradeResponse {
 
 export interface GradesListResponse {
   success: boolean;
-  data?: {
-    items: Grade[];
-    page: number;
-    perPage: number;
-    total: number;
-  };
+  data?: PaginatedData<Grade>;
   error?: string;
 }
 
@@ -45,11 +41,7 @@ export async function getGrades(filters?: Record<string, unknown>): Promise<Grad
     if (filters?.perPage) params.append('perPage', filters.perPage.toString()); 
 
     const response = await authFetch(`${API_URL}/grades?${params.toString()}`); 
-    const raw = await response.json();
-    if (raw?.success && raw.data && raw.data.totalItems != null && raw.data.total == null) {
-      raw.data.total = raw.data.totalItems;
-    }
-    return raw;
+    return await response.json();
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch' };
   }
@@ -71,11 +63,7 @@ export async function getStudentGrades(studentId: string): Promise<GradesListRes
   try {
     const params = new URLSearchParams({ studentId });
     const response = await authFetch(`${API_URL}/grades?${params.toString()}`); 
-    const raw = await response.json();
-    if (raw?.success && raw.data && raw.data.totalItems != null && raw.data.total == null) {
-      raw.data.total = raw.data.totalItems;
-    }
-    return raw;
+    return await response.json();
   } catch (error) {
     return { success: false, error: error instanceof Error ? error.message : 'Failed to fetch student grades' };
   }

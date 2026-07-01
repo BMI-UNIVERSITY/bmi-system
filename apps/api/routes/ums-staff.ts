@@ -7,6 +7,9 @@ import type { Env } from '../lib/types';
 
 export async function handleListStaff(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
+  const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
+  const perPage = Math.min(100, parseInt(url.searchParams.get('perPage') || '20'));
+  const offset = (page - 1) * perPage;
   const search = url.searchParams.get('search');
   const departmentId = url.searchParams.get('department_id');
 
@@ -22,6 +25,10 @@ export async function handleListStaff(request: Request, env: Env): Promise<Respo
 
   const where = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
 
+  const countRow = await env.DB.prepare(
+    `SELECT COUNT(*) as total FROM staff st INNER JOIN users u ON st.user_id = u.id ${where}`
+  ).bind(...bindings).first<{ total: number }>();
+
   const rows = await env.DB.prepare(
     `SELECT st.*, u.email, u.first_name, u.last_name, u.phone, u.role,
             d.name as department_name
@@ -29,10 +36,11 @@ export async function handleListStaff(request: Request, env: Env): Promise<Respo
      INNER JOIN users u ON st.user_id = u.id
      LEFT JOIN departments d ON st.department_id = d.id
      ${where}
-     ORDER BY u.last_name ASC`
-  ).bind(...bindings).all();
+     ORDER BY u.last_name ASC
+     LIMIT ? OFFSET ?`
+  ).bind(...bindings, perPage, offset).all();
 
-  return ok(rows.results);
+  return ok({ items: rows.results, page, perPage, total: countRow?.total ?? 0 });
 }
 
 export async function handleGetStaff(request: Request, env: Env, staffId: string): Promise<Response> {

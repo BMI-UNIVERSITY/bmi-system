@@ -27,7 +27,10 @@ describe('ProtectedRoute', () => {
       loading: true,
       login: vi.fn(),
       logout: vi.fn(),
-      register: vi.fn(),
+      refresh: vi.fn(),
+      refreshSession: vi.fn(),
+      setUser: vi.fn(),
+      expiresAt: null,
     });
 
     const { container } = renderWithRouter(
@@ -46,7 +49,10 @@ describe('ProtectedRoute', () => {
       loading: false,
       login: vi.fn(),
       logout: vi.fn(),
-      register: vi.fn(),
+      refresh: vi.fn(),
+      refreshSession: vi.fn(),
+      setUser: vi.fn(),
+      expiresAt: null,
     });
 
     renderWithRouter(
@@ -65,7 +71,10 @@ describe('ProtectedRoute', () => {
       loading: false,
       login: vi.fn(),
       logout: vi.fn(),
-      register: vi.fn(),
+      refresh: vi.fn(),
+      refreshSession: vi.fn(),
+      setUser: vi.fn(),
+      expiresAt: null,
     });
 
     renderWithRouter(
@@ -84,7 +93,10 @@ describe('ProtectedRoute', () => {
       loading: false,
       login: vi.fn(),
       logout: vi.fn(),
-      register: vi.fn(),
+      refresh: vi.fn(),
+      refreshSession: vi.fn(),
+      setUser: vi.fn(),
+      expiresAt: null,
     });
 
     renderWithRouter(

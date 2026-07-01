@@ -12,6 +12,7 @@ import {
   CheckCircle, Sparkles, FileText, Building2, GraduationCap,
   MapPin, Phone, Globe, Hash, Send, Award
 } from 'lucide-react';
+import { PORTAL_URL, MARKETING_URL, ADMISSIONS_EMAIL, PROGRAMS } from '@bmi/shared';
 import { Student } from '../types';
 import { documentService } from '../services/documentService';
 import { getHtml2Pdf } from '../services/pdfService';
@@ -37,7 +38,7 @@ export const AdmissionLetter: React.FC<AdmissionLetterProps> = ({ students, logo
   const [generatedLetter, setGeneratedLetter] = useState<AdmissionLetterType | null>(null);
   const [securityFeatures, setSecurityFeatures] = useState<DocumentSecurityFeatures | null>(null);
   const [letterConfig, setLetterConfig] = useState({
-    program: 'Bachelor of Science',
+    program: PROGRAMS[0].label, // Default to first program
     faculty: 'School of Science and Technology',
     semester: 'Fall 2024',
     reference: '',
@@ -71,10 +72,10 @@ export const AdmissionLetter: React.FC<AdmissionLetterProps> = ({ students, logo
       currency: 'KES',
       paymentDeadline: '2025-01-10',
       requiredDocuments: ['ID/Passport', 'Academic Certificates', 'Birth Certificate'],
-      registrationUrl: 'https://bmi-portal.hkmministries.org/register',
+      registrationUrl: `${PORTAL_URL}/register`,
       contactInfo: {
         phone: '+254 700 123 456',
-        email: 'admissions@hkmministries.org',
+        email: ADMISSIONS_EMAIL,
         address: 'Nairobi, Kenya'
       },
       status: 'draft',
@@ -212,12 +213,11 @@ export const AdmissionLetter: React.FC<AdmissionLetterProps> = ({ students, logo
                     onChange={(e) => setLetterConfig({ ...letterConfig, program: e.target.value })}
                     className={THEME.input}
                   >
-                    <option>Bachelor of Science</option>
-                    <option>Bachelor of Arts</option>
-                    <option>Bachelor of Commerce</option>
-                    <option>Bachelor of Engineering</option>
-                    <option>Master of Science</option>
-                    <option>Master of Business Administration</option>
+                    {PROGRAMS.map((program) => (
+                      <option key={program.label} value={program.label}>
+                        {program.label}
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -398,7 +398,7 @@ export const AdmissionLetter: React.FC<AdmissionLetterProps> = ({ students, logo
                     <div className="flex justify-center gap-6 text-xs text-slate-500">
                       <span className="flex items-center gap-1"><MapPin size={12} /> Nairobi, Kenya</span>
                       <span className="flex items-center gap-1"><Phone size={12} /> +254 700 123 456</span>
-                      <span className="flex items-center gap-1"><Globe size={12} /> www.hkmministries.org</span>
+                      <span className="flex items-center gap-1"><Globe size={12} /> {MARKETING_URL.replace('https://', '')}</span>
                     </div>
                   </div>
                 </div>

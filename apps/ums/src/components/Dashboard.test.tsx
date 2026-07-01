@@ -15,6 +15,13 @@ vi.mock('../stores/authStore', () => ({
   ),
 }));
 
+vi.mock('../services/authService', () => ({
+  authFetch: vi.fn().mockResolvedValue({
+    ok: true,
+    json: () => Promise.resolve({ data: [] }),
+  }),
+}));
+
 vi.mock('../stores/dataStore', () => ({
   useDataStore: vi.fn((selector: any) =>
     selector({
@@ -25,7 +32,7 @@ vi.mock('../stores/dataStore', () => ({
 }));
 
 vi.mock('../hooks/useEntityQueries', () => ({
-  useStudentsQuery: vi.fn(() => ({ data: { data: [] }, isLoading: false })),
+  useStudentsQuery: vi.fn(() => ({ data: { data: { items: [], page: 1, perPage: 50, total: 0 } }, isLoading: false })),
   useTransactionsQuery: vi.fn(() => ({ data: { data: [] }, isLoading: false })),
 }));
 

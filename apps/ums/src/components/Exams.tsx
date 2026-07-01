@@ -23,6 +23,7 @@ import {
   Layout,
   ClipboardList,
 } from "lucide-react";
+import { PROGRAMS } from "@bmi/shared";
 import { Student, Course } from "../types";
 import ImportModal from "./ImportModal";
 import GradeEntryModal, { GradeFormData } from "./grading/GradeEntryModal";
@@ -407,11 +408,11 @@ const Exams: React.FC = () => {
             className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-none text-xs font-bold uppercase outline-none focus:border-[#4B0082] dark:text-white"
           >
             <option>All Programs</option>
-            <option>Bachelor of Theology</option>
-            <option>B.Sc. Computer Science</option>
-            <option>Diploma in Christian Ministry and Theology</option>
-            <option>Masters in Divinity</option>
-            <option>PhD in Biblical Studies</option>
+            {PROGRAMS.map((program) => (
+              <option key={program.label} value={program.label}>
+                {program.label}
+              </option>
+            ))}
           </select>
         </div>
         <div className="space-y-1">

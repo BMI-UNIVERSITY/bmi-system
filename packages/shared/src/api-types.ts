@@ -27,6 +27,41 @@ export interface ApiFailure {
 
 export type ApiResponse<T = unknown> = ApiSuccess<T> | ApiFailure;
 
+// ── Standard Pagination ────────────────────────────────────────────────────
+//
+// Every paginated list endpoint in the BMI API must return:
+//   { success: true, data: PaginatedData<T> }
+//
+// where PaginatedData<T> is:
+//   { items: T[], page: number, perPage: number, total: number }
+//
+// Frontend services type their list responses as:
+//   ApiSuccess<PaginatedData<T>>  — i.e. PaginatedResponse<T>
+//
+// This is the single source of truth — do not redefine inline in services or routes.
+
+/**
+ * The data payload inside a paginated list response.
+ * Wrap with ApiSuccess<PaginatedData<T>> for the full response type.
+ */
+export interface PaginatedData<T> {
+  /** The current page's records. */
+  items: T[];
+  /** Current page number (1-indexed). */
+  page: number;
+  /** Maximum items per page. */
+  perPage: number;
+  /** Total number of records matching the query (across all pages). */
+  total: number;
+}
+
+/**
+ * A successful paginated list API response.
+ * Equivalent to: { success: true, data: { items: T[], page, perPage, total } }
+ */
+export type PaginatedResponse<T> = ApiSuccess<PaginatedData<T>>;
+
+
 // ── POST /api/auth/register ────────────────────────────────────────────────
 
 export interface RegisterRequest {
@@ -64,6 +99,7 @@ export interface LoginRequest {
 
 export interface LoginSuccessData {
   token: string;
+  expires_at: string;
   user: {
     id: string;
     email: string;
@@ -78,6 +114,18 @@ export interface LoginSuccessData {
 export type LoginSuccessResponse = ApiSuccess<LoginSuccessData>;
 
 export type LoginResponse = LoginSuccessResponse | ApiFailure;
+
+// ── POST /api/auth/refresh ─────────────────────────────────────────────────
+
+export interface RefreshSuccessData {
+  token: string;
+  expires_at: string;
+}
+
+/** HTTP 200 — Session refreshed successfully. */
+export type RefreshSuccessResponse = ApiSuccess<RefreshSuccessData>;
+
+export type RefreshResponse = RefreshSuccessResponse | ApiFailure;
 
 // ── HTTP Status Code Constants ─────────────────────────────────────────────
 

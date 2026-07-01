@@ -57,7 +57,7 @@ const Dashboard: React.FC = () => {
   const { data: studentsRes } = useStudentsQuery({ page: 1, perPage: 1000 });
   const { data: transactionsRes } = useTransactionsQuery({ page: 1, perPage: 1000 });
 
-  const students = studentsRes?.data || [];
+  const students = studentsRes?.data?.items || [];
   const transactions = transactionsRes?.data || [];
 
   const addStudent = useDataStore((s) => s.addStudent);

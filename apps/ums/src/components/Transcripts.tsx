@@ -242,7 +242,7 @@ export const Transcripts: React.FC<TranscriptsProps> = (props) => {
     perPage: 1000,
   });
 
-  const storeStudents = studentsRes?.data || [];
+  const storeStudents = studentsRes?.data?.items || [];
   const storeCourses = useDataStore((s) => s.courses);
   const storeLogo = useUIStore((s) => s.logo);
   const students = props.students ?? storeStudents ?? [];

@@ -46,8 +46,8 @@ const Grades: React.FC = () => {
   const { data: studentsRes } = useStudentsQuery({ page: 1, perPage: 1000 });
   const { data: coursesRes } = useCoursesQuery({ page: 1, perPage: 1000 });
 
-  const students = studentsRes?.data || [];
-  const courses = coursesRes?.data || [];
+  const students = studentsRes?.data?.items || [];
+  const courses = coursesRes?.data?.items || [];
   const [grades, setGrades] = useState<Grade[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);

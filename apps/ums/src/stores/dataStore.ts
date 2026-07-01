@@ -105,7 +105,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     try {
       const result = await getStudents({ perPage: 50 });
       if (result.success && result.data) {
-        set({ students: result.data, isLoadingStudents: false });
+        set({ students: result.data.items, isLoadingStudents: false });
       } else {
         set({ students: [], isLoadingStudents: false, error: result.error });
       }
@@ -123,7 +123,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     try {
       const result = await getStaff({ perPage: 100 });
       if (result.success && result.data) {
-        set({ staff: result.data, isLoadingStaff: false });
+        set({ staff: result.data.items, isLoadingStaff: false });
       } else {
         set({ isLoadingStaff: false });
       }
@@ -137,7 +137,7 @@ export const useDataStore = create<DataState>((set, get) => ({
     try {
       const result = await getCourses({ perPage: 100 });
       if (result.success && result.data) {
-        set({ courses: result.data, isLoadingCourses: false });
+        set({ courses: result.data.items, isLoadingCourses: false });
       } else {
         set({ isLoadingCourses: false });
       }
@@ -195,9 +195,9 @@ export const useDataStore = create<DataState>((set, get) => ({
         getAllStudyCenters(),
       ]);
       set({
-        students: stuRes.success && stuRes.data ? stuRes.data : get().students,
-        staff: st.success && st.data ? st.data : get().staff,
-        courses: co.success && co.data ? co.data : get().courses,
+        students: stuRes.success && stuRes.data ? stuRes.data.items : get().students,
+        staff: st.success && st.data ? st.data.items : get().staff,
+        courses: co.success && co.data ? co.data.items : get().courses,
         library: lib.success && lib.data ? lib.data : get().library,
         transactions: tx.success && tx.data ? tx.data : get().transactions,
         studyCenters: Array.isArray(ca) ? ca : get().studyCenters,

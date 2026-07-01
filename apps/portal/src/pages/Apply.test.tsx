@@ -37,7 +37,10 @@ describe('Apply Page (Portal)', () => {
       loading: false,
       login: vi.fn(),
       logout: vi.fn(),
-      register: vi.fn(),
+      refresh: vi.fn(),
+      refreshSession: vi.fn(),
+      setUser: vi.fn(),
+      expiresAt: null,
     });
 
     renderWithRouter();
@@ -53,7 +56,10 @@ describe('Apply Page (Portal)', () => {
       loading: false,
       login: vi.fn(),
       logout: vi.fn(),
-      register: vi.fn(),
+      refresh: vi.fn(),
+      refreshSession: vi.fn(),
+      setUser: vi.fn(),
+      expiresAt: null,
     });
 
     (api.applications.submit as any).mockResolvedValue({ success: true, data: { id: 'app-123' } });

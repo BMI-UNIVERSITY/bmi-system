@@ -57,7 +57,7 @@ export const Library: React.FC = () => {
   });
 
   const library = libraryRes?.data || [];
-  const courses = coursesRes?.data || [];
+  const courses = coursesRes?.data?.items || [];
 
   const _setLibrary = useDataStore((s) => s.setLibrary);
   const setLibrary = (action: React.SetStateAction<LibraryItem[]>) => {

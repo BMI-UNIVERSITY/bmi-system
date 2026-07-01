@@ -225,12 +225,57 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
 
   const response = ok({
     csrf_token: csrfToken,
+    expires_at: expiresAt,
     user: { id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name, role: user.role, mfa_enabled: user.mfa_enabled === 1 },
   });
 
   const headers = new Headers(response.headers);
   headers.append('Set-Cookie', `bmi_token=${token}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=${60 * 60 * 24 * 7}`);
   headers.append('Set-Cookie', `csrf_token=${csrfToken}; Path=/; Secure; SameSite=None; Max-Age=${60 * 60 * 24 * 7}`);
+
+  return new Response(response.body, {
+    status: 200,
+    headers,
+  });
+}
+export async function handleRefresh(request: Request, env: Env): Promise<Response> {
+  const cookieHeader = request.headers.get('Cookie');
+  let token: string | null = null;
+  
+  if (cookieHeader) {
+    const match = cookieHeader.match(/bmi_token=([^;]+)/);
+    if (match) token = match[1];
+  }
+
+  if (!token) {
+    return error('No active session', 401);
+  }
+
+  const { verifyJWT, signJWT } = await import('../lib/jwt');
+  const payload = await verifyJWT(token, env.JWT_SECRET);
+  
+  if (!payload || !payload.sub) {
+    return error('Invalid or expired session', 401);
+  }
+
+  // Issue new token and CSRF token
+  const newToken = await signJWT({ sub: payload.sub, email: payload.email, role: payload.role }, env.JWT_SECRET);
+  const newCsrfToken = generateCsrfToken();
+  const expiresAt = new Date(Date.now() + 60 * 60 * 24 * 7 * 1000).toISOString();
+
+  // Update session expiry in DB
+  await env.DB.prepare(
+    `UPDATE sessions SET expires_at = ? WHERE id = ?`
+  ).bind(expiresAt, `session:${payload.sub}`).run();
+
+  const response = ok({
+    csrf_token: newCsrfToken,
+    expires_at: expiresAt,
+  });
+
+  const headers = new Headers(response.headers);
+  headers.append('Set-Cookie', `bmi_token=${newToken}; Path=/; HttpOnly; Secure; SameSite=None; Max-Age=${60 * 60 * 24 * 7}`);
+  headers.append('Set-Cookie', `csrf_token=${newCsrfToken}; Path=/; Secure; SameSite=None; Max-Age=${60 * 60 * 24 * 7}`);
 
   return new Response(response.body, {
     status: 200,

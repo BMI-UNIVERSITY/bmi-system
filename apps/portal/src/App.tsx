@@ -21,9 +21,12 @@ import Finances from './pages/student/Finances';
 import Support from './pages/student/Support';
 import StudentSettings from './pages/student/Settings';
 
+import { SessionWarning } from './components/SessionWarning';
+
 export default function App() {
   return (
     <AuthProvider>
+      <SessionWarning />
       <Navbar />
       <Routes>
         <Route path="/" element={<Landing />} />

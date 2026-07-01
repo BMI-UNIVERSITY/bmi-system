@@ -67,13 +67,14 @@ const Courses: React.FC = () => {
   });
 
   const pagedCourses = useMemo(
-    () => (courseResponse?.success ? courseResponse.data : []),
+    () => (courseResponse?.success ? courseResponse.data?.items ?? [] : []),
     [courseResponse],
   );
 
   React.useEffect(() => {
-    if (courseResponse?.success && courseResponse.meta) {
-      setMeta(courseResponse.meta);
+    if (courseResponse?.success && courseResponse.data) {
+      const { page: p, perPage: pp, total } = courseResponse.data;
+      setMeta({ page: p, perPage: pp, total });
     }
   }, [courseResponse, setMeta]);
 
@@ -579,7 +580,7 @@ const Courses: React.FC = () => {
             );
             const r = await postCourseBatch(items);
             const list = await getCourses({ perPage: 500 });
-            if (list.success && list.data) setCourses(list.data);
+            if (list.success && list.data) setCourses(list.data.items);
             return {
               ok: (r.data?.failureCount ?? 0) === 0,
               message: `Created: ${r.data?.successCount ?? 0}, failed: ${r.data?.failureCount ?? 0}.`,
@@ -601,7 +602,7 @@ const Courses: React.FC = () => {
             const items = lines.map((l) => JSON.parse(l) as Record<string, unknown>);
             const r = await postCourseBatch(items);
             const list = await getCourses({ perPage: 500 });
-            if (list.success && list.data) setCourses(list.data);
+            if (list.success && list.data) setCourses(list.data.items);
             return {
               ok: (r.data?.failureCount ?? 0) === 0,
               message: `Created: ${r.data?.successCount ?? 0}, failed: ${r.data?.failureCount ?? 0}.`,

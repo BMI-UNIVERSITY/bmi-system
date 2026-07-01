@@ -74,7 +74,6 @@ export async function handleListGrades(request: Request, env: Env): Promise<Resp
     page,
     perPage,
     total: countRow?.total ?? 0,
-    totalItems: countRow?.total ?? 0,
   });
 }
 

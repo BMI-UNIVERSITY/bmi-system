@@ -14,6 +14,7 @@ import {
   Loader2,
   AlertCircle,
 } from "lucide-react";
+import { MARKETING_URL, REGISTRAR_EMAIL } from '@bmi/shared';
 import { Student } from "../types";
 import { getHtml2Pdf } from "../services/pdfService";
 import { useDataStore } from "../stores/dataStore";
@@ -119,7 +120,7 @@ const MicroBorder: React.FC = () => (
       <p className="text-[3.5px] leading-none whitespace-nowrap text-[#4B0082] opacity-40 tracking-[0.05em]">
         {Array(300)
           .fill(
-            "BMI UNIVERSITY · NAIROBI KENYA · CHARTERED 2005 · CUE ACCREDITED · VERIFY AT WWW.HKMMINISTRIES.ORG/VERIFY · ",
+            `BMI UNIVERSITY · NAIROBI KENYA · CHARTERED 2005 · CUE ACCREDITED · VERIFY AT ${MARKETING_URL.replace('https://', '').toUpperCase()}/VERIFY · `,
           )
           .join("")}
       </p>
@@ -202,7 +203,7 @@ const CertificateDocument: React.FC<CertDocProps> = ({
     new Date(cert.issue_date).toISOString().replace("T", " ").substring(0, 19) +
     "Z";
   const verifyUrl =
-    qrData?.url || `https://hkmministries.org/verify?id=${cert.serial_number}`;
+    qrData?.url || `${MARKETING_URL}/verify?id=${cert.serial_number}`;
 
   const isLandscape = orientation === "landscape";
 
@@ -506,9 +507,9 @@ const CertificateDocument: React.FC<CertDocProps> = ({
             <p className="text-[6px] font-bold text-[#C9A84C] uppercase tracking-widest mb-0.5">
               Verify Authenticity
             </p>
-            <p className="text-[6px] text-white">www.hkmministries.org/verify</p>
+            <p className="text-[6px] text-white">{MARKETING_URL.replace('https://', '')}/verify</p>
             <p className="text-[6px] text-gray-300">
-              registrar@bmiuniversity.org
+              {REGISTRAR_EMAIL}
             </p>
             <p className="text-[6px] text-gray-300">+254 726 912 577</p>
             <p className="text-[5.5px] text-[#C9A84C] mt-0.5 font-bold uppercase tracking-wide">

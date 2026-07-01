@@ -1,5 +1,5 @@
 import { withSentry } from '@sentry/cloudflare';
-import { handleRegister, handleLogin, handleLogout, handleMe, handleVerifyEmail, handleResendVerification, handleForgotPassword, handleResetPassword, handleMfaSetup, handleMfaEnable, handleMfaDisable, handleOAuthLogin, handleOAuthCallback } from './routes/auth';
+import { handleRegister, handleLogin, handleRefresh, handleLogout, handleMe, handleVerifyEmail, handleResendVerification, handleForgotPassword, handleResetPassword, handleMfaSetup, handleMfaEnable, handleMfaDisable, handleOAuthLogin, handleOAuthCallback } from './routes/auth';
 import { handleSubmitApplication, handleGetMyApplication, handleListApplications, handleGetApplication, handleUpdateStatus, handleGetStatusLogs } from './routes/apply';
 import { handleUploadDocument, handleDownloadDocument, handleDeleteDocument } from './routes/documents';
 import { handleRequestRecommendation, handleGetRecommendationInfo, handleUploadRecommendation, handleListRecommendations } from './routes/recommendations';
@@ -73,7 +73,7 @@ export default withSentry(
       const isCsrfExempt = csrfExemptPaths.some(p => path.startsWith(p)) || path.startsWith('/api/recommendations/');
       if (stateChangingMethods.includes(method) && !isCsrfExempt) {
         if (!validateCsrfToken(request)) {
-          return withCors(error('Invalid CSRF token', 403), request);
+          return withCors(error('Invalid CSRF token', 403), request, env);
         }
       }
 
@@ -83,6 +83,8 @@ export default withSentry(
         response = await handleRegister(request, env);
       } else if (path === '/api/auth/login' && method === 'POST') {
         response = await handleLogin(request, env);
+      } else if (path === '/api/auth/refresh' && method === 'POST') {
+        response = await handleRefresh(request, env);
       } else if (path === '/api/auth/logout' && method === 'DELETE') {
         response = await handleLogout(request, env);
       } else if (path === '/api/auth/verify' && method === 'GET') {
@@ -424,7 +426,7 @@ export default withSentry(
       return withCors(response, request, env);
     } catch (e) {
       console.error('Worker error:', e);
-      return withCors(error('Internal server error', 500), request);
+      return withCors(error('Internal server error', 500), request, env);
     }
   },
   async scheduled(controller, env, ctx) {

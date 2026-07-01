@@ -1,4 +1,8 @@
 import { ALLOWED_ORIGINS as BASE_ALLOWED_ORIGINS } from '@bmi/shared';
+import type { PaginatedData } from '@bmi/shared';
+
+// Re-export PaginatedData so route files can import it from one place
+export type { PaginatedData };
 
 export interface Env {
   DB: D1Database;

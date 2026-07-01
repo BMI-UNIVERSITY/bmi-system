@@ -20,6 +20,8 @@ export {
   DEV_ORIGINS,
   ALLOWED_ORIGINS,
   ADMISSIONS_EMAIL,
+  REGISTRAR_EMAIL,
+  ADMIN_EMAIL,
 } from './domains.js';
 
 // Brand design tokens
@@ -31,6 +33,9 @@ export type {
   ApiSuccess,
   ApiFailure,
   ApiResponse,
+  // Standard pagination — use these everywhere, not inline definitions
+  PaginatedData,
+  PaginatedResponse,
   RegisterRequest,
   RegisterSuccessData,
   RegisterSuccessResponse,
@@ -40,6 +45,9 @@ export type {
   LoginSuccessData,
   LoginSuccessResponse,
   LoginResponse,
+  RefreshSuccessData,
+  RefreshSuccessResponse,
+  RefreshResponse,
   // Public API types
   PublicProgramResponse,
   PublicStatsResponse,

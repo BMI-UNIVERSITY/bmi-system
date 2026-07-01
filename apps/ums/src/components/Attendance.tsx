@@ -29,7 +29,7 @@ const Attendance: React.FC = () => {
     page: 1,
     perPage: 1000,
   });
-  const students = studentsRes?.data || [];
+  const students = studentsRes?.data?.items || [];
   
   const {
     attendanceRecords,

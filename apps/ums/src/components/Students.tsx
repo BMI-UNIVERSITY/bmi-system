@@ -115,13 +115,14 @@ const Students: React.FC<StudentsProps> = (props) => {
   });
 
   const pagedStudents = useMemo(
-    () => (studentResponse?.success ? studentResponse.data : []),
+    () => (studentResponse?.success ? studentResponse.data?.items ?? [] : []),
     [studentResponse],
   );
 
   useEffect(() => {
-    if (studentResponse?.success && studentResponse.meta) {
-      setMeta(studentResponse.meta);
+    if (studentResponse?.success && studentResponse.data) {
+      const { page: p, perPage: pp, total } = studentResponse.data;
+      setMeta({ page: p, perPage: pp, total });
     }
   }, [studentResponse, setMeta]);
 
@@ -215,10 +216,13 @@ const Students: React.FC<StudentsProps> = (props) => {
       queryClient.setQueriesData<typeof studentResponse>(
         { queryKey: ['students'] },
         (old) => {
-          if (!old || !old.success || !Array.isArray(old.data)) return old;
+          if (!old || !old.success || !old.data || !Array.isArray(old.data.items)) return old;
           return {
             ...old,
-            data: old.data.map((s: Student) => (s.id === student.id ? student : s)),
+            data: {
+              ...old.data,
+              items: old.data.items.map((s: Student) => (s.id === student.id ? student : s)),
+            },
           };
         },
       );
@@ -318,7 +322,7 @@ const Students: React.FC<StudentsProps> = (props) => {
         campusId: activeCampusId,
       });
       if (r.success && r.data) {
-        setStudents(r.data);
+        setStudents(r.data.items);
         // Also invalidate the query to refresh the current view
         queryClient.invalidateQueries({ queryKey: ["students"] });
       }
@@ -793,7 +797,7 @@ const Students: React.FC<StudentsProps> = (props) => {
             );
             const r = await postStudentBatch(items);
             const list = await getStudents({ page: 1, perPage: 50 });
-            if (list.success && list.data) setStudents(list.data);
+            if (list.success && list.data) setStudents(list.data.items);
             return {
               ok: (r.data?.failureCount ?? 0) === 0,
               message: `Created: ${r.data?.successCount ?? 0}, failed: ${r.data?.failureCount ?? 0}.`,

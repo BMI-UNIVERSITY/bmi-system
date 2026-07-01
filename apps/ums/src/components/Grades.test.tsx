@@ -36,16 +36,26 @@ vi.mock('../services/academicRecordsService', () => ({
 vi.mock('../hooks/useEntityQueries', () => ({
   useStudentsQuery: vi.fn(() => ({
     data: {
-      data: [
-        { id: 'stu-1', first_name: 'Alice', last_name: 'Smith', student_number: 'STU001' },
-      ],
+      data: {
+        items: [
+          { id: 'stu-1', first_name: 'Alice', last_name: 'Smith', student_number: 'STU001' },
+        ],
+        page: 1,
+        perPage: 50,
+        total: 1,
+      },
     },
   })),
   useCoursesQuery: vi.fn(() => ({
     data: {
-      data: [
-        { code: 'THEO101', title: 'Theology 101', credit_hours: 3 },
-      ],
+      data: {
+        items: [
+          { code: 'THEO101', title: 'Theology 101', credit_hours: 3 },
+        ],
+        page: 1,
+        perPage: 50,
+        total: 1,
+      },
     },
   })),
 }));

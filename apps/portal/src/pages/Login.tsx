@@ -30,7 +30,7 @@ export default function Login() {
           setTempLoginData({ email, password });
           setRequiresMfa(true);
         } else {
-          setUser(res.user);
+          setUser(res.user ?? null);
           const dest = res.user?.role === 'admin' || res.user?.role === 'staff' ? '/admin' : res.user?.role === 'student' ? '/student/dashboard' : '/status';
           navigate(dest);
         }

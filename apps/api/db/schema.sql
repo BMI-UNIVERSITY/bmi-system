@@ -1,3 +1,8 @@
+-- WARNING: This file is for REFERENCE ONLY
+-- The authoritative source is: apps/api/migrations/0001_initial.sql
+-- Always use migrations to modify the database schema
+-- This file should be updated to match migrations but is NOT executed directly
+
 CREATE TABLE IF NOT EXISTS users (
   id          TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
   email       TEXT UNIQUE NOT NULL,

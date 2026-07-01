@@ -12,6 +12,7 @@ import {
   CheckCircle, Sparkles, FileText, Award, BadgeCheck, UserCheck,
   Hash, Building2, AwardIcon
 } from 'lucide-react';
+import { MARKETING_URL, MARKETING_URL_WWW } from '@bmi/shared';
 import { Student } from '../types';
 import { documentService } from '../services/documentService';
 import { getHtml2Pdf } from '../services/pdfService';
@@ -362,7 +363,7 @@ export const GoodStandingLetter: React.FC<GoodStandingLetterProps> = ({ students
                   <div className="mt-8 pt-4 border-t border-slate-200">
                     <p className="text-[10px] text-slate-400 text-center">
                       This is an official document issued by BMI University. The authenticity of this document can be verified 
-                      by scanning the QR code above or visiting www.hkmministries.org/verify and entering the reference number.
+                      by scanning the QR code above or visiting {MARKETING_URL_WWW.replace('https://', '')}/verify and entering the reference number.
                     </p>
                   </div>
                 </div>

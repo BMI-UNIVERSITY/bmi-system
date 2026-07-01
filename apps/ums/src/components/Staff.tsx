@@ -100,13 +100,14 @@ const Staff: React.FC = () => {
   });
 
   const pagedStaff = useMemo(
-    () => (staffResponse?.success ? staffResponse.data : []),
+    () => (staffResponse?.success ? staffResponse.data?.items ?? [] : []),
     [staffResponse],
   );
 
   useEffect(() => {
-    if (staffResponse?.success && staffResponse.meta) {
-      setMeta(staffResponse.meta);
+    if (staffResponse?.success && staffResponse.data) {
+      const { page: p, perPage: pp, total } = staffResponse.data;
+      setMeta({ page: p, perPage: pp, total });
     }
   }, [staffResponse, setMeta]);
 

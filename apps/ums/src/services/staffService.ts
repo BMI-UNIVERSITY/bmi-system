@@ -9,6 +9,7 @@ import { authFetch } from './authService';
 import { StaffMember } from '../types';
 import { API_URL } from './config';
 import { parseJsonSafe } from './apiClient';
+import type { PaginatedData } from '@bmi/shared';
 
 export interface StaffResponse {
   success: boolean;
@@ -18,12 +19,7 @@ export interface StaffResponse {
 
 export interface StaffListResponse {
   success: boolean;
-  data?: StaffMember[];
-  meta?: {
-    page: number;
-    perPage: number;
-    total: number;
-  };
+  data?: PaginatedData<StaffMember>;
   error?: string;
 }
 

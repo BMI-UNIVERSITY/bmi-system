@@ -9,6 +9,7 @@
 import { authFetch } from './authService';
 import { Student } from '../types';
 import { parseJsonSafe } from './apiClient';
+import type { PaginatedData } from '@bmi/shared';
 
 import { API_URL } from './config';
 
@@ -21,12 +22,7 @@ export interface StudentResponse {
 
 export interface StudentsListResponse {
   success: boolean;
-  data?: Student[];
-  meta?: {
-    page: number;
-    perPage: number;
-    total: number;
-  };
+  data?: PaginatedData<Student>;
   error?: string;
 }
 
@@ -121,10 +117,13 @@ export async function getStudents(filters?: StudentFilters): Promise<StudentsLis
     if (!data) {
       return { success: false, error: 'Invalid API response from students endpoint' };
     }
-    return {
-      ...data,
-      data: data.data?.map(normalizeStudent),
-    };
+    if (data.data?.items) {
+      return {
+        ...data,
+        data: { ...data.data, items: data.data.items.map(normalizeStudent) },
+      };
+    }
+    return data;
   } catch (error) { return {
       success: false,
       error: error instanceof Error ? error.message : 'Failed to fetch students',

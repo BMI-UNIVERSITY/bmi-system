@@ -43,6 +43,7 @@ import {
   Activity,
   Award,
 } from "lucide-react";
+import { ADMIN_EMAIL } from '@bmi/shared';
 import QRScanner from "./QRScanner";
 import {
   verifyDocument,
@@ -810,7 +811,7 @@ const VerificationPage: React.FC<VerificationPageProps> = ({ logo }) => {
           purposes.
         </p>
         <p className="text-[10px] text-gray-400">
-          Email: admin@bmiuniversity.org &nbsp;·&nbsp;
+          Email: {ADMIN_EMAIL} &nbsp;·&nbsp;
           <span>East Africa: +254-726-912577 &nbsp;·&nbsp; US: 704-607-5540</span>
         </p>
       </footer>

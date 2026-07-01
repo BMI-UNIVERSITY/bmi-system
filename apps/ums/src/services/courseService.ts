@@ -8,6 +8,7 @@ import { authFetch } from './authService';
 import { Course } from '../types';
 import { API_URL } from './config';
 import { parseJsonSafe } from './apiClient';
+import type { PaginatedData } from '@bmi/shared';
 
 export interface CourseResponse {
   success: boolean;
@@ -17,12 +18,7 @@ export interface CourseResponse {
 
 export interface CourseListResponse {
   success: boolean;
-  data?: Course[];
-  meta?: {
-    page: number;
-    perPage: number;
-    total: number;
-  };
+  data?: PaginatedData<Course>;
   error?: string;
 }
 

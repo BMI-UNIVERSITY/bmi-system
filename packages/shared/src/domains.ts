@@ -48,3 +48,9 @@ export const ALLOWED_ORIGINS: string[] = [
 
 /** The primary admissions contact email address. */
 export const ADMISSIONS_EMAIL = 'admissions@bmiuniversity.org' as const;
+
+/** The registrar's office contact email address. */
+export const REGISTRAR_EMAIL = 'registrar@bmiuniversity.org' as const;
+
+/** The admin/support contact email address. */
+export const ADMIN_EMAIL = 'admin@bmiuniversity.org' as const;
