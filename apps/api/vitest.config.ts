@@ -2,9 +2,9 @@ import { defineConfig } from 'vitest/config';
 
 export default defineConfig({
   test: {
-    pool: '@cloudflare/vitest-pool-workers',
-    workers: {
-      wrangler: { configPath: './wrangler.jsonc' },
-    },
+    // Use standard Node pool for CI compatibility
+    // Workers pool can be enabled locally if needed for integration testing
+    environment: 'node',
+    globals: true,
   },
 });

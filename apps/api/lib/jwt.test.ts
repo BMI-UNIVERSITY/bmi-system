@@ -46,18 +46,20 @@ describe('JWT and Password Utils', () => {
   });
 
   describe('hashPassword and verifyPassword', async () => {
+    const TEST_PEPPER = 'test-pepper-secret-key-for-testing';
+
     it('should hash and verify password correctly', async () => {
       const password = 'TestPassword123!';
-      const hash = await hashPassword(password);
+      const hash = await hashPassword(password, TEST_PEPPER);
       expect(hash).not.toEqual(password);
-      const isMatch = await verifyPassword(password, hash);
+      const isMatch = await verifyPassword(password, hash, TEST_PEPPER);
       expect(isMatch).toBe(true);
     });
 
     it('should reject incorrect password', async () => {
       const password = 'TestPassword123!';
-      const hash = await hashPassword(password);
-      const isMatch = await verifyPassword('WrongPassword123!', hash);
+      const hash = await hashPassword(password, TEST_PEPPER);
+      const isMatch = await verifyPassword('WrongPassword123!', hash, TEST_PEPPER);
       expect(isMatch).toBe(false);
     });
   });
