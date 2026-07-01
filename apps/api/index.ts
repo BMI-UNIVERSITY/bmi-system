@@ -20,6 +20,22 @@ import { handleListUmsCourses, handleCreateCourse, handleUpdateCourse, handleDel
 import { handleListStaff, handleGetStaff, handleCreateStaff, handleUpdateStaff } from './routes/ums-staff';
 import { handleListTransactions } from './routes/ums-finance';
 import { handleGetRevenueTrend } from './routes/ums-dashboard';
+import {
+  handleListStudyCenters, handleGetStudyCenter, handleGetStudyCenterStats,
+  handleCreateStudyCenter, handleUpdateStudyCenter,
+  handleListLibraryBooks,
+  handleListHostels, handleCreateHostel,
+  handleListRoomAssignments, handleCreateRoomAssignment, handleDeleteRoomAssignment,
+  handleListMedicalRecords, handleCreateMedicalRecord, handleDeleteMedicalRecord,
+  handleListInventory, handleCreateInventoryItem, handleUpdateInventoryItem, handleDeleteInventoryItem,
+  handleListVisitors, handleCreateVisitor, handleUpdateVisitor, handleDeleteVisitor,
+  handleListAttendance, handleCreateAttendanceRecord, handleUpdateAttendanceRecord,
+} from './routes/ums-collections';
+import {
+  handleCatalogFaculties, handleCatalogDepartments, handleCatalogPrograms, handleCatalogTerms,
+  handleStudentStatsOverview, handleStaffStatsOverview, handleCourseStatsOverview, handleFinanceStats,
+  handleVerifyCertificate, handleCertificateVerificationStats,
+} from './routes/ums-stats';
 
 function withCors(response: Response, request: Request, env: Env): Response {
   const corsHeaders = getCorsHeaders(request, env);
@@ -432,6 +448,168 @@ export default withSentry(
     const auth = await requireAuth(request, env, ['admin']);
     if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleGetRevenueTrend(request, env);
+
+  // Study Centers
+  } else if (path === '/api/v1/study-centers/all' && method === 'GET') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleListStudyCenters(request, env);
+  } else if (path === '/api/v1/study-centers' && method === 'GET') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleListStudyCenters(request, env);
+  } else if (path === '/api/v1/study-centers' && method === 'POST') {
+    const auth = await requireAuth(request, env, ['admin']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleCreateStudyCenter(request, env);
+  } else if (path.match(/^\/api\/v1\/study-centers\/[^/]+\/stats$/) && method === 'GET') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleGetStudyCenterStats(request, env, path.split('/')[4]);
+  } else if (path.match(/^\/api\/v1\/study-centers\/[^/]+$/) && method === 'GET') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleGetStudyCenter(request, env, path.split('/')[4]);
+  } else if (path.match(/^\/api\/v1\/study-centers\/[^/]+$/) && (method === 'PUT' || method === 'PATCH')) {
+    const auth = await requireAuth(request, env, ['admin']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleUpdateStudyCenter(request, env, path.split('/')[4]);
+
+  // Library
+  } else if (path === '/api/v1/library' && method === 'GET') {
+    const auth = await requireAuth(request, env, ['admin', 'staff', 'student']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleListLibraryBooks(request, env);
+
+  // Hostels
+  } else if (path === '/api/v1/hostels' && method === 'GET') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleListHostels(request, env);
+  } else if (path === '/api/v1/hostels' && method === 'POST') {
+    const auth = await requireAuth(request, env, ['admin']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleCreateHostel(request, env);
+  } else if (path === '/api/v1/hostels/assignments' && method === 'GET') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleListRoomAssignments(request, env);
+  } else if (path === '/api/v1/hostels/assignments' && method === 'POST') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleCreateRoomAssignment(request, env);
+  } else if (path.match(/^\/api\/v1\/hostels\/assignments\/[^/]+$/) && method === 'DELETE') {
+    const auth = await requireAuth(request, env, ['admin']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleDeleteRoomAssignment(request, env, path.split('/')[5]);
+
+  // Medical
+  } else if (path === '/api/v1/medical' && method === 'GET') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleListMedicalRecords(request, env);
+  } else if (path === '/api/v1/medical' && method === 'POST') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleCreateMedicalRecord(request, env);
+  } else if (path.match(/^\/api\/v1\/medical\/[^/]+$/) && method === 'DELETE') {
+    const auth = await requireAuth(request, env, ['admin']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleDeleteMedicalRecord(request, env, path.split('/')[4]);
+
+  // Inventory
+  } else if (path === '/api/v1/inventory' && method === 'GET') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleListInventory(request, env);
+  } else if (path === '/api/v1/inventory' && method === 'POST') {
+    const auth = await requireAuth(request, env, ['admin']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleCreateInventoryItem(request, env);
+  } else if (path.match(/^\/api\/v1\/inventory\/[^/]+$/) && (method === 'PUT' || method === 'PATCH')) {
+    const auth = await requireAuth(request, env, ['admin']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleUpdateInventoryItem(request, env, path.split('/')[4]);
+  } else if (path.match(/^\/api\/v1\/inventory\/[^/]+$/) && method === 'DELETE') {
+    const auth = await requireAuth(request, env, ['admin']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleDeleteInventoryItem(request, env, path.split('/')[4]);
+
+  // Visitors
+  } else if (path === '/api/v1/visitors' && method === 'GET') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleListVisitors(request, env);
+  } else if (path === '/api/v1/visitors' && method === 'POST') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleCreateVisitor(request, env);
+  } else if (path.match(/^\/api\/v1\/visitors\/[^/]+$/) && (method === 'PUT' || method === 'PATCH')) {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleUpdateVisitor(request, env, path.split('/')[4]);
+  } else if (path.match(/^\/api\/v1\/visitors\/[^/]+$/) && method === 'DELETE') {
+    const auth = await requireAuth(request, env, ['admin']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleDeleteVisitor(request, env, path.split('/')[4]);
+
+  // Attendance
+  } else if (path === '/api/v1/attendance' && method === 'GET') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleListAttendance(request, env);
+  } else if (path === '/api/v1/attendance' && method === 'POST') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleCreateAttendanceRecord(request, env);
+  } else if (path.match(/^\/api\/v1\/attendance\/[^/]+$/) && (method === 'PUT' || method === 'PATCH')) {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleUpdateAttendanceRecord(request, env, path.split('/')[4]);
+
+  // Catalog (dropdown data)
+  } else if (path === '/api/v1/catalog/faculties' && method === 'GET') {
+    const auth = await requireAuth(request, env, ['admin', 'staff', 'student']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleCatalogFaculties(request, env);
+  } else if (path === '/api/v1/catalog/departments' && method === 'GET') {
+    const auth = await requireAuth(request, env, ['admin', 'staff', 'student']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleCatalogDepartments(request, env);
+  } else if (path === '/api/v1/catalog/programs' && method === 'GET') {
+    const auth = await requireAuth(request, env, ['admin', 'staff', 'student']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleCatalogPrograms(request, env);
+  } else if (path === '/api/v1/catalog/terms' && method === 'GET') {
+    const auth = await requireAuth(request, env, ['admin', 'staff', 'student']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleCatalogTerms(request, env);
+
+  // Stats Overviews
+  } else if (path === '/api/v1/students/stats/overview' && method === 'GET') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleStudentStatsOverview(request, env);
+  } else if (path === '/api/v1/staff/stats/overview' && method === 'GET') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleStaffStatsOverview(request, env);
+  } else if (path === '/api/v1/courses/stats/overview' && method === 'GET') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleCourseStatsOverview(request, env);
+  } else if (path === '/api/v1/finance/stats' && method === 'GET') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleFinanceStats(request, env);
+
+  // Certificate Verification
+  } else if (path === '/api/v1/documents/verify' && method === 'POST') {
+    response = await handleVerifyCertificate(request, env);
+  } else if (path === '/api/v1/certificates/verification/stats' && method === 'GET') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleCertificateVerificationStats(request, env);
 
   } else {
     response = error('Route not found', 404);
