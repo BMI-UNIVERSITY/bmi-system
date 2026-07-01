@@ -348,14 +348,16 @@ export async function verifySession(): Promise<boolean> {
     const response = await authFetch(`${API_URL.replace('/v1', '')}/auth/me`, {}, 3000);
     const data = await response.json();
 
-    if (data.success) {
+    if (data.success && data.data) {
+      const apiUser = data.data;
       const user = {
-        id: data.id,
-        email: data.email,
-        name: `${data.first_name} ${data.last_name}`,
-        role: data.role,
+        id: apiUser.id,
+        email: apiUser.email,
+        name: `${apiUser.first_name} ${apiUser.last_name}`,
+        role: apiUser.role,
         isActive: true,
       };
+      console.log('[authService] Session verified - User object:', user);
       localStorage.setItem(USER_KEY, JSON.stringify(user));
       return true;
     }
