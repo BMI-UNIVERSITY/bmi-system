@@ -4,7 +4,7 @@ import { ok, error } from '../lib/types';
 export async function handleListRubrics(request: Request, env: Env): Promise<Response> {
   try {
     const rows = await env.DB.prepare(
-      `SELECT r.*, c.name as course_name 
+      `SELECT r.*, c.title as course_name 
        FROM rubrics r
        LEFT JOIN courses c ON r.course_id = c.id
        ORDER BY r.created_at DESC`

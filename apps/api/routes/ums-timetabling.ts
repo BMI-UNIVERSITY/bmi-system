@@ -4,7 +4,7 @@ import { ok, error } from '../lib/types';
 export async function handleListTimetabling(request: Request, env: Env): Promise<Response> {
   const rows = await env.DB.prepare(
     `SELECT t.*, 
-            c.code as course_code, c.name as course_name,
+            c.code as course_code, c.title as course_name,
             u.first_name, u.last_name
      FROM timetabling t
      LEFT JOIN courses c ON t.course_id = c.id
