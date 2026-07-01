@@ -205,7 +205,7 @@ const Finance: React.FC = () => {
       })
       .map((st) => {
         const staffTxs = transactions.filter(
-          (t) => t.name === st.name && t.desc.includes("Salary"),
+          (t) => t.name === st.name && (t.desc || "").includes("Salary"),
         );
         const totalPaid = staffTxs.reduce(
           (acc, curr) => (curr.status === "Paid" ? acc + curr.amt : acc),

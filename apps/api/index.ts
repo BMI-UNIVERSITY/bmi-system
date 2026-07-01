@@ -6,6 +6,7 @@ import { handleRequestRecommendation, handleGetRecommendationInfo, handleUploadR
 import { requireAuth, rateLimit } from './middleware/auth';
 import { handleGetDashboard, handleGetCourses, handleEnroll, handleGetFinances, handlePayInvoice, handleDropCourse, handleGetTranscript, handleGetSettings, handleUpdateSettings, handleGetTickets, handleCreateTicket } from './routes/student';
 import { handleAdminSetup, handleListUsers, handleUpdateUserRole, handleDeleteUser, handleAdminResetPassword, handleGetAuditLogs } from './routes/admin';
+import { handleListTimetabling, handleCreateTimetabling } from './routes/ums-timetabling';
 import { error, getCorsHeaders, validateCsrfToken } from './lib/types';
 import type { Env } from './lib/types';
 import backupWorker from './backup';
@@ -307,6 +308,16 @@ export default withSentry(
     const auth = await requireAuth(request, env, ['admin']);
     if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleDeletePage(request, env, path.split('/')[4], auth.user.sub);
+
+  // ─── Timetabling ─────────────────────────────────────────────────────────────
+  } else if (path === '/api/v1/timetabling' && method === 'GET') {
+    const auth = await requireAuth(request, env);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleListTimetabling(request, env);
+  } else if (path === '/api/v1/timetabling' && method === 'POST') {
+    const auth = await requireAuth(request, env);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleCreateTimetabling(request, env);
 
   // ─── Webhook Routes ───────────────────────────────────────────────
   } else if (path === '/api/webhooks/inbound' && method === 'POST') {

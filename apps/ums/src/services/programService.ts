@@ -26,7 +26,10 @@ export async function getPrograms(filters?: {
     const queryString = params.toString();
     const url = `${API_URL}/programs${queryString ? `?${queryString}` : ''}`;
     const response = await authFetch(url);
-    const data = await parseJsonSafe<ApiResponse<Program[]>>(response);
+    let data = await parseJsonSafe<any>(response);
+    if (data?.success && data.data && !Array.isArray(data.data) && Array.isArray(data.data.items)) {
+      data.data = data.data.items;
+    }
     return data ?? { success: false, data: [], error: { code: 'PARSE_ERROR', message: 'Failed to parse programs response' } };
   } catch (error) { return { success: false, data: [], error: { code: 'FETCH_ERROR', message: 'Failed to fetch programs'  } };
   }
