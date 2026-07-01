@@ -50,7 +50,7 @@ export async function handleListStudents(request: Request, env: Env): Promise<Re
   ).bind(...bindings).first<{ total: number }>();
 
   const rows = await env.DB.prepare(
-    `SELECT s.*, u.email, u.first_name, u.last_name, u.phone, u.role
+    `SELECT s.user_id as id, s.*, u.email, u.first_name, u.last_name, u.phone, u.role
      FROM students s
      INNER JOIN users u ON s.user_id = u.id
      ${where}
@@ -70,7 +70,7 @@ export async function handleListStudents(request: Request, env: Env): Promise<Re
 
 export async function handleGetStudent(request: Request, env: Env, studentId: string): Promise<Response> {
   const row = await env.DB.prepare(
-    `SELECT s.*, u.email, u.first_name, u.last_name, u.phone, u.role
+    `SELECT s.user_id as id, s.*, u.email, u.first_name, u.last_name, u.phone, u.role
      FROM students s
      INNER JOIN users u ON s.user_id = u.id
      WHERE s.user_id = ? OR s.reg_no = ?`
@@ -123,7 +123,7 @@ export async function handleCreateStudent(request: Request, env: Env): Promise<R
   ).run();
 
   const created = await env.DB.prepare(
-    `SELECT s.*, u.email, u.first_name, u.last_name, u.phone FROM students s
+    `SELECT s.user_id as id, s.*, u.email, u.first_name, u.last_name, u.phone FROM students s
      INNER JOIN users u ON s.user_id = u.id WHERE s.user_id = ?`
   ).bind(userId).first();
 
@@ -172,7 +172,7 @@ export async function handleUpdateStudent(request: Request, env: Env, studentId:
   }
 
   const updated = await env.DB.prepare(
-    `SELECT s.*, u.email, u.first_name, u.last_name, u.phone FROM students s
+    `SELECT s.user_id as id, s.*, u.email, u.first_name, u.last_name, u.phone FROM students s
      INNER JOIN users u ON s.user_id = u.id WHERE s.user_id = ?`
   ).bind(uid).first();
 
