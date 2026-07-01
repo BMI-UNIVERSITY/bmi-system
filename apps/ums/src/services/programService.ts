@@ -27,8 +27,12 @@ export async function getPrograms(filters?: {
     const url = `${API_URL}/programs${queryString ? `?${queryString}` : ''}`;
     const response = await authFetch(url);
     let data = await parseJsonSafe<any>(response);
-    if (data?.success && data.data && !Array.isArray(data.data) && Array.isArray(data.data.items)) {
-      data.data = data.data.items;
+    if (data?.success) {
+      if (data.data && !Array.isArray(data.data) && Array.isArray(data.data.items)) {
+        data.data = data.data.items;
+      } else if (!Array.isArray(data.data)) {
+        data.data = [];
+      }
     }
     return data ?? { success: false, data: [], error: { code: 'PARSE_ERROR', message: 'Failed to parse programs response' } };
   } catch (error) { return { success: false, data: [], error: { code: 'FETCH_ERROR', message: 'Failed to fetch programs'  } };
@@ -73,7 +77,10 @@ export async function updateProgram(id: string, data: Partial<Program>): Promise
 export async function getFaculties(): Promise<ApiResponse<Faculty[]>> {
   try {
     const response = await authFetch(`${API_URL}/catalog/faculties`);
-    const data = await parseJsonSafe<ApiResponse<Faculty[]>>(response);
+    let data = await parseJsonSafe<any>(response);
+    if (data?.success && !Array.isArray(data.data)) {
+      data.data = [];
+    }
     return data ?? { success: false, data: [] };
   } catch (error) { return { success: false, data: [] };
   }
@@ -82,12 +89,15 @@ export async function getFaculties(): Promise<ApiResponse<Faculty[]>> {
 export async function getDepartments(facultyId?: string): Promise<ApiResponse<Department[]>> {
   try {
     const params = new URLSearchParams();
-    if (facultyId) params.append('facultyId', facultyId);
+    if (facultyId) params.append('faculty_id', facultyId);
     
     const queryString = params.toString();
     const url = `${API_URL}/catalog/departments${queryString ? `?${queryString}` : ''}`;
     const response = await authFetch(url);
-    const data = await parseJsonSafe<ApiResponse<Department[]>>(response);
+    let data = await parseJsonSafe<any>(response);
+    if (data?.success && !Array.isArray(data.data)) {
+      data.data = [];
+    }
     return data ?? { success: false, data: [] };
   } catch (error) {
     return { success: false, data: [] };
@@ -97,7 +107,10 @@ export async function getDepartments(facultyId?: string): Promise<ApiResponse<De
 export async function getAcademicTerms(): Promise<ApiResponse<AcademicTerm[]>> {
   try {
     const response = await authFetch(`${API_URL}/catalog/terms`);
-    const data = await parseJsonSafe<ApiResponse<AcademicTerm[]>>(response);
+    let data = await parseJsonSafe<any>(response);
+    if (data?.success && !Array.isArray(data.data)) {
+      data.data = [];
+    }
     return data ?? { success: false, data: [] };
   } catch (error) {
     return { success: false, data: [] };

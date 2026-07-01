@@ -42,7 +42,17 @@ export async function getCourses(filters?: {
     const queryString = params.toString();
     const url = `${API_URL}/courses${queryString ? `?${queryString}` : ''}`;
     const response = await authFetch(url);
-    const data = await parseJsonSafe<CourseListResponse>(response);
+    let data = await parseJsonSafe<any>(response);
+    if (data?.success && !data.data?.items && data.data?.items !== []) {
+      // Make sure data has the paginated structure
+      if (!data.data) {
+        data.data = { items: [], page: 1, perPage: 20, total: 0 };
+      } else if (Array.isArray(data.data)) {
+        data.data = { items: data.data, page: 1, perPage: data.data.length, total: data.data.length };
+      } else if (!data.data.items) {
+        data.data.items = [];
+      }
+    }
     return data ?? { success: false, error: 'Failed to parse courses response' };
   } catch (error) { return { success: false, error: 'Failed to fetch courses'  };
   }

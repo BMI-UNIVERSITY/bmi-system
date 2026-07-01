@@ -288,7 +288,7 @@ export default withSentry(
     const auth = await requireAuth(request, env, ['admin', 'staff']);
     if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleCreatePost(request, env, auth.user.sub);
-  } else if (path.match(/^\/api\/cms\/posts\/[^/]+$/) && method === 'PUT') {
+  } else if (path.match(/^\/api\/cms\/posts\/[^/]+$/) && (method === 'PUT' || method === 'PATCH')) {
     const auth = await requireAuth(request, env, ['admin', 'staff']);
     if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleUpdatePost(request, env, path.split('/')[4], auth.user.sub);
@@ -361,7 +361,7 @@ export default withSentry(
     const auth = await requireAuth(request, env, ['admin', 'staff', 'student']);
     if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleGetStudent(request, env, path.split('/')[4]);
-  } else if (path.match(/^\/api\/v1\/students\/[^/]+$/) && method === 'PUT') {
+  } else if (path.match(/^\/api\/v1\/students\/[^/]+$/) && (method === 'PUT' || method === 'PATCH')) {
     const auth = await requireAuth(request, env, ['admin', 'staff']);
     if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleUpdateStudent(request, env, path.split('/')[4]);
@@ -393,7 +393,7 @@ export default withSentry(
     const auth = await requireAuth(request, env, ['admin', 'staff']);
     if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleCreateCourse(request, env);
-  } else if (path.match(/^\/api\/v1\/courses\/[^/]+$/) && method === 'PUT') {
+  } else if (path.match(/^\/api\/v1\/courses\/[^/]+$/) && (method === 'PUT' || method === 'PATCH')) {
     const auth = await requireAuth(request, env, ['admin', 'staff']);
     if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleUpdateCourse(request, env, path.split('/')[4]);
