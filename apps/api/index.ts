@@ -18,6 +18,8 @@ import { handleListStudents, handleGetStudent, handleCreateStudent, handleUpdate
 import { handleListGrades, handleCreateGrade, handleUpdateGrade } from './routes/ums-grades';
 import { handleListUmsCourses, handleCreateCourse, handleUpdateCourse, handleDeleteCourse, handleListPrograms, handleListFaculties, handleListDepartments, handleListTerms, handleListEnrollments, handleCreateEnrollment } from './routes/ums-courses';
 import { handleListStaff, handleGetStaff, handleCreateStaff, handleUpdateStaff } from './routes/ums-staff';
+import { handleListTransactions } from './routes/ums-finance';
+import { handleGetRevenueTrend } from './routes/ums-dashboard';
 
 function withCors(response: Response, request: Request, env: Env): Response {
   const corsHeaders = getCorsHeaders(request, env);
@@ -418,6 +420,18 @@ export default withSentry(
     const auth = await requireAuth(request, env, ['admin']);
     if (auth instanceof Response) return withCors(auth, request, env);
     response = await handleUpdateStaff(request, env, path.split('/')[4]);
+
+  // Finance
+  } else if (path === '/api/v1/finance/transactions' && method === 'GET') {
+    const auth = await requireAuth(request, env, ['admin', 'staff']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleListTransactions(request, env);
+
+  // Dashboard
+  } else if (path === '/api/v1/dashboard/revenue-trend' && method === 'GET') {
+    const auth = await requireAuth(request, env, ['admin']);
+    if (auth instanceof Response) return withCors(auth, request, env);
+    response = await handleGetRevenueTrend(request, env);
 
   } else {
     response = error('Route not found', 404);
