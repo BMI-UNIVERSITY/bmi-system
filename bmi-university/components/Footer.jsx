@@ -49,7 +49,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="bg-gradient-to-b from-[#0c1628] to-[#0f172a] border-t-[5px] border-[#d4af37] text-white">
+    <footer className="bg-gradient-to-b from-[#0c1628] to-[#0f172a] border-t-[5px] border-[#d4af37] text-white font-sans">
 
       {/* ── Top: Newsletter ── */}
       <div className="bg-white/5 border-b border-white/10 px-6 py-12 sm:px-12 sm:py-16">
