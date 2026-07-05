@@ -163,11 +163,32 @@ export async function readThrough(
 
 | Endpoint Group | TTL | Rationale |
 |----------------|-----|-----------|
-| `GET /api/v1/students*` | 60s | Student records change on staff writes only |
-| `GET /api/v1/grades*` | 30s | Grade updates are more frequent |
-| `GET /api/v1/courses*` | 300s | Course catalogue is near-static |
-| `GET /api/v1/timetabling*` | 120s | Updated weekly |
-| `GET /api/applications*` | 30s | Application status changes frequently |
+| `GET /api/v1/students*` | 15s | Student list is queried heavily and updated frequently by staff. 15s limits stale window without cross-Worker coordination. |
+| `GET /api/v1/grades*` | 30s | Grade updates are frequent during assessment periods. |
+| `GET /api/v1/courses*` | 30s | Course availability changes during add/drop periods. |
+| `GET /api/v1/timetabling*` | 30s | Updated weekly but queries spike at term start. |
+| `GET /api/applications*` | 30s | Application status changes frequently during review cycles. |
+| `GET /api/v1/staff*` | 30s | Staff records are infrequently updated. |
+
+> [!NOTE]
+> **Rationale for 30s (not 60s):** When `bmi-core` writes to the `applications` table, `bmi-ums` may serve stale data via `v_student_with_application` for up to the TTL window. 30s is the maximum acceptable staleness for a university SIS — it is not a stock exchange. This eliminates the need for complex cross-Worker purge coordination entirely.
+
+**Cache Invalidation Strategy — TTL-Based Only:**
+
+Cross-Worker cache purge APIs are **explicitly not implemented**. Here is why:
+
+| Approach | Problem | Decision |
+|----------|---------|----------|
+| Cross-Worker HTTP purge | Race conditions; purge can arrive before write commits | ❌ Rejected |
+| Shared KV invalidation flag | Adds KV read to every cache check; defeats purpose | ❌ Rejected |
+| TTL-based expiry | 30s eventual consistency is acceptable for SIS; zero complexity | ✅ **Adopted** |
+
+Within a single Worker, write handlers invalidate that Worker's own Cache API entries only:
+```typescript
+// In bmi-ums write handler — invalidates OWN cache entries only
+await caches.default.delete(new Request('https://cache.bmi-internal/students'));
+// Does NOT attempt to purge bmi-core's cache. bmi-core's 30s TTL handles this.
+```
 
 **Cache Invalidation**:
 - Any `POST`, `PUT`, `PATCH`, or `DELETE` handler that mutates a list must call:
@@ -372,3 +393,66 @@ All cached responses include:
 - `CF-Cache-Status` — set automatically by Cloudflare's edge for CDN-cached responses
 
 This allows the SRE team to monitor cache effectiveness in Cloudflare Analytics without any additional tooling.
+
+---
+
+## 7. Canary Ramp-Up Strategy (bmi-auth Extraction)
+
+`bmi-auth` is the highest-risk extraction (critical path for all authentication). Use a staged traffic split via the monolith Service Binding proxy to achieve zero-downtime rollout with a safe rollback window.
+
+```
+Phase 1: 10% traffic  →  Monitor for 30 min  →  Watch error rate on /api/auth/*
+Phase 2: 50% traffic  →  Monitor for 30 min  →  Validate session_version checks in production
+Phase 3: 100% traffic →  Keep monolith alive 48h as cold standby
+Phase 4: Decommission old monolith /api/auth/* handler. DNS Route takes over.
+```
+
+**Implementation in monolith proxy** (during migration):
+
+```typescript
+// apps/api/index.ts — canary routing during bmi-auth extraction
+if (path.startsWith('/api/auth/')) {
+  // Canary: route CANARY_PERCENT% of auth traffic to new Worker.
+  // Increase CANARY_PERCENT via wrangler secret: 0 → 10 → 50 → 100
+  const canaryPercent = parseInt(env.AUTH_CANARY_PERCENT ?? '0', 10);
+  if (Math.random() * 100 < canaryPercent) {
+    return env.AUTH_WORKER.fetch(request);
+  }
+  // Fall through to monolith handler (existing code)
+}
+```
+
+**Add to `wrangler.jsonc` vars** (increment without redeployment via secret):
+```jsonc
+"vars": {
+  "AUTH_CANARY_PERCENT": "0"   // Set to 10, 50, 100 via wrangler secret put
+}
+```
+
+**Rollback**: Set `AUTH_CANARY_PERCENT` to `0` via `wrangler secret put`. Zero code changes required. Zero downtime. The monolith handles 100% of traffic again instantly.
+
+**Success Criteria before advancing each phase**:
+- Error rate on `/api/auth/*` < 0.1% over 30-minute window
+- P99 latency ≤ monolith baseline (check via Cloudflare Analytics)
+- Zero `session_version` mismatch errors in Worker logs (`X-Cache: MISS` + 401 pattern)
+
+---
+
+## 8. TTL Summary Reference
+
+| Worker | Endpoint Pattern | TTL | Strategy |
+|--------|-----------------|-----|----------|
+| `bmi-public` | `/api/public/programs` | 300s | KV Snapshot + Cache API |
+| `bmi-public` | `/api/public/stats` | 300s | KV Snapshot + Cache API |
+| `bmi-public` | `/api/public/cms/posts` | 120s | KV Snapshot + Cache API |
+| `bmi-public` | `/api/public/cms/pages/*` | 600s | KV Snapshot + Cache API |
+| `bmi-ums` | `GET /api/v1/students*` | **15s** | Read-Through Cache API |
+| `bmi-ums` | `GET /api/v1/grades*` | 30s | Read-Through Cache API |
+| `bmi-ums` | `GET /api/v1/timetabling*` | 30s | Read-Through Cache API |
+| `bmi-core` | `GET /api/applications*` | 30s | Read-Through Cache API |
+| `bmi-ums` | `GET /api/v1/courses*` | 30s | Read-Through Cache API |
+| All workers | `POST/PUT/PATCH/DELETE` | N/A | **Never cached** |
+| All workers | Authenticated GETs | — | `Cache-Control: private` (no CDN edge caching) |
+
+> **Cross-Worker Cache Purge APIs: Not Implemented.**  
+> TTL-based expiry (max 30s) is the sole invalidation mechanism. This is a deliberate design decision to eliminate distributed cache stampedes and race conditions. 30 seconds of eventual consistency is acceptable for a university SIS.
