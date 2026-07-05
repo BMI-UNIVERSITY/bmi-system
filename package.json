@@ -3,7 +3,8 @@
   "private": true,
   "workspaces": [
     "apps/*",
-    "packages/*"
+    "packages/*",
+    "bmi-university"
   ],
   "scripts": {
     "prepare": "npm run build --workspace=@bmi/shared"
