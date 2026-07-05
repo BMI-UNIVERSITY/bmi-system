@@ -229,11 +229,16 @@ export default withSentry(
     }
 
     // ── Phase 2 Migration Proxy ──────────────────────────────────────────────
-    // Forward /api/public/* to bmi-public Worker once it is deployed.
-    // If PUBLIC_WORKER binding is not yet present, traffic falls through to
-    // the existing monolith handlers below — zero-downtime progressive migration.
+    // Forward domain paths to their extracted Workers once deployed.
+    // If a binding is not yet present, traffic falls through to the existing
+    // monolith handlers below — zero-downtime progressive migration.
+    
     if (path.startsWith('/api/public/') && env.PUBLIC_WORKER) {
       return env.PUBLIC_WORKER.fetch(request);
+    }
+    
+    if (path.startsWith('/api/webhooks/') && env.WEBHOOKS_WORKER) {
+      return env.WEBHOOKS_WORKER.fetch(request);
     }
 
     try {

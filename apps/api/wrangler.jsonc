@@ -69,7 +69,8 @@
   // As each domain Worker is deployed, add its binding here and update index.ts
   // routing to forward matching paths. Remove bindings once DNS Routes take over.
   "services": [
-    { "binding": "PUBLIC_WORKER", "service": "bmi-public" }
+    { "binding": "PUBLIC_WORKER", "service": "bmi-public" },
+    { "binding": "WEBHOOKS_WORKER", "service": "bmi-webhooks" }
   ],
 
   "triggers": {

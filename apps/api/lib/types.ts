@@ -36,6 +36,8 @@ export interface Env {
   // Add each domain Worker here as it is deployed. Remove once DNS Routes take over.
   /** bmi-public Worker — serves /api/public/* (read-only, KV cached) */
   PUBLIC_WORKER?: Fetcher;
+  /** bmi-webhooks Worker — serves /api/webhooks/* */
+  WEBHOOKS_WORKER?: Fetcher;
   /** Canary percentage for bmi-auth Worker extraction (0–100). Default: 0 */
   AUTH_CANARY_PERCENT?: string;
   SENTRY_DSN?: string;

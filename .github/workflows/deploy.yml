@@ -14,6 +14,7 @@ jobs:
     outputs:
       api: ${{ steps.filter.outputs.api }}
       worker-public: ${{ steps.filter.outputs.worker-public }}
+      worker-webhooks: ${{ steps.filter.outputs.worker-webhooks }}
       portal: ${{ steps.filter.outputs.portal }}
       ums: ${{ steps.filter.outputs.ums }}
       university: ${{ steps.filter.outputs.university }}
@@ -33,6 +34,11 @@ jobs:
             worker-public:
               - 'apps/workers/public/**'
               - 'packages/shared/**'
+              - '.github/workflows/deploy.yml'
+            worker-webhooks:
+              - 'apps/workers/webhooks/**'
+              - 'packages/shared/**'
+              - 'packages/api-middleware/**'
               - '.github/workflows/deploy.yml'
             portal:
               - 'apps/portal/**'
@@ -126,6 +132,42 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/workers/public
+          command: deploy
+
+  # ─── Deploy bmi-webhooks Worker (Phase 2 ─ Step 2) ───────────────────────────
+  deploy-webhooks-worker:
+    name: Deploy bmi-webhooks Worker
+    runs-on: ubuntu-latest
+    needs: [changes, test]
+    if: github.event_name == 'push' && needs.changes.outputs['worker-webhooks'] == 'true'
+    environment:
+      name: production
+    defaults:
+      run:
+        working-directory: apps/workers/webhooks
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+
+      - name: Install dependencies (workspace)
+        run: npm ci
+        working-directory: .
+
+      - name: Type check bmi-webhooks
+        run: npm run type-check
+
+      - name: Deploy bmi-webhooks to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/workers/webhooks
           command: deploy
 
   # ─── Deploy Portal Frontend ───────────────────────────────────────────────────
