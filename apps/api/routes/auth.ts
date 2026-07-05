@@ -51,7 +51,7 @@ export async function handleRegister(request: Request, env: Env): Promise<Respon
     return error('An account with this email already exists', 409);
   }
 
-  const passwordHash = await hashPassword(password, env.JWT_SECRET);
+  const passwordHash = await hashPassword(password, env.PASSWORD_PEPPER);
   const userId = crypto.randomUUID();
   const isVerified = 0;
   const verificationToken = crypto.randomUUID();
@@ -146,8 +146,6 @@ export async function handleResendVerification(request: Request, env: Env): Prom
   ).bind(body.email.toLowerCase()).first<{ id: string; first_name: string; is_verified: number }>();
 
   if (!user) return ok({ message: 'If the account exists, a verification email has been sent.' });
-  // DEV_ONLY: skip sending verification email (uncomment to reinstate)
-  /*
   if (user.is_verified) return ok({ message: 'Email is already verified.' });
 
   const verificationToken = crypto.randomUUID();
@@ -168,7 +166,6 @@ export async function handleResendVerification(request: Request, env: Env): Prom
       html: `<p>Click to verify: <a href="${verifyUrl}">${verifyUrl}</a></p>`
     }, env.RESEND_API_KEY);
   }
-  */
 
   return ok({ message: 'Verification email sent.' });
 }
@@ -194,12 +191,11 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
     return error('Invalid email or password', 401);
   }
 
-  // DEV_ONLY: skip email verification check (uncomment to reinstate)
-  // if (!user.is_verified) {
-  //   return error('Please verify your email address before logging in. Check your inbox for the verification link.', 403);
-  // }
+  if (!user.is_verified) {
+    return error('Please verify your email address before logging in. Check your inbox for the verification link.', 403);
+  }
 
-  const valid = await verifyPassword(password, user.password_hash, env.JWT_SECRET);
+  const valid = await verifyPassword(password, user.password_hash, env.PASSWORD_PEPPER);
   if (!valid) {
     return error('Invalid email or password', 401);
   }
@@ -383,7 +379,7 @@ export async function handleResetPassword(request: Request, env: Env): Promise<R
   if (new Date(resetToken.expires_at) < new Date()) return error('Reset token has expired', 410);
 
   // Update password
-  const passwordHash = await hashPassword(body.new_password, env.JWT_SECRET);
+  const passwordHash = await hashPassword(body.new_password, env.PASSWORD_PEPPER);
   await env.DB.prepare(
     `UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?`
   ).bind(passwordHash, resetToken.user_id).run();
@@ -445,7 +441,7 @@ export async function handleMfaDisable(request: Request, env: Env, userId: strin
   const user = await env.DB.prepare('SELECT password_hash FROM users WHERE id = ?').bind(userId).first<{ password_hash: string }>();
   if (!user) return error('User not found', 404);
 
-  const valid = await verifyPassword(body.password, user.password_hash, env.JWT_SECRET);
+  const valid = await verifyPassword(body.password, user.password_hash, env.PASSWORD_PEPPER);
   if (!valid) return error('Invalid password', 401);
 
   await env.DB.prepare('UPDATE users SET mfa_enabled = 0, mfa_secret = NULL, updated_at = datetime("now") WHERE id = ?').bind(userId).run();
@@ -505,7 +501,7 @@ export async function handleOAuthCallback(request: Request, env: Env, provider: 
     } else {
       userId = crypto.randomUUID();
       const tempPassword = crypto.randomUUID();
-      const passwordHash = await hashPassword(tempPassword, env.JWT_SECRET);
+      const passwordHash = await hashPassword(tempPassword, env.PASSWORD_PEPPER);
       
       // DEV_ONLY: force is_verified = 1 (change back to `userInfo.emailVerified ? 1 : 0` to reinstate)
       await env.DB.prepare(

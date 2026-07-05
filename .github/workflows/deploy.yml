@@ -54,6 +54,8 @@ jobs:
     runs-on: ubuntu-latest
     needs: [changes, test, contract-tests]
     if: github.event_name == 'push' && needs.changes.outputs.api == 'true'
+    environment:
+      name: production
     defaults:
       run:
         working-directory: apps/api
@@ -236,12 +238,20 @@ jobs:
         run: npm run type-check
         working-directory: apps/api
 
+      - name: Lint API
+        run: npm run lint
+        working-directory: apps/api
+
       - name: Run API tests (includes contract tests)
         run: npm test
         working-directory: apps/api
 
       - name: Type check UMS frontend
         run: npm run type-check
+        working-directory: apps/ums
+
+      - name: Lint UMS frontend
+        run: npm run lint
         working-directory: apps/ums
 
       - name: Run UMS tests

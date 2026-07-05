@@ -9,6 +9,7 @@ export interface Env {
   DOCUMENTS: R2Bucket;
   BACKUP_BUCKET: R2Bucket;
   JWT_SECRET: string;
+  PASSWORD_PEPPER: string;
   RESEND_API_KEY: string;
   ADMIN_EMAIL: string;
   ADMIN_SETUP_KEY?: string;

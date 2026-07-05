@@ -68,7 +68,7 @@ export async function handleCreateStaff(request: Request, env: Env): Promise<Res
     return error('Missing required: email, first_name, last_name, staff_no');
   }
 
-  let existingUser = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first<{ id: string }>();
+  const existingUser = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first<{ id: string }>();
   let userId: string;
 
   if (existingUser) {

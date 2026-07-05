@@ -11,7 +11,8 @@
     "verify-migrations": "tsx scripts/verify-migrations.ts",
     "type-check": "tsc --noEmit",
     "secrets:set": "node scripts/set-secrets.mjs",
-    "test": "vitest run"
+    "test": "vitest run",
+    "lint": "eslint ."
   },
   "dependencies": {
     "@bmi/shared": "file:../../packages/shared",
@@ -20,7 +21,9 @@
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "^0.16.20",
     "@cloudflare/workers-types": "^4.20260625.1",
+    "eslint": "^9.39.4",
     "typescript": "^5.8.2",
+    "typescript-eslint": "^8.62.1",
     "vitest": "^4.1.9",
     "wrangler": "^4.104.0"
   }

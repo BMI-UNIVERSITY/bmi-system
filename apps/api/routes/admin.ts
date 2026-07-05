@@ -32,7 +32,7 @@ export async function handleAdminSetup(request: Request, env: Env): Promise<Resp
   }
 
   const { hashPassword } = await import('../lib/jwt');
-  const passwordHash = await hashPassword(body.password, env.JWT_SECRET);
+  const passwordHash = await hashPassword(body.password, env.PASSWORD_PEPPER);
   const userId = crypto.randomUUID();
 
   await env.DB.prepare(

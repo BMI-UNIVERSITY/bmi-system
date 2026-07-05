@@ -68,7 +68,23 @@ export async function handleListStudents(request: Request, env: Env): Promise<Re
 
 // ─── get single student ──────────────────────────────────────────────────────
 
-export async function handleGetStudent(request: Request, env: Env, studentId: string): Promise<Response> {
+export async function handleGetStudent(
+  request: Request,
+  env: Env,
+  studentId: string,
+  callerId: string,
+  callerRole: string,
+): Promise<Response> {
+  // SECURITY: students may only read their own profile.
+  if (callerRole === 'student') {
+    const owner = await env.DB.prepare(
+      `SELECT user_id FROM students WHERE user_id = ? OR reg_no = ? LIMIT 1`
+    ).bind(studentId, studentId).first<{ user_id: string }>();
+    if (!owner || owner.user_id !== callerId) {
+      return error('Forbidden', 403);
+    }
+  }
+
   const row = await env.DB.prepare(
     `SELECT s.user_id as id, s.*, u.email, u.first_name, u.last_name, u.phone, u.role
      FROM students s
@@ -79,6 +95,7 @@ export async function handleGetStudent(request: Request, env: Env, studentId: st
   if (!row) return error('Student not found', 404);
   return ok(row);
 }
+
 
 // ─── create student ──────────────────────────────────────────────────────────
 
@@ -96,7 +113,7 @@ export async function handleCreateStudent(request: Request, env: Env): Promise<R
   }
 
   // Check if user exists already
-  let existingUser = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first<{ id: string }>();
+  const existingUser = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first<{ id: string }>();
 
   let userId: string;
   if (existingUser) {

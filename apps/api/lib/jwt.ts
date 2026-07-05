@@ -68,19 +68,34 @@ export async function hashPassword(password: string, pepper: string): Promise<st
     false,
     ['deriveBits']
   );
+  const iterations = 210000;
   const hashBuffer = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt, iterations: 50000, hash: 'SHA-256' },
+    { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
     keyMaterial,
     256
   );
   const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
   const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-  return `pbkdf2:${saltHex}:${hashHex}`;
+  return `pbkdf2:${iterations}:${saltHex}:${hashHex}`;
 }
 
 export async function verifyPassword(password: string, stored: string, pepper: string): Promise<boolean> {
   try {
-    const [, saltHex, storedHash] = stored.split(':');
+    const parts = stored.split(':');
+    let iterations = 50000;
+    let saltHex: string, storedHash: string;
+
+    if (parts.length === 4) {
+      iterations = parseInt(parts[1], 10);
+      saltHex = parts[2];
+      storedHash = parts[3];
+    } else if (parts.length === 3) {
+      saltHex = parts[1];
+      storedHash = parts[2];
+    } else {
+      return false;
+    }
+
     const salt = new Uint8Array(saltHex.match(/.{2}/g)!.map(h => parseInt(h, 16)));
     
     const pepperKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(pepper), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
@@ -94,7 +109,7 @@ export async function verifyPassword(password: string, stored: string, pepper: s
       ['deriveBits']
     );
     const hashBuffer = await crypto.subtle.deriveBits(
-      { name: 'PBKDF2', salt, iterations: 50000, hash: 'SHA-256' },
+      { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
       keyMaterial,
       256
     );

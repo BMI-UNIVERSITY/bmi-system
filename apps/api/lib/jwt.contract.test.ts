@@ -13,6 +13,7 @@ const mockEnv: Env = {
   DOCUMENTS: {} as any,
   BACKUP_BUCKET: {} as any,
   JWT_SECRET: 'test-secret',
+  PASSWORD_PEPPER: 'test-pepper',
   RESEND_API_KEY: '',
   ADMIN_EMAIL: 'admin@test.com',
   ENVIRONMENT: 'test',

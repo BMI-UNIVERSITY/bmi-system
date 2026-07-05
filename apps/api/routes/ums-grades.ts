@@ -13,14 +13,24 @@ function paginate(url: URL) {
 
 // ─── list grades ─────────────────────────────────────────────────────────────
 
-export async function handleListGrades(request: Request, env: Env): Promise<Response> {
+export async function handleListGrades(
+  request: Request,
+  env: Env,
+  callerId: string,
+  callerRole: string
+): Promise<Response> {
   const url = new URL(request.url);
   const { page, perPage, offset } = paginate(url);
 
   const filters: string[] = [];
   const bindings: unknown[] = [];
 
-  const studentId = url.searchParams.get('studentId');
+  let studentId = url.searchParams.get('studentId');
+
+  // SECURITY: Students can only ever see their own grades, regardless of what was requested.
+  if (callerRole === 'student') {
+    studentId = callerId;
+  }
   const courseId = url.searchParams.get('courseId');
   const termId = url.searchParams.get('termId');
 
