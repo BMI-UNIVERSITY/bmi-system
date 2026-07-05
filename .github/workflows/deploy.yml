@@ -214,5 +214,5 @@ jobs:
         # Contract tests are NOT continue-on-error — they are a hard gate.
         # Any regression in the { success, data: { items, page, perPage, total } }
         # response envelope will fail this job and block deployment.
-        run: npx vitest run --reporter=verbose routes/ums-students.contract.test.ts routes/ums-grades.contract.test.ts routes/ums-courses.contract.test.ts
+        run: npm test
 
