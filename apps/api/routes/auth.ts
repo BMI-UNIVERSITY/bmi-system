@@ -184,8 +184,8 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
   }
 
   const user = await env.DB.prepare(
-    'SELECT id, email, password_hash, first_name, last_name, role, is_verified, mfa_secret, mfa_enabled FROM users WHERE email = ?'
-  ).bind(email.toLowerCase()).first<{ id: string; email: string; password_hash: string; first_name: string; last_name: string; role: string; is_verified: number; mfa_secret: string | null; mfa_enabled: number }>();
+    'SELECT id, email, password_hash, first_name, last_name, role, is_verified, mfa_secret, mfa_enabled, session_version FROM users WHERE email = ?'
+  ).bind(email.toLowerCase()).first<{ id: string; email: string; password_hash: string; first_name: string; last_name: string; role: string; is_verified: number; mfa_secret: string | null; mfa_enabled: number; session_version: number }>();
 
   if (!user) {
     return error('Invalid email or password', 401);
@@ -210,7 +210,9 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
     }
   }
 
-  const token = await signJWT({ sub: user.id, email: user.email, role: user.role }, env.JWT_SECRET);
+  // Include session_version in token so requireAuth can verify it without
+  // hitting the sessions table on every request
+  const token = await signJWT({ sub: user.id, email: user.email, role: user.role, sv: user.session_version }, env.JWT_SECRET);
   const csrfToken = generateCsrfToken();
 
   const expiresAt = new Date(Date.now() + 60 * 60 * 24 * 7 * 1000).toISOString();
@@ -295,6 +297,13 @@ export async function handleLogout(request: Request, env: Env): Promise<Response
     const { verifyJWT } = await import('../lib/jwt');
     const payload = await verifyJWT(token, env.JWT_SECRET);
     if (payload) {
+      // Increment session_version — this atomically invalidates all existing JWTs
+      // for this user. No KV lag, no sessions table scan: every prior token's sv
+      // will mismatch the DB value and be rejected immediately.
+      await env.DB.prepare(
+        `UPDATE users SET session_version = session_version + 1, updated_at = datetime('now') WHERE id = ?`
+      ).bind(payload.sub).run();
+      // Also clean up the sessions table row for this user
       await env.DB.prepare('DELETE FROM sessions WHERE id = ?').bind(`session:${payload.sub}`).run();
     }
   }
@@ -389,7 +398,13 @@ export async function handleResetPassword(request: Request, env: Env): Promise<R
     `UPDATE password_reset_tokens SET used_at = datetime('now') WHERE id = ?`
   ).bind(resetToken.id).run();
 
-  // Invalidate all sessions for this user
+  // Increment session_version to instantly invalidate all active JWTs for this user
+  // (eliminates need to enumerate and delete individual session records)
+  await env.DB.prepare(
+    `UPDATE users SET session_version = session_version + 1, updated_at = datetime('now') WHERE id = ?`
+  ).bind(resetToken.user_id).run();
+
+  // Also clean up the session row
   await env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(resetToken.user_id).run();
 
   return ok({ message: 'Password reset successfully. You can now log in with your new password.' });

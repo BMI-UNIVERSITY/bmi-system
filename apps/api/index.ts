@@ -11,6 +11,7 @@ import { handleListRubrics, handleCreateRubric, handleDeleteRubric } from './rou
 import { error, getCorsHeaders, validateCsrfToken } from './lib/types';
 import type { Env } from './lib/types';
 import backupWorker from './backup';
+import { WriteQueue } from './lib/WriteQueue';
 // Integration routes
 import { handlePublicPrograms, handlePublicStats, handlePublicListPosts, handlePublicGetPost, handlePublicGetPage } from './routes/public';
 import { handleListPosts, handleCreatePost, handleUpdatePost, handleDeletePost, handleListPages, handleCreatePage, handleDeletePage } from './routes/cms';
@@ -282,3 +283,7 @@ export default withSentry(
     await backupWorker.scheduled(controller, env, ctx);
   },
 } satisfies ExportedHandler<Env>);
+
+// Durable Object export — required for Cloudflare to discover and deploy the class.
+// The WriteQueue DO serializes all D1 writes to prevent SQLITE_BUSY under concurrent load.
+export { WriteQueue };

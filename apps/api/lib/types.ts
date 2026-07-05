@@ -30,6 +30,8 @@ export interface Env {
   WEBHOOK_SECRET?: string;
   /** Email address for critical ops alerts via Resend. */
   OPS_ALERT_EMAIL?: string;
+  /** WriteQueue Durable Object — serializes D1 writes to prevent concurrency exhaustion */
+  WRITE_QUEUE: DurableObjectNamespace;
   SENTRY_DSN?: string;
 }
 
@@ -74,6 +76,8 @@ export interface JWTPayload {
   sub: string;
   email: string;
   role: string;
+  /** Session version — incremented on logout/password-reset to immediately invalidate all prior tokens */
+  sv: number;
   iat: number;
   exp: number;
 }

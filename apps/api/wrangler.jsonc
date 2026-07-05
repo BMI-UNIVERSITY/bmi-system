@@ -20,6 +20,22 @@
     }
   ],
 
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "WRITE_QUEUE",
+        "class_name": "WriteQueue"
+      }
+    ]
+  },
+
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_classes": ["WriteQueue"]
+    }
+  ],
+
   // ─── R2 Object Storage (Documents & Backups) ──────────────────────
   "r2_buckets": [
     {

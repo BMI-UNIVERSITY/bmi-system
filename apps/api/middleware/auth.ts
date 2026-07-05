@@ -47,11 +47,20 @@ export async function requireAuth(
 
   const user = payload as unknown as JWTPayload;
 
-  const sessionValid = await env.DB.prepare(
-    `SELECT 1 FROM sessions WHERE id = ? AND expires_at > datetime('now')`
-  ).bind(`session:${user.sub}`).first();
-  if (!sessionValid) {
-    return error('Session expired. Please log in again.', 401);
+  // Validate session_version against the DB.
+  // This is instant and globally consistent: incrementing session_version on
+  // logout/password-reset immediately invalidates ALL existing tokens for that
+  // user — no eventual consistency lag, no sessions table required.
+  const dbUser = await env.DB.prepare(
+    `SELECT session_version FROM users WHERE id = ?`
+  ).bind(user.sub).first<{ session_version: number }>();
+
+  if (!dbUser) {
+    return error('User not found', 401);
+  }
+
+  if (dbUser.session_version !== user.sv) {
+    return error('Session has been invalidated. Please log in again.', 401);
   }
 
   if (requiredRoles && !requiredRoles.includes(user.role)) {
