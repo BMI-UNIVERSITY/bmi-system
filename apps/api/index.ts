@@ -246,6 +246,10 @@ export default withSentry(
         return env.AUTH_WORKER.fetch(request);
       }
     }
+    
+    if ((path.startsWith('/api/student/') || (path.startsWith('/api/v1/') && !path.startsWith('/api/v1/auth/'))) && env.UMS_WORKER) {
+      return env.UMS_WORKER.fetch(request);
+    }
 
     try {
       const rateLimitResult = await rateLimit(request, env);
