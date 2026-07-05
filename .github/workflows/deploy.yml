@@ -15,6 +15,7 @@ jobs:
       api: ${{ steps.filter.outputs.api }}
       worker-public: ${{ steps.filter.outputs.worker-public }}
       worker-webhooks: ${{ steps.filter.outputs.worker-webhooks }}
+      worker-auth: ${{ steps.filter.outputs.worker-auth }}
       portal: ${{ steps.filter.outputs.portal }}
       ums: ${{ steps.filter.outputs.ums }}
       university: ${{ steps.filter.outputs.university }}
@@ -37,6 +38,11 @@ jobs:
               - '.github/workflows/deploy.yml'
             worker-webhooks:
               - 'apps/workers/webhooks/**'
+              - 'packages/shared/**'
+              - 'packages/api-middleware/**'
+              - '.github/workflows/deploy.yml'
+            worker-auth:
+              - 'apps/workers/auth/**'
               - 'packages/shared/**'
               - 'packages/api-middleware/**'
               - '.github/workflows/deploy.yml'
@@ -168,6 +174,42 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/workers/webhooks
+          command: deploy
+
+  # ─── Deploy bmi-auth Worker (Phase 2 ─ Step 3) ───────────────────────────────
+  deploy-auth-worker:
+    name: Deploy bmi-auth Worker
+    runs-on: ubuntu-latest
+    needs: [changes, test]
+    if: github.event_name == 'push' && needs.changes.outputs['worker-auth'] == 'true'
+    environment:
+      name: production
+    defaults:
+      run:
+        working-directory: apps/workers/auth
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+
+      - name: Install dependencies (workspace)
+        run: npm ci
+        working-directory: .
+
+      - name: Type check bmi-auth
+        run: npm run type-check
+
+      - name: Deploy bmi-auth to Cloudflare Workers
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/workers/auth
           command: deploy
 
   # ─── Deploy Portal Frontend ───────────────────────────────────────────────────

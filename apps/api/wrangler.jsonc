@@ -24,7 +24,8 @@
     "bindings": [
       {
         "name": "WRITE_QUEUE",
-        "class_name": "WriteQueue"
+        "class_name": "WriteQueue",
+        "script_name": "bmi-auth"
       }
     ]
   },
@@ -33,6 +34,10 @@
     {
       "tag": "v1",
       "new_classes": ["WriteQueue"]
+    },
+    {
+      "tag": "v2",
+      "deleted_classes": ["WriteQueue"]
     }
   ],
 
@@ -70,7 +75,8 @@
   // routing to forward matching paths. Remove bindings once DNS Routes take over.
   "services": [
     { "binding": "PUBLIC_WORKER", "service": "bmi-public" },
-    { "binding": "WEBHOOKS_WORKER", "service": "bmi-webhooks" }
+    { "binding": "WEBHOOKS_WORKER", "service": "bmi-webhooks" },
+    { "binding": "AUTH_WORKER", "service": "bmi-auth" }
   ],
 
   "triggers": {

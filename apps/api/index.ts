@@ -11,7 +11,6 @@ import { handleListRubrics, handleCreateRubric, handleDeleteRubric } from './rou
 import { error, getCorsHeaders, validateCsrfToken } from './lib/types';
 import type { Env } from './lib/types';
 import backupWorker from './backup';
-import { WriteQueue } from './lib/WriteQueue';
 // Integration routes
 import { handlePublicPrograms, handlePublicStats, handlePublicListPosts, handlePublicGetPost, handlePublicGetPage } from './routes/public';
 import { handleListPosts, handleCreatePost, handleUpdatePost, handleDeletePost, handleListPages, handleCreatePage, handleDeletePage } from './routes/cms';
@@ -240,6 +239,13 @@ export default withSentry(
     if (path.startsWith('/api/webhooks/') && env.WEBHOOKS_WORKER) {
       return env.WEBHOOKS_WORKER.fetch(request);
     }
+    
+    if ((path.startsWith('/api/auth/') || path.startsWith('/api/v1/auth/')) && env.AUTH_WORKER) {
+      const canaryPercent = parseInt(env.AUTH_CANARY_PERCENT || '0', 10);
+      if (canaryPercent >= 100 || Math.random() * 100 < canaryPercent) {
+        return env.AUTH_WORKER.fetch(request);
+      }
+    }
 
     try {
       const rateLimitResult = await rateLimit(request, env);
@@ -297,6 +303,3 @@ export default withSentry(
   },
 } satisfies ExportedHandler<Env>);
 
-// Durable Object export — required for Cloudflare to discover and deploy the class.
-// The WriteQueue DO serializes all D1 writes to prevent SQLITE_BUSY under concurrent load.
-export { WriteQueue };

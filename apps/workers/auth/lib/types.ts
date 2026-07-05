@@ -38,8 +38,6 @@ export interface Env {
   PUBLIC_WORKER?: Fetcher;
   /** bmi-webhooks Worker — serves /api/webhooks/* */
   WEBHOOKS_WORKER?: Fetcher;
-  /** bmi-auth Worker — serves /api/auth/* */
-  AUTH_WORKER?: Fetcher;
   /** Canary percentage for bmi-auth Worker extraction (0–100). Default: 0 */
   AUTH_CANARY_PERCENT?: string;
   SENTRY_DSN?: string;
