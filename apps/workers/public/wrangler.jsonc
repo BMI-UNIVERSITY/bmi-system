@@ -1,0 +1,51 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bmi-public",
+  "main": "index.ts",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+
+  // ─── Account ─────────────────────────────────────────────────────────────────
+  "account_id": "2557f2f143734abc82bd4c80be750eb6",
+
+  // ─── D1 Database ─────────────────────────────────────────────────────────────
+  // max_concurrent_requests: 2 — Phase 2 guardrail (cache.md §2a).
+  // bmi-public only touches D1 from the cron handler, never per-request.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bmi-portal-db",
+      "database_id": "a5e26ad9-5d8e-4afa-9ad9-8cd55c1cbf1a",
+      "max_concurrent_requests": 2
+    }
+  ],
+
+  // ─── KV (Cache Snapshot Store) ───────────────────────────────────────────────
+  // CF_CACHE stores serialised D1 query results, refreshed every 5 min by cron.
+  // All per-request reads are served from this KV namespace — zero D1 per-request.
+  "kv_namespaces": [
+    {
+      "binding": "CF_CACHE",
+      "id": "REPLACE_WITH_KV_NAMESPACE_ID"
+    }
+  ],
+
+  // ─── CORS Allowed Origins ─────────────────────────────────────────────────────
+  "vars": {
+    "ENVIRONMENT": "production",
+    "ALLOWED_ORIGINS_OVERRIDE": "https://bmi-portal.hkmministries.org,https://bmi-ums.hkmministries.org,https://bmi-portal.pages.dev,https://bmi-ums.pages.dev,https://bmi-university.hkmministries.org"
+  },
+
+  // ─── Scheduled Cron (KV Snapshot Refresh) ────────────────────────────────────
+  // Runs every 5 minutes. Queries D1 and writes results to KV.
+  // This is the ONLY time D1 is queried in this Worker.
+  "triggers": {
+    "crons": ["*/5 * * * *"]
+  },
+
+  // ─── Observability ────────────────────────────────────────────────────────────
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}

@@ -228,6 +228,14 @@ export default withSentry(
       return new Response('Not found', { status: 404 });
     }
 
+    // ── Phase 2 Migration Proxy ──────────────────────────────────────────────
+    // Forward /api/public/* to bmi-public Worker once it is deployed.
+    // If PUBLIC_WORKER binding is not yet present, traffic falls through to
+    // the existing monolith handlers below — zero-downtime progressive migration.
+    if (path.startsWith('/api/public/') && env.PUBLIC_WORKER) {
+      return env.PUBLIC_WORKER.fetch(request);
+    }
+
     try {
       const rateLimitResult = await rateLimit(request, env);
       if (rateLimitResult) return withCors(rateLimitResult, request, env);
