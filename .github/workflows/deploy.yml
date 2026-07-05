@@ -36,7 +36,7 @@ jobs:
   deploy-api:
     name: Deploy API Worker
     runs-on: ubuntu-latest
-    needs: [changes, test]
+    needs: [changes, test, contract-tests]
     if: github.event_name == 'push' && needs.changes.outputs.api == 'true'
     defaults:
       run:
@@ -70,7 +70,7 @@ jobs:
   deploy-portal:
     name: Deploy Portal (Cloudflare Pages)
     runs-on: ubuntu-latest
-    needs: [changes, test]
+    needs: [changes, test, contract-tests]
     if: github.event_name == 'push' && needs.changes.outputs.portal == 'true'
     defaults:
       run:
@@ -106,7 +106,7 @@ jobs:
   deploy-ums:
     name: Deploy UMS (Cloudflare Pages)
     runs-on: ubuntu-latest
-    needs: [changes, test]
+    needs: [changes, test, contract-tests]
     if: github.event_name == 'push' && needs.changes.outputs.ums == 'true'
     defaults:
       run:
@@ -188,32 +188,31 @@ jobs:
         working-directory: apps/ums
 
       - name: Run npm audit
-        run: npm audit --audit-level=high || true
+        run: npm audit --audit-level=high
 
   # ─── API Contract Tests (blocking gate) ──────────────────────────────────────
-  # TODO: Re-enable when contract tests are properly configured with @cloudflare/vitest-pool-workers
-  # contract-tests:
-  #   name: API Contract Tests
-  #   runs-on: ubuntu-latest
-  #   needs: changes
-  #   defaults:
-  #     run:
-  #       working-directory: apps/api
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #
-  #     - name: Setup Node.js
-  #       uses: actions/setup-node@v4
-  #       with:
-  #         node-version: '24'
-  #
-  #     - name: Install all workspace dependencies
-  #       run: npm ci
-  #       working-directory: .
-  #
-  #     - name: Run API contract tests
-  #       # Contract tests are NOT continue-on-error — they are a hard gate.
-  #       # Any regression in the { success, data: { items, page, perPage, total } }
-  #       # response envelope will fail this job and block deployment.
-  #       run: npx vitest run --reporter=verbose routes/ums-students.contract.test.ts routes/ums-grades.contract.test.ts routes/ums-courses.contract.test.ts
+  contract-tests:
+    name: API Contract Tests
+    runs-on: ubuntu-latest
+    needs: changes
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Install all workspace dependencies
+        run: npm ci
+        working-directory: .
+
+      - name: Run API contract tests
+        # Contract tests are NOT continue-on-error — they are a hard gate.
+        # Any regression in the { success, data: { items, page, perPage, total } }
+        # response envelope will fail this job and block deployment.
+        run: npx vitest run --reporter=verbose routes/ums-students.contract.test.ts routes/ums-grades.contract.test.ts routes/ums-courses.contract.test.ts
 
