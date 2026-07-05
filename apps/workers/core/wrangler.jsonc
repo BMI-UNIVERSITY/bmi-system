@@ -34,5 +34,15 @@
       "binding": "DOCUMENTS",
       "bucket_name": "bmi-portal-documents"
     }
+  ],
+
+  // ─── Cloudflare DNS Routes ────────────────────────────────────────────────
+  // bmi-core owns the application pipeline, admin operations, CMS, and documents.
+  "routes": [
+    { "pattern": "api.hkmministries.org/api/applications*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/admin*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/documents*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/recommendations*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/cms*", "zone_name": "hkmministries.org" }
   ]
 }

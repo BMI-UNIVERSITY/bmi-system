@@ -21,5 +21,11 @@
       "database_id": "8b51d6c8-5dc6-44de-9e5c-0bd12c1c7365",
       "migrations_dir": "../../api/migrations"
     }
+  ],
+
+  // ─── Cloudflare DNS Routes ────────────────────────────────────────────────
+  // bmi-webhooks owns all inbound webhook and event-queue endpoints.
+  "routes": [
+    { "pattern": "api.hkmministries.org/api/webhooks/*", "zone_name": "hkmministries.org" }
   ]
 }

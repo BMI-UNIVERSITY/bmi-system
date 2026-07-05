@@ -34,5 +34,13 @@
       "tag": "v1",
       "new_classes": ["WriteQueue"]
     }
+  ],
+
+  // ─── Cloudflare DNS Routes ────────────────────────────────────────────────
+  // bmi-auth owns all authentication and identity endpoints.
+  // Both /api/auth/* (legacy path) and /api/v1/auth/* are captured here.
+  "routes": [
+    { "pattern": "api.hkmministries.org/api/auth/*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/auth/*", "zone_name": "hkmministries.org" }
   ]
 }

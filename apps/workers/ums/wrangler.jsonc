@@ -27,5 +27,35 @@
     "bindings": [
       { "name": "WRITE_QUEUE", "class_name": "WriteQueue", "script_name": "bmi-auth" }
     ]
-  }
+  },
+
+  // ─── Cloudflare DNS Routes ────────────────────────────────────────────────
+  // bmi-ums owns student portal and all UMS management API paths.
+  // Note: /api/v1/auth/* is explicitly NOT included — bmi-auth owns that.
+  "routes": [
+    { "pattern": "api.hkmministries.org/api/student/*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/students*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/grades*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/courses*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/programs*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/faculties*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/departments*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/terms*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/enrollments*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/staff*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/rubrics*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/timetabling*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/finance*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/dashboard*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/study-centers*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/library*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/hostels*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/medical*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/inventory*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/visitors*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/attendance*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/catalog*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/certificates*", "zone_name": "hkmministries.org" },
+    { "pattern": "api.hkmministries.org/api/v1/documents/verify*", "zone_name": "hkmministries.org" }
+  ]
 }
