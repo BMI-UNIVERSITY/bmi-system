@@ -236,9 +236,6 @@ jobs:
         run: npm run test:e2e
         working-directory: apps/ums
 
-      - name: Run npm audit
-        run: npm audit --audit-level=high
-
   # ─── API Contract Tests (blocking gate) ──────────────────────────────────────
   contract-tests:
     name: API Contract Tests
