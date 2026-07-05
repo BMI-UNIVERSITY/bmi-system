@@ -179,13 +179,23 @@ jobs:
       - name: Build University
         run: npm run build
 
+      - name: Verify build output
+        run: |
+          echo "=== Checking out/ directory exists ==="
+          ls -la out/
+          echo "=== Verifying new footer content in index.html ==="
+          grep -c "Subscribe" out/index.html && echo "✅ Newsletter section found" || echo "❌ Newsletter section NOT found"
+          grep -c "programCategories\|Quick Links\|font-sans" out/index.html && echo "✅ New footer classes found" || echo "❌ New footer classes NOT found"
+          echo "=== Footer tail snippet ==="
+          grep -o "Privacy Policy.*Terms of Service" out/index.html | head -1 || echo "(pattern not found)"
+
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: bmi-university
-          command: pages deploy out --project-name=bmi-university
+          command: pages deploy out --project-name=bmi-university --branch=main
 
   # ─── Run Tests (PRs & Background) ─────────────────────────────────────────────
   test:
