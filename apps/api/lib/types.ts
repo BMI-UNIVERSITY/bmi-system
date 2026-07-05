@@ -32,20 +32,6 @@ export interface Env {
   OPS_ALERT_EMAIL?: string;
   /** WriteQueue Durable Object — serializes D1 writes to prevent concurrency exhaustion */
   WRITE_QUEUE: DurableObjectNamespace;
-  // ── Phase 2 migration Service Bindings ──
-  // Add each domain Worker here as it is deployed. Remove once DNS Routes take over.
-  /** bmi-public Worker — serves /api/public/* (read-only, KV cached) */
-  PUBLIC_WORKER?: Fetcher;
-  /** bmi-webhooks Worker — serves /api/webhooks/* */
-  WEBHOOKS_WORKER?: Fetcher;
-  /** bmi-auth Worker — serves /api/auth/* */
-  AUTH_WORKER?: Fetcher;
-  /** bmi-ums Worker — serves /api/student/* and UMS /api/v1/* routes */
-  UMS_WORKER?: Fetcher;
-  /** bmi-core Worker — serves /api/applications, /api/admin, /api/documents, etc. */
-  CORE_WORKER?: Fetcher;
-  /** Canary percentage for bmi-auth Worker extraction (0–100). Default: 0 */
-  AUTH_CANARY_PERCENT?: string;
   SENTRY_DSN?: string;
 }
 

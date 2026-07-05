@@ -16,15 +16,15 @@
   },
   "dependencies": {
     "@bmi/shared": "file:../../packages/shared",
-    "@sentry/cloudflare": "^10.62.0"
+    "@sentry/cloudflare": "10.62.0"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.16.20",
-    "@cloudflare/workers-types": "^4.20260625.1",
-    "eslint": "^9.39.4",
-    "typescript": "^5.8.2",
-    "typescript-eslint": "^8.62.1",
-    "vitest": "^4.1.9",
-    "wrangler": "^4.104.0"
+    "@cloudflare/vitest-pool-workers": "0.16.20",
+    "@cloudflare/workers-types": "4.20260625.1",
+    "eslint": "9.39.4",
+    "typescript": "5.8.2",
+    "typescript-eslint": "8.62.1",
+    "vitest": "4.1.9",
+    "wrangler": "4.104.0"
   }
 }

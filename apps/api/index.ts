@@ -227,33 +227,7 @@ export default withSentry(
       return new Response('Not found', { status: 404 });
     }
 
-    // ── Phase 2 Migration Proxy ──────────────────────────────────────────────
-    // Forward domain paths to their extracted Workers once deployed.
-    // If a binding is not yet present, traffic falls through to the existing
-    // monolith handlers below — zero-downtime progressive migration.
-    
-    if (path.startsWith('/api/public/') && env.PUBLIC_WORKER) {
-      return env.PUBLIC_WORKER.fetch(request);
-    }
-    
-    if (path.startsWith('/api/webhooks/') && env.WEBHOOKS_WORKER) {
-      return env.WEBHOOKS_WORKER.fetch(request);
-    }
-    
-    if ((path.startsWith('/api/auth/') || path.startsWith('/api/v1/auth/')) && env.AUTH_WORKER) {
-      const canaryPercent = parseInt(env.AUTH_CANARY_PERCENT || '0', 10);
-      if (canaryPercent >= 100 || Math.random() * 100 < canaryPercent) {
-        return env.AUTH_WORKER.fetch(request);
-      }
-    }
-    
-    if ((path.startsWith('/api/student/') || (path.startsWith('/api/v1/') && !path.startsWith('/api/v1/auth/'))) && env.UMS_WORKER) {
-      return env.UMS_WORKER.fetch(request);
-    }
-    
-    if ((path.startsWith('/api/applications') || path.startsWith('/api/admin') || path.startsWith('/api/cms') || path.startsWith('/api/documents') || path.startsWith('/api/recommendations')) && env.CORE_WORKER) {
-      return env.CORE_WORKER.fetch(request);
-    }
+
 
     try {
       const rateLimitResult = await rateLimit(request, env);
