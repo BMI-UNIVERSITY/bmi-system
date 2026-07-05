@@ -250,6 +250,10 @@ export default withSentry(
     if ((path.startsWith('/api/student/') || (path.startsWith('/api/v1/') && !path.startsWith('/api/v1/auth/'))) && env.UMS_WORKER) {
       return env.UMS_WORKER.fetch(request);
     }
+    
+    if ((path.startsWith('/api/applications') || path.startsWith('/api/admin') || path.startsWith('/api/cms') || path.startsWith('/api/documents') || path.startsWith('/api/recommendations')) && env.CORE_WORKER) {
+      return env.CORE_WORKER.fetch(request);
+    }
 
     try {
       const rateLimitResult = await rateLimit(request, env);

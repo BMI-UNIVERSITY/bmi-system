@@ -42,8 +42,6 @@ export interface Env {
   AUTH_WORKER?: Fetcher;
   /** bmi-ums Worker — serves /api/student/* and UMS /api/v1/* routes */
   UMS_WORKER?: Fetcher;
-  /** bmi-core Worker — serves /api/applications, /api/admin, /api/documents, etc. */
-  CORE_WORKER?: Fetcher;
   /** Canary percentage for bmi-auth Worker extraction (0–100). Default: 0 */
   AUTH_CANARY_PERCENT?: string;
   SENTRY_DSN?: string;

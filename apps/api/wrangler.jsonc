@@ -77,7 +77,8 @@
     { "binding": "PUBLIC_WORKER", "service": "bmi-public" },
     { "binding": "WEBHOOKS_WORKER", "service": "bmi-webhooks" },
     { "binding": "AUTH_WORKER", "service": "bmi-auth" },
-    { "binding": "UMS_WORKER", "service": "bmi-ums" }
+    { "binding": "UMS_WORKER", "service": "bmi-ums" },
+    { "binding": "CORE_WORKER", "service": "bmi-core" }
   ],
 
   "triggers": {
