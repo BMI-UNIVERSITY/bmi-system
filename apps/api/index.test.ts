@@ -2,14 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import app from './index';
 
 // Mock the dependencies used by index.ts
-vi.mock('./middleware/auth', () => ({
+vi.mock('@bmi/api-middleware', () => ({
   rateLimit: vi.fn().mockResolvedValue(null),
   requireAuth: vi.fn(),
+  withCors: vi.fn().mockImplementation((res) => res),
+  getCorsHeaders: vi.fn().mockReturnValue({}),
+  createLogger: vi.fn().mockReturnValue({ error: vi.fn(), info: vi.fn() }),
+  requestLogger: vi.fn().mockReturnValue({ error: vi.fn(), info: vi.fn() })
 }));
 
 vi.mock('./lib/types', () => ({
   error: (msg: string, status: number) => new Response(msg, { status }),
-  getCorsHeaders: () => ({}),
   validateCsrfToken: () => true,
 }));
 
@@ -24,7 +27,7 @@ vi.mock('./routes/ums-students', () => ({ handleListStudents: vi.fn().mockResolv
 // but since Vitest hoists vi.mock, we can just let it import the actual modules
 // OR we can rely on the fact that we're just testing the dispatcher.
 
-import { requireAuth } from './middleware/auth';
+import { requireAuth } from '@bmi/api-middleware';
 
 describe('API Route Dispatcher & Authorization', () => {
   let env: any;
@@ -61,7 +64,7 @@ describe('API Route Dispatcher & Authorization', () => {
     const res = await app.fetch(req, env, ctx);
     
     expect(res.status).toBe(401);
-    expect(requireAuth).toHaveBeenCalledWith(req, env, ['admin', 'staff']);
+    expect(requireAuth).toHaveBeenCalledWith(req, env.DB, env.JWT_SECRET, ['admin', 'staff']);
   });
 
   it('should block student access to admin routes', async () => {
@@ -72,7 +75,7 @@ describe('API Route Dispatcher & Authorization', () => {
     const res = await app.fetch(req, env, ctx);
     
     expect(res.status).toBe(403);
-    expect(requireAuth).toHaveBeenCalledWith(req, env, ['admin']);
+    expect(requireAuth).toHaveBeenCalledWith(req, env.DB, env.JWT_SECRET, ['admin']);
   });
 
   it('should allow admin access to timetabling', async () => {
@@ -85,6 +88,6 @@ describe('API Route Dispatcher & Authorization', () => {
     // As long as it doesn't return 401/403 (it will either hit the mock or the actual handler which might 500, but auth passed)
     expect(res.status).not.toBe(401);
     expect(res.status).not.toBe(403);
-    expect(requireAuth).toHaveBeenCalledWith(req, env, ['admin', 'staff']);
+    expect(requireAuth).toHaveBeenCalledWith(req, env.DB, env.JWT_SECRET, ['admin', 'staff']);
   });
 });

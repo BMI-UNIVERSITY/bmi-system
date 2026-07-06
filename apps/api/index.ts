@@ -3,12 +3,12 @@ import { handleRegister, handleLogin, handleRefresh, handleLogout, handleMe, han
 import { handleSubmitApplication, handleGetMyApplication, handleListApplications, handleGetApplication, handleUpdateStatus, handleGetStatusLogs, handleGetLifecycle } from './routes/apply';
 import { handleUploadDocument, handleDownloadDocument, handleDeleteDocument } from './routes/documents';
 import { handleRequestRecommendation, handleGetRecommendationInfo, handleUploadRecommendation, handleListRecommendations } from './routes/recommendations';
-import { requireAuth, rateLimit } from './middleware/auth';
+import { requireAuth, rateLimit, withCors, getCorsHeaders, createLogger, requestLogger } from '@bmi/api-middleware';
 import { handleGetDashboard, handleGetCourses, handleEnroll, handleGetFinances, handlePayInvoice, handleDropCourse, handleGetTranscript, handleGetSettings, handleUpdateSettings, handleGetTickets, handleCreateTicket } from './routes/student';
 import { handleAdminSetup, handleListUsers, handleUpdateUserRole, handleDeleteUser, handleAdminResetPassword, handleGetAuditLogs } from './routes/admin';
 import { handleListTimetabling, handleCreateTimetabling } from './routes/ums-timetabling';
 import { handleListRubrics, handleCreateRubric, handleDeleteRubric } from './routes/ums-rubrics';
-import { error, getCorsHeaders, validateCsrfToken } from './lib/types';
+import { error, validateCsrfToken } from './lib/types';
 import type { Env } from './lib/types';
 import backupWorker from './backup';
 // Integration routes
@@ -40,21 +40,7 @@ import {
   handleVerifyCertificate, handleCertificateVerificationStats,
 } from './routes/ums-stats';
 
-function withCors(response: Response, request: Request, env: Env): Response {
-  const corsHeaders = getCorsHeaders(request, env);
-  const newHeaders = new Headers(response.headers);
-  for (const [key, value] of Object.entries(corsHeaders)) {
-    newHeaders.set(key, value);
-  }
-  newHeaders.set('X-Frame-Options', 'DENY');
-  newHeaders.set('X-Content-Type-Options', 'nosniff');
-  newHeaders.set('Referrer-Policy', 'strict-origin-when-cross-origin');
-  newHeaders.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
-  newHeaders.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
-  newHeaders.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://api.resend.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
-  return new Response(response.body, { status: response.status, headers: newHeaders });
-}
-
+const log = createLogger('bmi-api');
 
 type RouteHandler = (
   req: Request,
@@ -220,7 +206,7 @@ export default withSentry(
     const method = request.method;
 
     if (method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: getCorsHeaders(request, env) });
+      return new Response(null, { status: 204, headers: getCorsHeaders(request, env.ALLOWED_ORIGINS_OVERRIDE) });
     }
 
     if (!path.startsWith('/api/')) {
@@ -230,8 +216,8 @@ export default withSentry(
 
 
     try {
-      const rateLimitResult = await rateLimit(request, env);
-      if (rateLimitResult) return withCors(rateLimitResult, request, env);
+      const rateLimitResult = await rateLimit(request, env.DB);
+      if (rateLimitResult) return withCors(rateLimitResult, request, env.ALLOWED_ORIGINS_OVERRIDE);
 
       const stateChangingMethods = ['POST', 'PUT', 'DELETE', 'PATCH'];
       const csrfExemptPaths = [
@@ -246,7 +232,7 @@ export default withSentry(
       const isCsrfExempt = csrfExemptPaths.some(p => path.startsWith(p)) || path.startsWith('/api/recommendations/');
       if (stateChangingMethods.includes(method) && !isCsrfExempt) {
         if (!validateCsrfToken(request)) {
-          return withCors(error('Invalid CSRF token', 403), request, env);
+          return withCors(error('Invalid CSRF token', 403), request, env.ALLOWED_ORIGINS_OVERRIDE);
         }
       }
 
@@ -259,8 +245,8 @@ export default withSentry(
 
         let auth: any = undefined;
         if (route.roles !== undefined) {
-          const authResult = await requireAuth(request, env, route.roles.length > 0 ? route.roles : undefined);
-          if (authResult instanceof Response) return withCors(authResult, request, env);
+          const authResult = await requireAuth(request, env.DB, env.JWT_SECRET, route.roles.length > 0 ? route.roles : undefined);
+          if (authResult instanceof Response) return withCors(authResult, request, env.ALLOWED_ORIGINS_OVERRIDE);
           auth = authResult;
         }
 
@@ -271,13 +257,16 @@ export default withSentry(
           response.headers.set('Cache-Control', `public, max-age=${route.cacheTTL}, s-maxage=${route.cacheTTL}`);
         }
 
-        return withCors(response, request, env);
+        return withCors(response, request, env.ALLOWED_ORIGINS_OVERRIDE);
       }
 
-      return withCors(error('Route not found', 404), request, env);
-    } catch (e) {
-      console.error('Worker error:', e);
-      return withCors(error('Internal server error', 500), request, env);
+      return withCors(error('Route not found', 404), request, env.ALLOWED_ORIGINS_OVERRIDE);
+    } catch (e: any) {
+      requestLogger(log, request).error('Worker error', {
+        err: e?.message ?? String(e),
+        stack: e?.stack?.split('\n')[1]?.trim(),
+      });
+      return withCors(error('Internal server error', 500), request, env.ALLOWED_ORIGINS_OVERRIDE);
     }
   },
   async scheduled(controller, env, ctx) {

@@ -19,6 +19,9 @@
  */
 
 import type { Env } from './types';
+import { createLogger } from '@bmi/api-middleware';
+
+const log = createLogger('write-queue');
 
 interface QueueEntry {
   sql: string;
@@ -125,7 +128,10 @@ export class WriteQueue {
         // Success: reset backoff so the next failure starts fresh
         backoffMs = 0;
       } catch (err: any) {
-        console.error('[WriteQueue] D1 batch write failed, re-queuing with exponential backoff:', err?.message ?? err);
+        log.error('WriteQueue D1 batch write failed, re-queuing with exponential backoff', {
+          err: err?.message ?? String(err),
+          batchSize: batch.length,
+        });
 
         // ❌ Batch failed: put items back at the FRONT of the queue
         this.queue = [...batch, ...this.queue];

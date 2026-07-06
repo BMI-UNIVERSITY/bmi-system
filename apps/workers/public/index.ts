@@ -26,6 +26,9 @@ import {
 import { getCorsHeaders } from './lib/types';
 import { invalidateCacheKey } from './lib/cache';
 import type { Env } from './lib/types';
+import { createLogger, requestLogger } from '@bmi/api-middleware';
+
+const log = createLogger('bmi-public');
 
 // ─── Route Table ──────────────────────────────────────────────────────────────
 
@@ -66,7 +69,10 @@ export default {
         for (const [k, v] of Object.entries(corsHeaders)) headers.set(k, v);
         return new Response(response.body, { status: response.status, headers });
       } catch (err: any) {
-        console.error('[bmi-public] Handler error:', err?.message ?? err);
+        requestLogger(log, request).error('Handler error', {
+          err: err?.message ?? String(err),
+          stack: err?.stack?.split('\n')[1]?.trim(),
+        });
         return new Response(JSON.stringify({ success: false, error: 'Internal server error' }), {
           status: 500,
           headers: { 'Content-Type': 'application/json', ...corsHeaders },
@@ -84,34 +90,34 @@ export default {
   // This is the ONLY place that queries D1 in this Worker.
   // It pre-populates KV so all GET requests are served from cache.
   async scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
-    console.log('[bmi-public] Cron: refreshing KV cache snapshots');
+    log.info('Cron: refreshing KV cache snapshots');
 
     const results = await Promise.allSettled([
       // Programs snapshot (TTL 300s)
       fetchProgramsFromD1(env).then(async (data) => {
         await env.CF_CACHE.put(KV_KEYS.PROGRAMS, JSON.stringify(data), { expirationTtl: 300 });
         await invalidateCacheKey(env, KV_KEYS.PROGRAMS);
-        console.log('[bmi-public] Cron: programs snapshot refreshed');
+        log.info('Cron: programs snapshot refreshed');
       }),
 
       // Stats snapshot (TTL 300s)
       fetchStatsFromD1(env).then(async (data) => {
         await env.CF_CACHE.put(KV_KEYS.STATS, JSON.stringify(data), { expirationTtl: 300 });
         await invalidateCacheKey(env, KV_KEYS.STATS);
-        console.log('[bmi-public] Cron: stats snapshot refreshed');
+        log.info('Cron: stats snapshot refreshed');
       }),
 
       // CMS posts list snapshot (TTL 120s)
       fetchPostsListFromD1(env).then(async (data) => {
         await env.CF_CACHE.put(KV_KEYS.POSTS_LIST, JSON.stringify(data), { expirationTtl: 120 });
         await invalidateCacheKey(env, KV_KEYS.POSTS_LIST);
-        console.log('[bmi-public] Cron: posts list snapshot refreshed');
+        log.info('Cron: posts list snapshot refreshed');
       }),
     ]);
 
     for (const result of results) {
       if (result.status === 'rejected') {
-        console.error('[bmi-public] Cron: snapshot refresh failed —', result.reason);
+        log.error('Cron: snapshot refresh failed', { err: result.reason });
       }
     }
 

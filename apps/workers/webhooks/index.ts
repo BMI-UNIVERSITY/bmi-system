@@ -1,4 +1,4 @@
-import { requireAuth, rateLimit, withCors, getCorsHeaders } from '@bmi/api-middleware';
+import { requireAuth, rateLimit, withCors, getCorsHeaders, createLogger, requestLogger } from '@bmi/api-middleware';
 import type { Env } from './lib/types';
 import { handleInboundWebhook, handleListEvents, handleListDeadLetters, handleRetryDeadLetter } from './routes/webhooks';
 
@@ -8,6 +8,8 @@ type RouteHandler = (
   p: string[],
   ctx: ExecutionContext
 ) => Promise<Response> | Response;
+
+const log = createLogger('bmi-webhooks');
 
 type Route = {
   method: string | string[];
@@ -62,7 +64,10 @@ export default {
 
       return withCors(new Response('Method not allowed or endpoint not found', { status: 404 }), request);
     } catch (err: any) {
-      console.error(`[Worker Error] ${method} ${path}`, err);
+      requestLogger(log, request).error('Unhandled worker error', {
+        err: err?.message ?? String(err),
+        stack: err?.stack?.split('\n')[1]?.trim(),
+      });
       return withCors(
         new Response(JSON.stringify({ success: false, error: 'Internal Server Error' }), {
           status: 500,

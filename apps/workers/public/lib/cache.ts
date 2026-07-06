@@ -17,6 +17,9 @@
  */
 
 import type { Env } from './types';
+import { createLogger } from '@bmi/api-middleware';
+
+const log = createLogger('bmi-public');
 
 export interface CacheOptions {
   /** KV key for storing the snapshot */
@@ -60,7 +63,7 @@ export async function cachedResponse(
   }
 
   // ── Tier 3: D1 Fallback (cold-start only) ───────────────────────────────────
-  console.warn(`[bmi-public] Cache MISS for ${opts.kvKey} — falling through to D1`);
+  log.warn('Cache MISS — falling through to D1', { key: opts.kvKey });
   const data = await opts.fetcher();
 
   // Populate KV so the cron has something to work with on first boot

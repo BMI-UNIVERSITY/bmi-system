@@ -1,4 +1,4 @@
-import { requireAuth, rateLimit, withCors, getCorsHeaders } from '@bmi/api-middleware';
+import { requireAuth, rateLimit, withCors, getCorsHeaders, createLogger, requestLogger } from '@bmi/api-middleware';
 import type { Env } from './lib/types';
 
 import { handleGetDashboard, handleGetCourses, handleEnroll, handleGetFinances, handlePayInvoice, handleDropCourse, handleGetTranscript, handleGetSettings, handleUpdateSettings, handleGetTickets, handleCreateTicket } from './routes/student';
@@ -35,6 +35,8 @@ type RouteHandler = (
   auth: any,
   ctx: ExecutionContext
 ) => Promise<Response> | Response;
+
+const log = createLogger('bmi-ums');
 
 type Route = {
   method: string | string[];
@@ -183,7 +185,10 @@ export default {
 
       return withCors(new Response('Method not allowed or endpoint not found', { status: 404 }), request, env.ALLOWED_ORIGINS_OVERRIDE);
     } catch (err: any) {
-      console.error(`[Worker Error] ${method} ${path}`, err);
+      requestLogger(log, request).error('Unhandled worker error', {
+        err: err?.message ?? String(err),
+        stack: err?.stack?.split('\n')[1]?.trim(),
+      });
       return withCors(
         new Response(JSON.stringify({ success: false, error: 'Internal Server Error' }), {
           status: 500,
