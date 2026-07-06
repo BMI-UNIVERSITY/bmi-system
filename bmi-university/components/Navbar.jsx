@@ -69,38 +69,18 @@ export default function Navbar() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "10px",
               textDecoration: "none",
             }}
           >
             <img
-              src="/images/bmi-crest-270.png"
-              alt="BMI University Crest"
+              src="/images/bmi-logo.png"
+              alt="BMI University Logo"
               style={{
-                height: "56px",
+                height: "50px",
                 width: "auto",
                 objectFit: "contain",
               }}
             />
-            <div style={{ display: "flex", flexDirection: "column", lineHeight: 1 }}>
-              <span style={{
-                fontFamily: "'Outfit', sans-serif",
-                fontWeight: 900,
-                fontSize: "1.85rem",
-                color: "#ffffff",
-                letterSpacing: "-0.02em",
-                lineHeight: 1,
-              }}>BMI</span>
-              <span style={{
-                fontFamily: "'Outfit', sans-serif",
-                fontWeight: 700,
-                fontSize: "0.6rem",
-                color: "#d4af37",
-                letterSpacing: "0.18em",
-                textTransform: "uppercase",
-                marginTop: "3px",
-              }}>University</span>
-            </div>
           </Link>
 
           {/* ─── Desktop Links ─── */}
