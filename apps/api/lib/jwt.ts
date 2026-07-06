@@ -68,7 +68,7 @@ export async function hashPassword(password: string, pepper?: string): Promise<s
     false,
     ['deriveBits']
   );
-  const iterations = 210000;
+  const iterations = 100000;
   const hashBuffer = await crypto.subtle.deriveBits(
     { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
     keyMaterial,
