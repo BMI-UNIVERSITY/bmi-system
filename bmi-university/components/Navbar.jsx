@@ -45,7 +45,7 @@ export default function Navbar() {
           right: 0,
           height: "80px",
           zIndex: 1000,
-          background: "#0f172a",
+          background: "#007FFF",
           transition: "box-shadow 0.35s ease",
         }}
         className={navBg}
@@ -204,7 +204,7 @@ export default function Navbar() {
           left: 0,
           right: 0,
           bottom: 0,
-          background: "#0f172a",
+          background: "#007FFF",
           zIndex: 999,
           display: "flex",
           flexDirection: "column",

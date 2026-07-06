@@ -41,7 +41,7 @@ export default function Footer() {
   };
 
   return (
-    <footer style={{ background: "#0a1628", color: "#fff", fontFamily: "'Inter', sans-serif" }}>
+    <footer style={{ background: "#007FFF", color: "#fff", fontFamily: "'Inter', sans-serif" }}>
 
       {/* ── Gold accent top border ── */}
       <div style={{ height: "4px", background: "linear-gradient(90deg, #d4af37 0%, #f5d76e 50%, #d4af37 100%)" }} />
