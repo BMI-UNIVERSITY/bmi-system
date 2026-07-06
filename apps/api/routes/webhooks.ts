@@ -30,7 +30,6 @@ export async function handleInboundWebhook(request: Request, env: Env): Promise<
     return error('Invalid signature', 401);
   }
 
-  let payload: { type: string; data: Record<string, unknown>; id?: string };
   const schemaResult = InboundWebhookSchema.safeParse((() => {
     try { return JSON.parse(rawBody); } catch { return null; }
   })());
@@ -38,7 +37,7 @@ export async function handleInboundWebhook(request: Request, env: Env): Promise<
     const fields = schemaResult.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ');
     return error(`Invalid webhook payload — ${fields}`, 400);
   }
-  payload = schemaResult.data as { type: string; data: Record<string, unknown>; id?: string };
+  const payload = schemaResult.data as { type: string; data: Record<string, unknown>; id?: string };
 
   // Log the inbound event for audit/debugging
   await env.DB.prepare(
