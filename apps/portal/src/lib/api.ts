@@ -1,5 +1,9 @@
-const BASE = ((import.meta as any).env.VITE_API_URL || '') + '/api';
+import { API_WORKER_URL } from '@bmi/shared';
 
+const isDev = (import.meta as any).env?.DEV;
+const BASE = (isDev 
+  ? ((import.meta as any).env?.VITE_API_URL || '') 
+  : ((import.meta as any).env?.VITE_API_URL || API_WORKER_URL)) + '/api';
 // Store CSRF token in memory only (not localStorage) for security
 let _memoryToken: string | null = null;
 

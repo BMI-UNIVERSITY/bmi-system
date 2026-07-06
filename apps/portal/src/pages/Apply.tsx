@@ -39,7 +39,7 @@ export default function Apply() {
     }
   }, [form]);
 
-  const update = useCallback((field: string, value: string) => setForm(f => ({ ...f, [field]: value })), []);
+  const update = useCallback((field: string, value: string) => setForm((f: any) => ({ ...f, [field]: value })), []);
 
   const selectProgram = (p: { label: string; level: string }) => {
     update('program', p.label);
