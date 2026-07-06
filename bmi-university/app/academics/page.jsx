@@ -3,10 +3,10 @@ import Link from "next/link";
 import { PROGRAMS } from "@/lib/programs";
 
 export default function Academics() {
-  const bachelors = PROGRAMS.filter(p => p.level === 'undergraduate').map(p => ({ title: p.label, desc: p.description }));
-  const masters = PROGRAMS.filter(p => p.level === 'graduate').map(p => ({ title: p.label, desc: p.description }));
-  const doctorates = PROGRAMS.filter(p => p.level === 'doctorate').map(p => ({ title: p.label, desc: p.description }));
-  const certificates = PROGRAMS.filter(p => p.level === 'certificate').map(p => ({ title: p.label, desc: p.description }));
+  const bachelors = PROGRAMS.filter(p => p.level === 'undergraduate').map(p => ({ title: p.label, desc: p.description, icon: p.icon }));
+  const masters = PROGRAMS.filter(p => p.level === 'graduate').map(p => ({ title: p.label, desc: p.description, icon: p.icon }));
+  const doctorates = PROGRAMS.filter(p => p.level === 'doctorate').map(p => ({ title: p.label, desc: p.description, icon: p.icon }));
+  const certificates = PROGRAMS.filter(p => p.level === 'certificate').map(p => ({ title: p.label, desc: p.description, icon: p.icon }));
 
   const renderCards = (programs) =>
     programs.map((p, i) => (
@@ -25,17 +25,31 @@ export default function Academics() {
           transition: "transform 0.25s ease, box-shadow 0.25s ease",
         }}
       >
+        {p.icon && (
+          <div style={{ marginBottom: "0.5rem" }}>
+            <img 
+              src={p.icon} 
+              alt="" 
+              style={{ 
+                width: "48px", 
+                height: "48px", 
+                objectFit: "contain" 
+              }} 
+              loading="lazy" 
+            />
+          </div>
+        )}
         <div style={{ width: "40px", height: "4px", borderRadius: "999px", background: "linear-gradient(90deg,#d4af37,#b5952f)" }} />
         <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "1.1rem", color: "#0f172a", lineHeight: 1.3 }}>
           {p.title}
         </h3>
         <p style={{ color: "#64748b", fontSize: "0.9rem", lineHeight: 1.7, flexGrow: 1 }}>{p.desc}</p>
         <Link
-              href="/apply"
-              style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", color: "#d4af37", fontWeight: 700, fontSize: "0.85rem", marginTop: "0.5rem", width: "fit-content", textDecoration: "underline" }}
-            >
-              Apply Today →
-            </Link>
+          href="/apply"
+          style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", color: "#d4af37", fontWeight: 700, fontSize: "0.85rem", marginTop: "0.5rem", textDecoration: "underline", width: "fit-content" }}
+        >
+          Apply Today →
+        </Link>
       </article>
     ));
 
