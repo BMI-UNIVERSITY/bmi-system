@@ -5,9 +5,11 @@ import { handleUploadDocument, handleDownloadDocument, handleDeleteDocument } fr
 import { handleRequestRecommendation, handleGetRecommendationInfo, handleUploadRecommendation, handleListRecommendations } from './routes/recommendations';
 import { requireAuth, rateLimit, withCors, getCorsHeaders, createLogger, requestLogger } from '@bmi/api-middleware';
 import { handleGetDashboard, handleGetCourses, handleEnroll, handleGetFinances, handlePayInvoice, handleDropCourse, handleGetTranscript, handleGetSettings, handleUpdateSettings, handleGetTickets, handleCreateTicket } from './routes/student';
-import { handleAdminSetup, handleListUsers, handleUpdateUserRole, handleDeleteUser, handleAdminResetPassword, handleGetAuditLogs } from './routes/admin';
+import { handleAdminSetup, handleListUsers, handleUpdateUserRole, handleDeleteUser, handleAdminResetPassword, handleGetAuditLogs, handleBulkEmails } from './routes/admin';
 import { handleListTimetabling, handleCreateTimetabling } from './routes/ums-timetabling';
 import { handleListRubrics, handleCreateRubric, handleDeleteRubric } from './routes/ums-rubrics';
+import { handleGetPerformanceMetrics, handleGetQueryAnalysis, handleRunMaintenance, handleGetSystemHealth, handleClearMetrics, handleGetPerformanceAlerts } from './routes/performance';
+import { trackResponseTime } from './lib/performance';
 import { error, validateCsrfToken } from './lib/types';
 import type { Env } from './lib/types';
 import backupWorker from './backup';
@@ -97,6 +99,7 @@ const ROUTES: Route[] = [
   { method: 'PUT', path: /^\/api\/admin\/users\/([^/]+)\/role$/, roles: ['admin'], handler: async (req, env, p, auth, ctx) => handleUpdateUserRole(req, env, auth!.user.sub) },
   { method: 'DELETE', path: /^\/api\/admin\/users\/([^/]+)$/, roles: ['admin'], handler: async (req, env, p, auth, ctx) => handleDeleteUser(req, env, auth!.user.sub) },
   { method: 'POST', path: /^\/api\/admin\/users\/([^/]+)\/reset-password$/, roles: ['admin'], handler: async (req, env, p, auth, ctx) => handleAdminResetPassword(req, env, auth!.user.sub) },
+  { method: 'POST', path: /^\/api\/admin\/emails\/bulk$/, roles: ['admin'], handler: async (req, env, p, auth, ctx) => handleBulkEmails(req, env) },
   { method: 'GET', path: /^\/api\/admin\/audit-logs$/, roles: ['admin'], handler: async (req, env, p, auth, ctx) => handleGetAuditLogs(req, env) },
   { method: 'GET', path: /^\/api\/admin\/applications$/, roles: ['staff', 'admin'], handler: async (req, env, p, auth, ctx) => handleListApplications(req, env) },
   { method: 'GET', path: /^\/api\/admin\/applications\/([^/]+)$/, roles: ['staff', 'admin'], handler: async (req, env, p, auth, ctx) => handleGetApplication(req, env) },
@@ -105,6 +108,12 @@ const ROUTES: Route[] = [
   { method: 'GET', path: /^\/api\/auth\/oauth\/(google|github|microsoft)$/, roles: undefined, handler: async (req, env, p, auth, ctx) => handleOAuthLogin(req, env, p[1] as 'google' | 'github' | 'microsoft') },
   { method: 'GET', path: /^\/api\/auth\/oauth\/(google|github|microsoft)\/callback$/, roles: undefined, handler: async (req, env, p, auth, ctx) => handleOAuthCallback(req, env, p[1] as 'google' | 'github' | 'microsoft') },
   { method: 'GET', path: /^\/api\/health$/, roles: undefined, handler: async (req, env, p, auth, ctx) => new Response(JSON.stringify({ status: 'ok', version: '1.3.0' }), { headers: { 'Content-Type': 'application/json' } }) },
+  // Performance monitoring endpoints
+  { method: 'GET', path: /^\/api\/admin\/performance\/metrics$/, roles: ['admin'], handler: async (req, env, p, auth, ctx) => handleGetPerformanceMetrics(req, env) },
+  { method: 'GET', path: /^\/api\/admin\/performance\/analysis$/, roles: ['admin'], handler: async (req, env, p, auth, ctx) => handleGetQueryAnalysis(req, env) },
+  { method: 'POST', path: /^\/api\/admin\/performance\/maintenance$/, roles: ['admin'], handler: async (req, env, p, auth, ctx) => handleRunMaintenance(req, env) },
+  { method: 'GET', path: /^\/api\/admin\/performance\/health$/, roles: ['admin'], handler: async (req, env, p, auth, ctx) => handleGetSystemHealth(req, env) },
+  { method: 'DELETE', path: /^\/api\/admin\/performance\/metrics$/, roles: ['admin'], handler: async (req, env, p, auth, ctx) => handleClearMetrics(req, env) },
   { method: 'GET', path: /^\/api\/public\/programs$/, cacheTTL: 300, roles: undefined, handler: async (req, env, p, auth, ctx) => handlePublicPrograms(req, env) },
   { method: 'GET', path: /^\/api\/public\/stats$/, cacheTTL: 300, roles: undefined, handler: async (req, env, p, auth, ctx) => handlePublicStats(req, env) },
   { method: 'GET', path: /^\/api\/public\/cms\/posts$/, roles: undefined, handler: async (req, env, p, auth, ctx) => handlePublicListPosts(req, env) },
@@ -202,6 +211,7 @@ export default withSentry(
   }),
   {
   async fetch(request, env, ctx) {
+    const startTime = performance.now();
     const url = new URL(request.url);
     const path = url.pathname;
     const method = request.method;
@@ -214,11 +224,13 @@ export default withSentry(
       return new Response('Not found', { status: 404 });
     }
 
-
-
     try {
       const rateLimitResult = await rateLimit(request, env.DB);
-      if (rateLimitResult) return withCors(rateLimitResult, request, env.ALLOWED_ORIGINS_OVERRIDE);
+      if (rateLimitResult) {
+        const duration = performance.now() - startTime;
+        trackResponseTime(path, method, duration, rateLimitResult.status, request);
+        return withCors(rateLimitResult, request, env.ALLOWED_ORIGINS_OVERRIDE);
+      }
 
       const stateChangingMethods = ['POST', 'PUT', 'DELETE', 'PATCH'];
       const csrfExemptPaths = [
@@ -233,7 +245,10 @@ export default withSentry(
       const isCsrfExempt = csrfExemptPaths.some(p => path.startsWith(p)) || path.startsWith('/api/recommendations/');
       if (stateChangingMethods.includes(method) && !isCsrfExempt) {
         if (!validateCsrfToken(request)) {
-          return withCors(error('Invalid CSRF token', 403), request, env.ALLOWED_ORIGINS_OVERRIDE);
+          const duration = performance.now() - startTime;
+          const errorResponse = error('Invalid CSRF token', 403);
+          trackResponseTime(path, method, duration, 403, request);
+          return withCors(errorResponse, request, env.ALLOWED_ORIGINS_OVERRIDE);
         }
       }
 
@@ -247,7 +262,11 @@ export default withSentry(
         let auth: any = undefined;
         if (route.roles !== undefined) {
           const authResult = await requireAuth(request, env.DB, env.JWT_SECRET, route.roles.length > 0 ? route.roles : undefined);
-          if (authResult instanceof Response) return withCors(authResult, request, env.ALLOWED_ORIGINS_OVERRIDE);
+          if (authResult instanceof Response) {
+            const duration = performance.now() - startTime;
+            trackResponseTime(path, method, duration, authResult.status, request);
+            return withCors(authResult, request, env.ALLOWED_ORIGINS_OVERRIDE);
+          }
           auth = authResult;
         }
 
@@ -258,11 +277,21 @@ export default withSentry(
           response.headers.set('Cache-Control', `public, max-age=${route.cacheTTL}, s-maxage=${route.cacheTTL}`);
         }
 
+        // Track response time for all requests
+        const duration = performance.now() - startTime;
+        trackResponseTime(path, method, duration, response.status, request);
+
         return withCors(response, request, env.ALLOWED_ORIGINS_OVERRIDE);
       }
 
-      return withCors(error('Route not found', 404), request, env.ALLOWED_ORIGINS_OVERRIDE);
+      const duration = performance.now() - startTime;
+      const notFoundResponse = error('Route not found', 404);
+      trackResponseTime(path, method, duration, 404, request);
+      return withCors(notFoundResponse, request, env.ALLOWED_ORIGINS_OVERRIDE);
     } catch (e: any) {
+      const duration = performance.now() - startTime;
+      trackResponseTime(path, method, duration, 500, request);
+      
       requestLogger(log, request).error('Worker error', {
         err: e?.message ?? String(e),
         stack: e?.stack?.split('\n')[1]?.trim(),
@@ -274,5 +303,34 @@ export default withSentry(
     await backupWorker.scheduled(controller, env, ctx);
     await runArchivalJob(env);
   },
+  async queue(batch, env, ctx) {
+    const { processEmailDelivery } = await import('./lib/email');
+    for (const msg of batch.messages) {
+      const payload = msg.body as any;
+      let status = 'failed';
+      let errorMessage = '';
+      try {
+        const success = await processEmailDelivery(payload, env.RESEND_API_KEY || '');
+        if (success) {
+          status = 'sent';
+          msg.ack();
+        } else {
+          errorMessage = 'Resend API returned failure';
+          msg.retry();
+        }
+      } catch (err: any) {
+        errorMessage = err.message || 'Unknown error';
+        msg.retry();
+      }
+      if (payload.logId) {
+        try {
+          await env.DB.prepare(
+            `UPDATE email_logs SET status = ?, error_message = ?, attempts = attempts + 1, updated_at = datetime('now') WHERE id = ?`
+          ).bind(status, errorMessage || null, payload.logId).run();
+        } catch (e) {
+          console.error('Failed to update email_logs:', e);
+        }
+      }
+    }
+  },
 } satisfies ExportedHandler<Env>);
-

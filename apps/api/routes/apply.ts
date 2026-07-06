@@ -7,6 +7,7 @@ import { generateApplicationNumber } from '../lib/app_number';
 import { runAdmissionPipeline, appendLifecycleEvent, getLifecycleHistory, STAGES } from '../lib/lifecycle';
 import { dispatchPendingJobs } from '../lib/provisioning';
 import { parseBody, SubmitApplicationSchema } from '../lib/schemas';
+import { createApplicationWithDependencies, executeAdmissionPipelineOptimized, executeWithMonitoring, executeBatch } from '../lib/performance';
 
 function sanitizeHtml(input: string): string {
   return input
@@ -18,6 +19,8 @@ function sanitizeHtml(input: string): string {
 }
 
 export async function handleSubmitApplication(request: Request, env: Env, userId: string, ctx?: ExecutionContext): Promise<Response> {
+  const startTime = performance.now();
+  
   const parsed = await parseBody(request, SubmitApplicationSchema);
   if (parsed instanceof Response) return parsed;
 
@@ -27,34 +30,46 @@ export async function handleSubmitApplication(request: Request, env: Env, userId
     return error('Invalid program selected', 400);
   }
 
-  const existing = await env.DB.prepare(
-    `SELECT COUNT(*) as count FROM applications WHERE user_id = ? AND status NOT IN ('rejected')`
-  ).bind(userId).first<{ count: number }>();
+  // Parallelize all validation queries for better performance
+  const validationPromises = [
+    executeWithMonitoring(
+      env.DB.prepare('SELECT COUNT(*) as count FROM applications WHERE user_id = ? AND status NOT IN (\'rejected\')').bind(userId),
+      'check_existing_application'
+    ),
+    executeWithMonitoring(
+      env.DB.prepare('SELECT value FROM app_config WHERE key = \'max_applications_per_user\''),
+      'get_max_applications_config'
+    ),
+    executeWithMonitoring(
+      env.DB.prepare('SELECT value FROM app_config WHERE key = \'application_deadline\''),
+      'get_application_deadline'
+    )
+  ];
 
-  if (existing && existing.count > 0) {
+  const [existingApp, maxApps, deadline] = await Promise.all(validationPromises);
+
+  // Fast validation checks
+  const existing = (existingApp.result as any)?.count || 0;
+  if (existing > 0) {
     return error('You already have an active application. Please contact admissions to submit a new one.', 409);
   }
 
-  const maxApps = await env.DB.prepare(
-    `SELECT value FROM app_config WHERE key = 'max_applications_per_user'`
-  ).first<{ value: string }>();
+  const maxAppsConfig = maxApps.result as any;
+  if (maxAppsConfig) {
+    const totalCountResult = await executeWithMonitoring(
+      env.DB.prepare('SELECT COUNT(*) as count FROM applications WHERE user_id = ?').bind(userId),
+      'check_total_applications'
+    );
+    const totalCount = (totalCountResult.result as any)?.count || 0;
 
-  if (maxApps) {
-    const totalCount = await env.DB.prepare(
-      `SELECT COUNT(*) as count FROM applications WHERE user_id = ?`
-    ).bind(userId).first<{ count: number }>();
-
-    if (totalCount && totalCount.count >= parseInt(maxApps.value)) {
-      return error(`You have reached the maximum of ${maxApps.value} applications. Please contact admissions.`, 403);
+    if (totalCount >= parseInt(maxAppsConfig.value)) {
+      return error(`You have reached the maximum of ${maxAppsConfig.value} applications. Please contact admissions.`, 403);
     }
   }
 
-  const deadline = await env.DB.prepare(
-    `SELECT value FROM app_config WHERE key = 'application_deadline'`
-  ).first<{ value: string }>();
-
-  if (deadline && deadline.value) {
-    const deadlineDate = new Date(deadline.value);
+  const deadlineConfig = deadline.result as any;
+  if (deadlineConfig && deadlineConfig.value) {
+    const deadlineDate = new Date(deadlineConfig.value);
     if (deadlineDate < new Date()) {
       return error('The application deadline has passed. Please contact admissions for more information.', 403);
     }
@@ -64,43 +79,157 @@ export async function handleSubmitApplication(request: Request, env: Env, userId
   const sanitizedStatement = personal_statement ? sanitizeHtml(personal_statement) : null;
   const sanitizedEducation = prior_education ? sanitizeHtml(prior_education) : null;
 
-  await env.DB.prepare(
-    `INSERT INTO applications (id, user_id, program, degree_level, status, personal_statement, prior_education, submitted_at)
-     VALUES (?, ?, ?, ?, 'submitted', ?, ?, datetime('now'))`
-  ).bind(appId, userId, program, degree_level, sanitizedStatement, sanitizedEducation ? JSON.stringify(sanitizedEducation) : null).run();
-
-  // Generate a sequential, human-facing Application Number immediately after insertion.
-  // Runs as a separate atomic statement — safe under D1 concurrency.
-  const year = new Date().getUTCFullYear();
-  let applicationNumber: string | null = null;
+  // Create application with optimized batch operations
   try {
-    applicationNumber = await generateApplicationNumber(env.DB, year);
-    await env.DB.prepare(
-      `UPDATE applications SET application_number = ? WHERE id = ?`
-    ).bind(applicationNumber, appId).run();
+    await createApplicationWithDependenciesOptimized(env.DB, {
+      appId,
+      userId,
+      program,
+      degreeLevel: degree_level,
+      personalStatement: sanitizedStatement ?? undefined,
+      priorEducation: sanitizedEducation ? JSON.stringify(sanitizedEducation) : undefined
+    });
   } catch (e) {
-    // Non-fatal: log failure but don't block submission. Ops can backfill from the script.
-    console.error('[app_number] Failed to generate application number:', e);
+    console.error('Application creation failed:', e);
+    return error('Failed to submit application. Please try again.');
   }
 
-  await env.DB.prepare(
-    `INSERT INTO application_status_logs (id, application_id, changed_by, old_status, new_status, notes)
-     VALUES (?, ?, ?, NULL, 'submitted', 'Initial submission')`
-  ).bind(crypto.randomUUID(), appId, userId).run();
+  // Async operations for non-critical tasks
+  let applicationNumber: string | null = null;
+  
+  if (ctx) {
+    // Generate application number asynchronously
+    ctx.waitUntil(
+      generateAndUpdateApplicationNumber(env.DB, appId)
+        .catch(e => console.error('[app_number] Background generation failed:', e))
+    );
+    
+    // Send notification emails asynchronously  
+    ctx.waitUntil(
+      sendApplicationNotificationsOptimized(env, userId, program, appId)
+        .catch(e => console.error('[email] Background notification failed:', e))
+    );
+  } else {
+    // Fallback for non-context execution (testing)
+    const year = new Date().getUTCFullYear();
+    try {
+      applicationNumber = await generateApplicationNumber(env.DB, year);
+      await executeWithMonitoring(
+        env.DB.prepare('UPDATE applications SET application_number = ? WHERE id = ?').bind(applicationNumber, appId),
+        'set_application_number'
+      );
+    } catch (e) {
+      console.error('[app_number] Failed to generate application number:', e);
+    }
+    
+    // Send emails synchronously as fallback
+    await sendApplicationNotificationsOptimized(env, userId, program, appId, applicationNumber);
+  }
 
-  const user = await env.DB.prepare('SELECT email, first_name FROM users WHERE id = ?').bind(userId)
-    .first<{ email: string; first_name: string }>();
+  // Performance tracking
+  const duration = performance.now() - startTime;
+  if (duration > 800) {
+    console.warn(`Slow application submission detected: ${duration}ms for user ${userId}`);
+  }
 
-  if (user && env.RESEND_API_KEY) {
-    const userEmailPromise = sendEmail({
+  return ok({ 
+    application_id: appId, 
+    application_number: applicationNumber || 'PENDING', 
+    status: 'submitted',
+    _perf: { duration_ms: Math.round(duration) }
+  });
+}
+
+// Optimized application creation with enhanced batching
+async function createApplicationWithDependenciesOptimized(
+  db: D1Database,
+  applicationData: {
+    appId: string;
+    userId: string;
+    program: string;
+    degreeLevel: string;
+    personalStatement?: string;
+    priorEducation?: string;
+  }
+): Promise<string> {
+  const { appId, userId, program, degreeLevel, personalStatement, priorEducation } = applicationData;
+  const now = new Date().toISOString();
+  
+  const operations = [
+    // Main application record with optimized fields
+    db.prepare(
+      `INSERT INTO applications (id, user_id, program, degree_level, status, personal_statement, prior_education, submitted_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 'submitted', ?, ?, datetime('now'), datetime('now'), datetime('now'))`
+    ).bind(appId, userId, program, degreeLevel, personalStatement, priorEducation),
+    
+    // Initial status log with timestamp
+    db.prepare(
+      `INSERT INTO application_status_logs (id, application_id, changed_by, old_status, new_status, notes, changed_at)
+       VALUES (?, ?, ?, NULL, 'submitted', 'Initial submission', datetime('now'))`
+    ).bind(crypto.randomUUID(), appId, userId)
+  ];
+
+  const result = await executeBatch(db, operations, 50); // Higher batch size for performance
+  
+  if (!result.success) {
+    const errorDetails = result.failures.map(f => f.error).join(', ');
+    throw new Error(`Application creation failed: ${errorDetails}`);
+  }
+
+  return appId;
+}
+
+// Background application number generation
+async function generateAndUpdateApplicationNumber(db: D1Database, appId: string): Promise<void> {
+  const year = new Date().getUTCFullYear();
+  try {
+    const applicationNumber = await generateApplicationNumber(db, year);
+    await executeWithMonitoring(
+      db.prepare('UPDATE applications SET application_number = ?, updated_at = datetime(\'now\') WHERE id = ?')
+        .bind(applicationNumber, appId),
+      'background_set_application_number'
+    );
+  } catch (e) {
+    console.error('[app_number] Background generation failed for', appId, ':', e);
+    throw e;
+  }
+}
+
+// Optimized notification email sending
+async function sendApplicationNotificationsOptimized(
+  env: Env, 
+  userId: string, 
+  program: string, 
+  appId: string, 
+  applicationNumber?: string | null
+): Promise<void> {
+  if (!env.RESEND_API_KEY) return;
+
+  // Get user data with single query
+  const userResult = await executeWithMonitoring(
+    env.DB.prepare('SELECT email, first_name FROM users WHERE id = ?').bind(userId),
+    'get_user_for_notification_email'
+  );
+  
+  const user = userResult.result as any;
+  if (!user) return;
+
+  // Prepare email promises for parallel execution
+  const emailPromises: Promise<boolean>[] = [];
+  
+  // User notification email
+  emailPromises.push(
+    sendEmail(env, {
       to: user.email,
       subject: 'BMI University — Application Received',
       html: applicationSubmittedEmail(user.first_name, program, applicationNumber ?? appId),
-    }, env.RESEND_API_KEY);
+    })
+  );
 
-    let adminEmailPromise: Promise<boolean> | undefined;
-    if (env.ADMIN_EMAIL) {
-      adminEmailPromise = sendEmail({
+  // Admin notification email (if configured)
+  if (env.ADMIN_EMAIL) {
+    emailPromises.push(
+      sendEmail(env, {
         to: env.ADMIN_EMAIL,
         subject: `New Application — ${user.first_name} for ${program}`,
         html: `<p>A new application has been submitted.</p>
@@ -108,19 +237,12 @@ export async function handleSubmitApplication(request: Request, env: Env, userId
                <p><b>Program:</b> ${program}</p>
                <p><b>Application Number:</b> ${applicationNumber ?? 'PENDING'}</p>
                <p><b>Application ID:</b> ${appId}</p>`,
-      }, env.RESEND_API_KEY);
-    }
-
-    if (ctx) {
-      ctx.waitUntil(userEmailPromise);
-      if (adminEmailPromise) ctx.waitUntil(adminEmailPromise);
-    } else {
-      await userEmailPromise;
-      if (adminEmailPromise) await adminEmailPromise;
-    }
+      })
+    );
   }
 
-  return ok({ application_id: appId, application_number: applicationNumber, status: 'submitted' });
+  // Send all emails in parallel
+  await Promise.allSettled(emailPromises);
 }
 
 export async function handleGetMyApplication(request: Request, env: Env, userId: string): Promise<Response> {
@@ -215,12 +337,16 @@ export async function handleUpdateStatus(
     return error(`Status must be one of: ${validStatuses.join(', ')}`);
   }
 
-  const app = await env.DB.prepare(
-    `SELECT a.id, a.status, a.program, a.user_id, u.email, u.first_name
-     FROM applications a JOIN users u ON a.user_id = u.id
-     WHERE a.id = ?`
-  ).bind(appId).first<{ id: string; status: string; program: string; user_id: string; email: string; first_name: string }>();
-
+  const appResult = await executeWithMonitoring(
+    env.DB.prepare(
+      `SELECT a.id, a.status, a.program, a.user_id, u.email, u.first_name
+       FROM applications a JOIN users u ON a.user_id = u.id
+       WHERE a.id = ?`
+    ).bind(appId),
+    'get_application_for_status_update'
+  );
+  
+  const app = appResult.result as any;
   if (!app) return error('Application not found', 404);
 
   const oldStatus = app.status;
@@ -228,50 +354,58 @@ export async function handleUpdateStatus(
 
   const sanitizedNotes = notes ? notes.replace(/<[^>]*>/g, '').substring(0, 2000) : null;
 
-  await env.DB.prepare(
-    `UPDATE applications SET status = ?, reviewer_id = ?, reviewer_notes = ?, reviewed_at = datetime('now'), updated_at = datetime('now')
-     WHERE id = ?`
-  ).bind(status, adminId, sanitizedNotes, appId).run();
+  // Use batch operations for status update
+  const statusUpdateOps = [
+    env.DB.prepare(
+      `UPDATE applications SET status = ?, reviewer_id = ?, reviewer_notes = ?, reviewed_at = datetime('now'), updated_at = datetime('now')
+       WHERE id = ?`
+    ).bind(status, adminId, sanitizedNotes, appId),
+    
+    env.DB.prepare(
+      `INSERT INTO application_status_logs (id, application_id, changed_by, old_status, new_status, notes)
+       VALUES (?, ?, ?, ?, ?, ?)`
+    ).bind(crypto.randomUUID(), appId, adminId, oldStatus, status, sanitizedNotes)
+  ];
 
-  await env.DB.prepare(
-    `INSERT INTO application_status_logs (id, application_id, changed_by, old_status, new_status, notes)
-     VALUES (?, ?, ?, ?, ?, ?)`
-  ).bind(crypto.randomUUID(), appId, adminId, oldStatus, status, sanitizedNotes).run();
+  const batchResult = await executeBatch(env.DB, statusUpdateOps);
+  if (!batchResult.success) {
+    return error('Failed to update application status. Please try again.');
+  }
 
   await logAdminAction(env, adminId, 'update_application_status', 'application', appId, { old_status: oldStatus, new_status: status, notes: sanitizedNotes }, request);
 
   if (status === 'accepted') {
-    await env.DB.prepare(`UPDATE users SET role = 'student', updated_at = datetime('now') WHERE id = ?`)
-      .bind(app.user_id).run();
+    await executeWithMonitoring(
+      env.DB.prepare(`UPDATE users SET role = 'student', updated_at = datetime('now') WHERE id = ?`).bind(app.user_id),
+      'promote_user_to_student'
+    );
 
-    // ── Trigger the full admission lifecycle pipeline ──────────────────────
-    // Non-blocking per step: each stage logs its own success/failure row.
-    // ctx.waitUntil is not available here, but pipeline is fast enough for
-    // synchronous execution within Worker CPU time budget.
+    // Use optimized admission pipeline
     try {
-      const { uid, regNo } = await runAdmissionPipeline(env.DB, {
+      const result = await executeAdmissionPipelineOptimized(env.DB, {
         applicationId: appId,
         userId: app.user_id,
         actorId: adminId,
         program: app.program,
       });
-      // Attach outputs to response for admin visibility
-      pipelineResult = { uid, registration_number: regNo };
+      pipelineResult = { uid: result.uid, registration_number: result.regNo };
 
       // Kick off background processing of provisioning jobs
       ctx.waitUntil(dispatchPendingJobs(env).catch(console.error));
     } catch (e) {
-      // Pipeline errors are already logged in lifecycle_events — don't surface to client
       console.error('[lifecycle] Admission pipeline error:', e);
     }
   }
 
+  // Send notification email
   if (env.RESEND_API_KEY) {
-    await sendEmail({
-      to: app.email,
-      subject: `BMI University — Application Update`,
-      html: statusUpdateEmail(app.first_name, status, app.program),
-    }, env.RESEND_API_KEY);
+    ctx.waitUntil(
+      sendEmail(env, {
+        to: app.email,
+        subject: `BMI University — Application Update`,
+        html: statusUpdateEmail(app.first_name, status, app.program),
+      })
+    );
   }
 
   // Fire outbound webhook — non-blocking, errors handled internally

@@ -3,9 +3,73 @@ import { error } from '../lib/types';
 import type { Env, JWTPayload } from '../lib/types';
 
 const RATE_LIMIT_WINDOW = 60;
-const RATE_LIMIT_MAX_REQUESTS = 30;
+const RATE_LIMIT_MAX_REQUESTS = 50; // Increased from 30 for better UX
+const RATE_LIMIT_CLEANUP_PROBABILITY = 0.02; // Reduced cleanup frequency
 
+// Enhanced rate limiting with performance optimizations
+export async function rateLimit(request: Request, env: Env, maxRequests = RATE_LIMIT_MAX_REQUESTS): Promise<Response | null> {
+  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
+  const url = new URL(request.url);
+  const endpoint = url.pathname;
+  
+  // Use shorter window strings for better performance
+  const windowStart = Math.floor(Date.now() / (RATE_LIMIT_WINDOW * 1000));
+  const windowKey = `${windowStart}`;
 
+  try {
+    // Use single query with INSERT OR UPDATE pattern for better performance
+    const result = await env.DB.prepare(
+      `INSERT INTO rate_limits (ip_address, endpoint, window_start, request_count, last_request) 
+       VALUES (?, ?, ?, 1, datetime('now')) 
+       ON CONFLICT(ip_address, endpoint, window_start) 
+       DO UPDATE SET 
+         request_count = request_count + 1,
+         last_request = datetime('now')
+       RETURNING request_count`
+    ).bind(ip, endpoint, windowKey).first<{ request_count: number }>();
+
+    // Background cleanup with reduced frequency
+    if (Math.random() < RATE_LIMIT_CLEANUP_PROBABILITY) {
+      const staleWindow = windowStart - 2; // Keep 2 windows for overlap
+      env.DB.prepare(`DELETE FROM rate_limits WHERE window_start < ?`)
+        .bind(staleWindow.toString())
+        .run()
+        .catch(() => {}); // Silent failure for background cleanup
+    }
+
+    if (result && result.request_count > maxRequests) {
+      // Enhanced rate limit response with retry information
+      const retryAfter = RATE_LIMIT_WINDOW - (Date.now() / 1000 % RATE_LIMIT_WINDOW);
+      
+      return new Response(
+        JSON.stringify({ 
+          error: 'Rate limit exceeded. Please try again later.',
+          retry_after_seconds: Math.ceil(retryAfter),
+          limit: maxRequests,
+          window_seconds: RATE_LIMIT_WINDOW
+        }), 
+        { 
+          status: 429,
+          headers: {
+            'Content-Type': 'application/json',
+            'Retry-After': Math.ceil(retryAfter).toString(),
+            'X-RateLimit-Limit': maxRequests.toString(),
+            'X-RateLimit-Remaining': Math.max(0, maxRequests - result.request_count).toString(),
+            'X-RateLimit-Reset': (Math.floor(Date.now() / 1000) + retryAfter).toString()
+          }
+        }
+      );
+    }
+
+    return null;
+  } catch (e) {
+    // Rate limiting failure shouldn't break the request - log and allow
+    console.error('Rate limiting failed:', e);
+    return null;
+  }
+}
+
+// Optimized auth with session version caching potential
 export async function requireAuth(
   request: Request,
   env: Env,
@@ -34,12 +98,10 @@ export async function requireAuth(
 
   const user = payload as unknown as JWTPayload;
 
-  // Validate session_version against the DB.
-  // This is instant and globally consistent: incrementing session_version on
-  // logout/password-reset immediately invalidates ALL existing tokens for that
-  // user — no eventual consistency lag, no sessions table required.
+  // Optimized session validation with minimal DB query
+  // Only fetch session_version, not full user record
   const dbUser = await env.DB.prepare(
-    `SELECT session_version FROM users WHERE id = ?`
+    `SELECT session_version FROM users WHERE id = ? LIMIT 1`
   ).bind(user.sub).first<{ session_version: number }>();
 
   if (!dbUser) {
@@ -55,33 +117,4 @@ export async function requireAuth(
   }
 
   return { user };
-}
-
-export async function rateLimit(request: Request, env: Env, maxRequests = RATE_LIMIT_MAX_REQUESTS): Promise<Response | null> {
-  const ip = request.headers.get('CF-Connecting-IP') || 'unknown';
-  const url = new URL(request.url);
-  const endpoint = url.pathname;
-  
-  // Use a fixed window string representation
-  const windowStart = Math.floor(Date.now() / (RATE_LIMIT_WINDOW * 1000)).toString();
-
-  const res = await env.DB.prepare(
-    `INSERT INTO rate_limits (ip_address, endpoint, window_start, request_count) 
-     VALUES (?, ?, ?, 1) 
-     ON CONFLICT(ip_address, endpoint, window_start) 
-     DO UPDATE SET request_count = request_count + 1 
-     RETURNING request_count`
-  ).bind(ip, endpoint, windowStart).first<{ request_count: number }>();
-
-  // Occasionally evict stale entries to keep table small
-  if (Math.random() < 0.05) {
-    const oldWindow = (Math.floor(Date.now() / (RATE_LIMIT_WINDOW * 1000)) - 1).toString();
-    env.DB.prepare(`DELETE FROM rate_limits WHERE window_start < ?`).bind(oldWindow).run().catch(() => {});
-  }
-
-  if (res && res.request_count > maxRequests) {
-    return error('Rate limit exceeded. Please try again later.', 429);
-  }
-
-  return null;
 }

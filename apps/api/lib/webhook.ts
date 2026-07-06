@@ -87,7 +87,7 @@ async function deadLetter(
 
   // Send ops alert — guard against infinite loops if alert itself fails
   if (env.OPS_ALERT_EMAIL && env.RESEND_API_KEY) {
-    await sendEmail(
+    await sendEmail(env,
       {
         to: env.OPS_ALERT_EMAIL,
         subject: `[BMI Portal] Webhook dead-letter: ${payload.type}`,
@@ -104,8 +104,7 @@ async function deadLetter(
               Review and retry at: Admin → Webhooks → Dead Letters
             </p>
           </div>`,
-      },
-      env.RESEND_API_KEY,
+      }
     ).catch(() => {
       /* Suppress — alert failure must never cause infinite loop */
     });

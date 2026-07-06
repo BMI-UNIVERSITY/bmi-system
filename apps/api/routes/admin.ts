@@ -160,7 +160,7 @@ export async function handleAdminResetPassword(request: Request, env: Env, actor
 
   if (env.RESEND_API_KEY) {
     const resetUrl = `${getPortalUrl(env)}/reset-password?token=${resetToken}`;
-    await sendEmail({
+    await sendEmail(env, {
       to: target.email,
       subject: 'BMI University — Password Reset by Administrator',
       html: `
@@ -173,19 +173,23 @@ export async function handleAdminResetPassword(request: Request, env: Env, actor
             <h2 style="color: #0f172a;">Hi ${target.first_name},</h2>
             <p style="color: #475569; line-height: 1.6;">
               An administrator has initiated a password reset for your BMI University account.
-              Click the button below to set a new password:
+              Please click the link below to set a new password:
             </p>
-            <a href="${resetUrl}"
-               style="display: inline-block; background: #d4af37; color: #0f172a; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 16px;">
-              Set New Password
-            </a>
-            <p style="color: #94a3b8; font-size: 13px; margin-top: 24px;">
-              This link expires in <strong>24 hours</strong>. If you did not expect this email, please contact support immediately.
+            <div style="margin: 32px 0; text-align: center;">
+              <a href="${resetUrl}"
+                 style="display: inline-block; background: #d4af37; color: #0f172a; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px;">
+                Reset Password
+              </a>
+            </div>
+            <p style="color: #94a3b8; font-size: 13px;">
+              Or copy this link into your browser:<br>
+              <a href="${resetUrl}" style="color: #d4af37; word-break: break-all;">${resetUrl}</a>
             </p>
+            <p style="color: #94a3b8; font-size: 13px;">This link expires in 24 hours.</p>
           </div>
         </div>
-      `,
-    }, env.RESEND_API_KEY);
+      `
+    });
   }
 
   await logAdminAction(env, actorId, 'admin_reset_password', 'user', targetId, {
@@ -233,3 +237,32 @@ export async function handleGetAuditLogs(request: Request, env: Env): Promise<Re
   return ok({ logs: logs.results, total: totalResult?.total ?? 0, limit, offset });
 }
 
+export async function handleBulkEmails(request: Request, env: Env): Promise<Response> {
+  const body = await request.json() as any;
+  if (!Array.isArray(body.recipients) || !body.subject || !body.html) {
+    return error('Invalid payload. Expected { recipients: string[], subject: string, html: string }', 400);
+  }
+
+  const { recipients, subject, html } = body;
+  
+  if (recipients.length > 500) {
+    return error('Cannot send more than 500 emails at once', 400);
+  }
+
+  let enqueued = 0;
+  for (const to of recipients) {
+    try {
+      const logId = crypto.randomUUID();
+      await env.DB.prepare(
+        `INSERT INTO email_logs (id, to_address, subject, status) VALUES (?, ?, ?, 'pending')`
+      ).bind(logId, to, subject).run();
+
+      await env.EMAIL_QUEUE.send({ to, subject, html, logId });
+      enqueued++;
+    } catch (e) {
+      console.error(`Failed to enqueue email for ${to}:`, e);
+    }
+  }
+
+  return ok({ message: `Successfully queued ${enqueued}/${recipients.length} emails.` });
+}

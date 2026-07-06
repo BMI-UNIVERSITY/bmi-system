@@ -19,9 +19,23 @@
       "database_id": "a5e26ad9-5d8e-4afa-9ad9-8cd55c1cbf1a"
     }
   ],
-
-
-
+  
+  "queues": {
+    "producers": [
+      {
+        "queue": "bmi-email-queue",
+        "binding": "EMAIL_QUEUE"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "bmi-email-queue",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 3
+      }
+    ]
+  },
 
   // ─── R2 Object Storage (Documents & Backups) ──────────────────────
   "r2_buckets": [

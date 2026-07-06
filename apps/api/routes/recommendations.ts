@@ -54,7 +54,7 @@ export async function handleRequestRecommendation(request: Request, env: Env, ap
   if (env.RESEND_API_KEY && applicant) {
     const baseUrl = getPortalUrl(env);
     const uploadUrl = `${baseUrl}/recommend/${token}`;
-    await sendEmail({
+    await sendEmail(env, {
       to: referee_email,
       subject: `Recommendation Request for ${applicant.first_name} ${applicant.last_name}`,
       html: `
@@ -66,7 +66,7 @@ export async function handleRequestRecommendation(request: Request, env: Env, ap
         <p>Or copy this link: ${uploadUrl}</p>
         <p>Thank you,<br/>BMI University Admissions</p>
       `
-    }, env.RESEND_API_KEY);
+    });
   }
 
   return ok({ id: reqId, status: 'requested' });
@@ -147,11 +147,11 @@ export async function handleUploadRecommendation(request: Request, env: Env, tok
     .bind(req.user_id).first<{ email: string; first_name: string }>();
 
   if (applicant && env.RESEND_API_KEY) {
-    await sendEmail({
+    await sendEmail(env, {
       to: applicant.email,
       subject: 'BMI University — Recommendation Received',
       html: `<p>Dear ${applicant.first_name},</p><p>A recommendation letter has been received and added to your application.</p>`
-    }, env.RESEND_API_KEY);
+    });
   }
 
   return ok({ success: true });

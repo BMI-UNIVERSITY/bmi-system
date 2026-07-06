@@ -33,6 +33,7 @@ export interface Env {
   /** WriteQueue Durable Object — serializes D1 writes to prevent concurrency exhaustion */
   WRITE_QUEUE: DurableObjectNamespace;
   SENTRY_DSN?: string;
+  EMAIL_QUEUE: Queue;
 }
 
 export type Role = 'applicant' | 'student' | 'staff' | 'admin' | 'verifier';

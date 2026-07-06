@@ -45,7 +45,7 @@ async function deadLetterJob(env: Env, job: ProvisioningJob, lastError: string):
 
   // Send ops alert
   if (env.OPS_ALERT_EMAIL && env.RESEND_API_KEY) {
-    await sendEmail({
+    await sendEmail(env, {
       to: env.OPS_ALERT_EMAIL,
       subject: `[BMI Portal] Provisioning Dead-Letter: ${job.job_type}`,
       html: `
@@ -58,10 +58,10 @@ async function deadLetterJob(env: Env, job: ProvisioningJob, lastError: string):
           <p><strong>Time:</strong> ${new Date().toISOString()}</p>
           <hr/>
           <p style="color:#64748b;font-size:13px;">
-            Review and retry at: Admin → Provisioning → Dead Letters
+            Review and retry at: Admin → Infrastructure → Provisioning
           </p>
         </div>`
-    }, env.RESEND_API_KEY).catch(() => { /* Suppress alert failure */ });
+    }).catch(() => { /* Suppress alert failure */ });
   }
 }
 

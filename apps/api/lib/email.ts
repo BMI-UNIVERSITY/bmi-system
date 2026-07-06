@@ -3,13 +3,37 @@ import { PORTAL_URL } from '@bmi/shared';
 const FROM_ADDRESS = 'BMI University <admissions@hkmministries.org>';
 // Brand token cross-reference: colors sourced from @bmi/shared/src/tokens.ts (BrandColors.gold / BrandColors.navy)
 
-interface EmailPayload {
+import type { Env } from './types';
+
+export interface EmailPayload {
   to: string;
   subject: string;
   html: string;
+  logId?: string; // added internally when queuing
 }
 
-export async function sendEmail(payload: EmailPayload, resendApiKey: string): Promise<boolean> {
+export async function sendEmail(env: Env, payload: EmailPayload): Promise<boolean> {
+  if (!env.RESEND_API_KEY) return false;
+  
+  try {
+    // 1. Insert into email_logs as 'pending'
+    const logId = crypto.randomUUID();
+    await env.DB.prepare(
+      `INSERT INTO email_logs (id, to_address, subject, status) VALUES (?, ?, ?, 'pending')`
+    ).bind(logId, payload.to, payload.subject).run();
+
+    // 2. Enqueue the message for background processing
+    const queuedPayload = { ...payload, logId };
+    await env.EMAIL_QUEUE.send(queuedPayload);
+
+    return true;
+  } catch (err) {
+    console.error('Failed to enqueue email:', err);
+    return false;
+  }
+}
+
+export async function processEmailDelivery(payload: EmailPayload, resendApiKey: string): Promise<boolean> {
   if (!resendApiKey) return false;
   try {
     const response = await fetch('https://api.resend.com/emails', {

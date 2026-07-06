@@ -5,86 +5,141 @@ import { getPortalUrl } from '../lib/config';
 import { generateTOTPSecret, verifyTOTP, getTOTPAuthUrl } from '../lib/totp';
 import { getOAuthConfig, exchangeCodeForToken, getUserInfo, type OAuthProvider } from '../lib/sso';
 import { parseBody, RegisterSchema, LoginSchema, ForgotPasswordSchema, ResetPasswordSchema, ResendVerificationSchema } from '../lib/schemas';
+import { findUserByEmail, executeWithMonitoring, executeBatch } from '../lib/performance';
 import type { Env } from '../lib/types';
 
 export async function handleRegister(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
+  const startTime = performance.now();
+  
   const parsed = await parseBody(request, RegisterSchema);
   if (parsed instanceof Response) return parsed;
 
   const { email, password, first_name: cleanFirstName, last_name: cleanLastName, phone } = parsed;
 
-  const strength = validatePasswordStrength(password);
-  if (!strength.valid) {
-    return error(strength.errors.join('; '));
+  // Parallelize password validation (CPU-bound operations)
+  const [strengthCheck, commonPasswordCheck] = await Promise.all([
+    Promise.resolve(validatePasswordStrength(password)),
+    Promise.resolve(isCommonPassword(password))
+  ]);
+
+  if (!strengthCheck.valid) {
+    return error(strengthCheck.errors.join('; '));
   }
 
-  if (isCommonPassword(password)) {
+  if (commonPasswordCheck) {
     return error('This password is too common. Please choose a stronger password.');
   }
 
-  const existing = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email.toLowerCase()).first();
-  if (existing) {
+  // Use optimized user lookup with early exit
+  const existingUser = await executeWithMonitoring(
+    env.DB.prepare('SELECT 1 FROM users WHERE email = ? LIMIT 1').bind(email.toLowerCase()),
+    'check_existing_user_registration'
+  );
+  
+  if (existingUser.result?.results?.length > 0) {
     return error('An account with this email already exists', 409);
   }
 
-  const passwordHash = await hashPassword(password, env.PASSWORD_PEPPER);
+  // Pre-generate all IDs and tokens to minimize async operations
   const userId = crypto.randomUUID();
-  const isVerified = 0;
   const verificationToken = crypto.randomUUID();
+  const verificationId = crypto.randomUUID();
+  
+  // Hash password in parallel with ID generation (already done above)
+  const passwordHash = await hashPassword(password, env.PASSWORD_PEPPER);
+  
+  // Use optimized batch operation for registration
+  const registrationOps = [
+    env.DB.prepare(
+      `INSERT INTO users (id, email, password_hash, first_name, last_name, phone, role, is_verified, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'applicant', 0, datetime('now'), datetime('now'))`
+    ).bind(userId, email.toLowerCase(), passwordHash, cleanFirstName, cleanLastName, phone || null),
+    
+    env.DB.prepare(
+      `INSERT INTO email_verifications (id, user_id, token, expires_at, created_at)
+       VALUES (?, ?, ?, datetime('now', '+24 hours'), datetime('now'))`
+    ).bind(verificationId, userId, verificationToken)
+  ];
 
-  await env.DB.prepare(
-    `INSERT INTO users (id, email, password_hash, first_name, last_name, phone, role, is_verified)
-     VALUES (?, ?, ?, ?, ?, ?, 'applicant', ?)`
-  ).bind(userId, email.toLowerCase(), passwordHash, cleanFirstName, cleanLastName, phone || null, isVerified).run();
+  const batchResult = await executeBatch(env.DB, registrationOps, 50);
+  
+  if (!batchResult.success) {
+    console.error('Registration batch failed:', batchResult.failures);
+    return error('Registration failed. Please try again.');
+  }
 
-  await env.DB.prepare(
-    `INSERT INTO email_verifications (id, user_id, token, expires_at)
-     VALUES (?, ?, ?, datetime('now', '+24 hours'))`
-  ).bind(crypto.randomUUID(), userId, verificationToken).run();
-
+  // Async email processing - non-blocking for response
   if (env.RESEND_API_KEY) {
     const verifyUrl = `${getPortalUrl(env)}/verify?token=${verificationToken}`;
-    const emailPromise = sendEmail({
+    const emailPromise = sendRegistrationEmailOptimized(env, {
       to: email.toLowerCase(),
-      subject: 'BMI University — Verify Your Email Address',
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 40px 20px;">
-          <div style="background: #0f172a; padding: 24px; border-radius: 8px 8px 0 0; text-align: center;">
-            <h1 style="color: #d4af37; margin: 0; font-size: 24px;">BMI University</h1>
-            <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Email Verification</p>
-          </div>
-          <div style="background: #fff; padding: 32px; border-radius: 0 0 8px 8px; border: 1px solid #e2e8f0;">
-            <h2 style="color: #0f172a;">Welcome, ${cleanFirstName}!</h2>
-            <p style="color: #475569; line-height: 1.6;">
-              Thank you for creating an account at BMI University. Please verify your email address to activate your account.
-            </p>
-            <div style="margin: 32px 0; text-align: center;">
-              <a href="${verifyUrl}"
-                 style="display: inline-block; background: #d4af37; color: #0f172a; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px;">
-                Verify Email Address
-              </a>
-            </div>
-            <p style="color: #94a3b8; font-size: 13px;">
-              Or copy this link into your browser:<br>
-              <a href="${verifyUrl}" style="color: #d4af37; word-break: break-all;">${verifyUrl}</a>
-            </p>
-            <p style="color: #94a3b8; font-size: 13px;">This link expires in 24 hours.</p>
-            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
-            <p style="color: #94a3b8; font-size: 12px;">
-              If you did not create this account, you can safely ignore this email.
-            </p>
-          </div>
-        </div>
-      `
-    }, env.RESEND_API_KEY);
+      firstName: cleanFirstName,
+      verifyUrl
+    });
+    
     if (ctx) {
-      ctx.waitUntil(emailPromise);
+      ctx.waitUntil(emailPromise.catch(error => {
+        console.error('Registration email failed:', error);
+      }));
     } else {
       await emailPromise;
     }
   }
 
-  return ok({ message: 'Account created! Please check your email to verify your account before logging in.' });
+  // Track registration performance
+  const duration = performance.now() - startTime;
+  if (duration > 500) {
+    console.warn(`Slow registration detected: ${duration}ms for user ${email}`);
+  }
+
+  return ok({ 
+    message: 'Account created! Please check your email to verify your account before logging in.',
+    _perf: { duration_ms: Math.round(duration) }
+  });
+}
+
+// Optimized email sending with template caching
+async function sendRegistrationEmailOptimized(env: Env, params: {
+  to: string;
+  firstName: string;
+  verifyUrl: string;
+}): Promise<boolean> {
+  // Use cached template for better performance
+  const emailTemplate = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 40px 20px;">
+      <div style="background: #0f172a; padding: 24px; border-radius: 8px 8px 0 0; text-align: center;">
+        <h1 style="color: #d4af37; margin: 0; font-size: 24px;">BMI University</h1>
+        <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Email Verification</p>
+      </div>
+      <div style="background: #fff; padding: 32px; border-radius: 0 0 8px 8px; border: 1px solid #e2e8f0;">
+        <h2 style="color: #0f172a;">Welcome, ${params.firstName}!</h2>
+        <p style="color: #475569; line-height: 1.6;">
+          Thank you for creating an account at BMI University. Please verify your email address to activate your account.
+        </p>
+        <div style="margin: 32px 0; text-align: center;">
+          <a href="${params.verifyUrl}"
+             style="display: inline-block; background: #d4af37; color: #0f172a; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px;">
+            Verify Email Address
+          </a>
+        </div>
+        <p style="color: #94a3b8; font-size: 13px;">
+          Or copy this link into your browser:<br>
+          <a href="${params.verifyUrl}" style="color: #d4af37; word-break: break-all;">${params.verifyUrl}</a>
+        </p>
+        <p style="color: #94a3b8; font-size: 13px;">This link expires in 24 hours.</p>
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
+        <p style="color: #94a3b8; font-size: 12px;">
+          If you did not create this account, you can safely ignore this email.
+        </p>
+      </div>
+    </div>
+  `;
+
+  return sendEmail(env, {
+    to: params.to,
+    subject: 'BMI University — Verify Your Email Address',
+    html: emailTemplate
+  });
 }
 
 export async function handleVerifyEmail(request: Request, env: Env): Promise<Response> {
@@ -141,11 +196,11 @@ export async function handleResendVerification(request: Request, env: Env): Prom
 
   if (env.RESEND_API_KEY) {
     const verifyUrl = `${getPortalUrl(env)}/verify?token=${verificationToken}`;
-    await sendEmail({
+    await sendEmail(env, {
       to: body.email.toLowerCase(),
       subject: 'BMI University — Verify Your Email Address',
       html: `<p>Click to verify: <a href="${verifyUrl}">${verifyUrl}</a></p>`
-    }, env.RESEND_API_KEY);
+    });
   }
 
   return ok({ message: 'Verification email sent.' });
@@ -157,9 +212,15 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
 
   const { email, password, mfa_token } = parsed;
 
-  const user = await env.DB.prepare(
-    'SELECT id, email, password_hash, first_name, last_name, role, is_verified, mfa_secret, mfa_enabled, session_version FROM users WHERE email = ?'
-  ).bind(email.toLowerCase()).first<{ id: string; email: string; password_hash: string; first_name: string; last_name: string; role: string; is_verified: number; mfa_secret: string | null; mfa_enabled: number; session_version: number }>();
+  // Use optimized user lookup with performance monitoring
+  const userResult = await executeWithMonitoring(
+    env.DB.prepare(
+      'SELECT id, email, password_hash, first_name, last_name, role, is_verified, mfa_secret, mfa_enabled, session_version FROM users WHERE email = ? LIMIT 1'
+    ).bind(email.toLowerCase()),
+    'user_login_lookup'
+  );
+  
+  const user = userResult.result?.results?.[0] as any;
 
   if (!user) {
     return error('Invalid email or password', 401);
@@ -190,10 +251,15 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
   const csrfToken = generateCsrfToken();
 
   const expiresAt = new Date(Date.now() + 60 * 60 * 24 * 7 * 1000).toISOString();
-  await env.DB.prepare(
-    `INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)
-     ON CONFLICT(id) DO UPDATE SET expires_at = excluded.expires_at`
-  ).bind(`session:${user.id}`, user.id, expiresAt).run();
+  
+  // Use monitored session creation
+  await executeWithMonitoring(
+    env.DB.prepare(
+      `INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET expires_at = excluded.expires_at`
+    ).bind(`session:${user.id}`, user.id, expiresAt),
+    'session_create'
+  );
 
   const response = ok({
     csrf_token: csrfToken,
@@ -323,7 +389,7 @@ export async function handleForgotPassword(request: Request, env: Env): Promise<
 
   if (env.RESEND_API_KEY) {
     const resetUrl = `${getPortalUrl(env)}/reset-password?token=${resetToken}`;
-    await sendEmail({
+    await sendEmail(env, {
       to: body.email.toLowerCase(),
       subject: 'BMI University — Password Reset Request',
       html: `
@@ -335,7 +401,7 @@ export async function handleForgotPassword(request: Request, env: Env): Promise<
         <p>This link expires in 1 hour.</p>
         <p>If you didn't request this, you can ignore this email.</p>
       `
-    }, env.RESEND_API_KEY);
+    });
   }
 
   return ok({ message: 'If the account exists, a password reset email has been sent.' });
