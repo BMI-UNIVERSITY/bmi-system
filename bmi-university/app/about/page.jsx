@@ -147,6 +147,7 @@ export default function About() {
                       width: "100%", 
                       height: "100%", 
                       objectFit: "cover", 
+                      objectPosition: "center top",
                       display: "block",
                       transform: l.img.includes("dr-young") ? "scaleX(-1)" : "none"
                     }} 
