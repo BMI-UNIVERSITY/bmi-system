@@ -69,7 +69,7 @@ export default function Navbar() {
             style={{
               display: "flex",
               alignItems: "center",
-              gap: "0.75rem",
+              gap: "10px",
               textDecoration: "none",
             }}
           >
@@ -82,17 +82,25 @@ export default function Navbar() {
                 objectFit: "contain",
               }}
             />
-            <span style={{
-              fontFamily: "'Outfit', sans-serif",
-              fontWeight: 900,
-              fontSize: "1.25rem",
-              color: "#ffffff",
-              letterSpacing: "-0.01em",
-              lineHeight: 1.15,
-            }}>
-              BMI<br />
-              <span style={{ color: "#d4af37", fontSize: "0.75rem", fontWeight: 700, letterSpacing: "0.05em", textTransform: "uppercase" }}>University</span>
-            </span>
+            <div style={{ display: "flex", flexDirection: "column", lineHeight: 1 }}>
+              <span style={{
+                fontFamily: "'Outfit', sans-serif",
+                fontWeight: 900,
+                fontSize: "1.85rem",
+                color: "#ffffff",
+                letterSpacing: "-0.02em",
+                lineHeight: 1,
+              }}>BMI</span>
+              <span style={{
+                fontFamily: "'Outfit', sans-serif",
+                fontWeight: 700,
+                fontSize: "0.6rem",
+                color: "#d4af37",
+                letterSpacing: "0.18em",
+                textTransform: "uppercase",
+                marginTop: "3px",
+              }}>University</span>
+            </div>
           </Link>
 
           {/* ─── Desktop Links ─── */}
