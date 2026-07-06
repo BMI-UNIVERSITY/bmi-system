@@ -20,15 +20,7 @@
     }
   ],
 
-  "durable_objects": {
-    "bindings": [
-      {
-        "name": "WRITE_QUEUE",
-        "class_name": "WriteQueue",
-        "script_name": "bmi-auth"
-      }
-    ]
-  },
+
 
 
   // ─── R2 Object Storage (Documents & Backups) ──────────────────────

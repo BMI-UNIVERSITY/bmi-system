@@ -11,7 +11,8 @@
   // D1 global max concurrent connections is 10.
   // We limit each Worker to 2 to prevent SQLITE_BUSY saturation.
   "limits": {
-    "max_concurrent_requests": 2
+    "max_concurrent_requests": 2,
+    "cpu_ms": 50
   },
 
   "d1_databases": [
