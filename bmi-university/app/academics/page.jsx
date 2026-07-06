@@ -90,7 +90,9 @@ export default function Academics() {
       <section aria-labelledby="bachelors-heading" style={{ background: "#f8fafc", padding: "5rem 2rem" }}>
         <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "2.5rem" }}>
-            <div style={{ width: "50px", height: "50px", background: "#0f172a", borderRadius: "14px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", flexShrink: 0 }}>🎓</div>
+            <div style={{ width: "70px", height: "70px", background: "#0f172a", borderRadius: "14px", display: "flex", alignItems: "center", justifyContent: "center", padding: "8px", flexShrink: 0 }}>
+              <img src="/images/bachelor-icon.png" alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} loading="lazy" />
+            </div>
             <div>
               <h2 id="bachelors-heading" style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: "clamp(1.6rem, 2.5vw, 2.2rem)", color: "#0f172a", lineHeight: 1.1 }}>
                 Bachelor&apos;s Degrees
@@ -108,7 +110,9 @@ export default function Academics() {
       <section aria-labelledby="masters-heading" style={{ background: "#fff", padding: "5rem 2rem" }}>
         <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "2.5rem" }}>
-            <div style={{ width: "50px", height: "50px", background: "#d4af37", borderRadius: "14px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", flexShrink: 0 }}>📖</div>
+            <div style={{ width: "70px", height: "70px", background: "#d4af37", borderRadius: "14px", display: "flex", alignItems: "center", justifyContent: "center", padding: "8px", flexShrink: 0 }}>
+              <img src="/images/masters-icon.png" alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} loading="lazy" />
+            </div>
             <div>
               <h2 id="masters-heading" style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: "clamp(1.6rem, 2.5vw, 2.2rem)", color: "#0f172a", lineHeight: 1.1 }}>
                 Master&apos;s Degrees
@@ -126,7 +130,9 @@ export default function Academics() {
       <section aria-labelledby="doctorate-heading" style={{ background: "#f8fafc", padding: "5rem 2rem" }}>
         <div style={{ maxWidth: "1280px", margin: "0 auto" }}>
           <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "2.5rem" }}>
-            <div style={{ width: "50px", height: "50px", background: "#1e293b", borderRadius: "14px", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.4rem", flexShrink: 0 }}>✝️</div>
+            <div style={{ width: "70px", height: "70px", background: "#1e293b", borderRadius: "14px", display: "flex", alignItems: "center", justifyContent: "center", padding: "8px", flexShrink: 0 }}>
+              <img src="/images/phd-icon.png" alt="" style={{ width: "100%", height: "100%", objectFit: "contain" }} loading="lazy" />
+            </div>
             <div>
               <h2 id="doctorate-heading" style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: "clamp(1.6rem, 2.5vw, 2.2rem)", color: "#0f172a", lineHeight: 1.1 }}>
                 Doctorate Programs
