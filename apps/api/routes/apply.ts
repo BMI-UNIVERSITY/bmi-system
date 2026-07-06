@@ -98,7 +98,7 @@ export async function handleSubmitApplication(request: Request, env: Env, userId
       html: applicationSubmittedEmail(user.first_name, program, applicationNumber ?? appId),
     }, env.RESEND_API_KEY);
 
-    let adminEmailPromise: Promise<void> | undefined;
+    let adminEmailPromise: Promise<boolean> | undefined;
     if (env.ADMIN_EMAIL) {
       adminEmailPromise = sendEmail({
         to: env.ADMIN_EMAIL,

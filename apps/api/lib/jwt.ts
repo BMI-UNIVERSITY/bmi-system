@@ -55,10 +55,10 @@ export async function verifyJWT(token: string, secret: string): Promise<Record<s
   }
 }
 
-export async function hashPassword(password: string, pepper: string): Promise<string> {
+export async function hashPassword(password: string, pepper?: string): Promise<string> {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   
-  const pepperKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(pepper), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const pepperKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(pepper || ''), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
   const pepperedPassword = await crypto.subtle.sign('HMAC', pepperKey, new TextEncoder().encode(password));
 
   const keyMaterial = await crypto.subtle.importKey(
@@ -79,7 +79,7 @@ export async function hashPassword(password: string, pepper: string): Promise<st
   return `pbkdf2:${iterations}:${saltHex}:${hashHex}`;
 }
 
-export async function verifyPassword(password: string, stored: string, pepper: string): Promise<boolean> {
+export async function verifyPassword(password: string, stored: string, pepper?: string): Promise<boolean> {
   try {
     const parts = stored.split(':');
     let iterations = 50000;
@@ -98,7 +98,7 @@ export async function verifyPassword(password: string, stored: string, pepper: s
 
     const salt = new Uint8Array(saltHex.match(/.{2}/g)!.map(h => parseInt(h, 16)));
     
-    const pepperKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(pepper), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const pepperKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(pepper || ''), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
     const pepperedPassword = await crypto.subtle.sign('HMAC', pepperKey, new TextEncoder().encode(password));
 
     const keyMaterial = await crypto.subtle.importKey(
