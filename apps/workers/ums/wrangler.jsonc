@@ -17,8 +17,8 @@
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "bmi-production",
-      "database_id": "8b51d6c8-5dc6-44de-9e5c-0bd12c1c7365",
+      "database_name": "bmi-portal-db",
+      "database_id": "a5e26ad9-5d8e-4afa-9ad9-8cd55c1cbf1a",
       "migrations_dir": "../../api/migrations"
     }
   ],
