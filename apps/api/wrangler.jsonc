@@ -56,9 +56,9 @@
   //   scheduled (cron)      — nightly backup job
   // All other paths are handled by domain-worker routes below.
   // Pattern: api.hkmministries.org/api/health* only.
-  "routes": [
-    { "pattern": "api.hkmministries.org/api/health*", "zone_name": "hkmministries.org" }
-  ],
+  // "routes": [
+  //   { "pattern": "api.hkmministries.org/api/health*", "zone_name": "hkmministries.org" }
+  // ],
 
 
   "triggers": {
