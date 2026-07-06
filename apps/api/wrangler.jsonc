@@ -30,16 +30,6 @@
     ]
   },
 
-  "migrations": [
-    {
-      "tag": "v1",
-      "new_classes": ["WriteQueue"]
-    },
-    {
-      "tag": "v2",
-      "deleted_classes": ["WriteQueue"]
-    }
-  ],
 
   // ─── R2 Object Storage (Documents & Backups) ──────────────────────
   "r2_buckets": [
