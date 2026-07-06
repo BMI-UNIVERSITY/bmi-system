@@ -26,7 +26,7 @@ export default function Admissions() {
   ];
 
   const steps = [
-    { num: "01", title: "Create Your Account", body: "Fill out the initial form at bmiuniversity.org/apply to create your applicant account. You will receive a verification email to confirm your email address." },
+    { num: "01", title: "Create Your Account", body: "Fill out the initial form at /apply to create your applicant account. You will receive a verification email to confirm your email address." },
     { num: "02", title: "Complete the Application", body: "Log into the applicant portal and complete the multi-step application form, including program selection, educational background, and personal statement." },
     { num: "03", title: "Submit Transcripts & Documents", body: "Upload transcripts from all colleges and universities attended, along with ID documents and any additional materials through the secure applicant portal." },
     { num: "04", title: "Request Recommendations", body: "Use the portal to send secure recommendation requests to your referees. They will receive a unique link to upload their letters directly." },
@@ -54,9 +54,9 @@ export default function Admissions() {
               a Bachelor&apos;s, Master&apos;s, or Doctoral degree, our admissions process is designed to be straightforward
               and supportive.
             </p>
-            <a href="https://bmiuniversity.org/apply/" target="_blank" rel="noopener noreferrer" className="btn btn-gold" style={{ fontSize: "1rem" }}>
+            <Link href="/apply" className="btn btn-gold" style={{ fontSize: "1rem" }}>
               Apply Now →
-            </a>
+            </Link>
           </div>
           <div style={{ borderRadius: "24px", overflow: "hidden", boxShadow: "0 20px 60px rgba(15,23,42,0.15)", aspectRatio: "4/3" }}>
             <img src="/images/admissions-hero/admissions-hero-2-interview.jpg" alt="Admissions process at BMI University" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />

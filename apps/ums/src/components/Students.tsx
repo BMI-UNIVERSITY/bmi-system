@@ -377,7 +377,7 @@ const Students: React.FC<StudentsProps> = (props) => {
             onClick={() => handleSyncApplications()}
             disabled={isSyncing}
             className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[#4B0082] dark:text-purple-300 rounded-none font-bold text-[9px] uppercase tracking-widest hover:border-[#4B0082] transition-all shadow-sm disabled:opacity-50"
-            title="Fetch from bmiuniversity.org/apply/"
+            title="Fetch from portal applications"
           >
             {isSyncing ? (
               <RefreshCw size={12} className="animate-spin" />

@@ -4,7 +4,7 @@ export default function About() {
   const leadership = [
     { name: "Dr. Christopher Cookhorne", role: "President, BMI University",     img: "/images/cookhorne.png" },
     { name: "Dr. George Githinji",       role: "Vice-President, BMI University", img: "/images/george-githinji.png" },
-    { name: "Dr. Joseph Kiai",           role: "Dean of Academics",              img: "/images/about-hero/about-hero-3-faculty.jpg" },
+    { name: "Dr. Joseph Kiai",           role: "Dean of Academics",              img: "/images/dr-joseph.png" },
     { name: "Dr. Melba Layne",           role: "Chief Registrar",                img: "/images/melba.png" },
     { name: "Dr. Lilian Young",          role: "Dean of Students",               img: "/images/dr-young.png" },
   ];

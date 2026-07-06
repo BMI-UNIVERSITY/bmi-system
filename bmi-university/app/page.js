@@ -62,7 +62,7 @@ export default function HomePage() {
           </p>
 
           <div className="animate-hero-delay-2" style={{ display: "flex", gap: "1rem", justifyContent: "center", flexWrap: "wrap" }}>
-            <a href="https://bmiuniversity.org/apply/" target="_blank" rel="noopener noreferrer" className="btn btn-gold">Apply Today →</a>
+            <Link href="/apply" className="btn btn-gold">Apply Today →</Link>
             <Link href="/academics" className="btn btn-outline-white">Learn More</Link>
           </div>
         </div>
@@ -131,7 +131,7 @@ export default function HomePage() {
               <p style={{ color: "rgba(255,255,255,0.7)", marginBottom: "0.5rem" }}>✦ Christian Studies</p>
               <p style={{ color: "rgba(255,255,255,0.7)" }}>✦ Spiritual Formation</p>
             </div>
-            <a href="https://bmiuniversity.org/apply/" target="_blank" rel="noopener noreferrer" className="btn btn-gold">Apply for a Certificate →</a>
+            <Link href="/apply" className="btn btn-gold">Apply for a Certificate →</Link>
           </div>
         </div>
       </section>
@@ -151,7 +151,7 @@ export default function HomePage() {
               Degree programs have been declared exempt from licensure requirements under North Carolina General Statutes (G.S.) 116-15(d) for religious education.
             </p>
             <div style={{ display: "flex", gap: "1rem", flexWrap: "wrap" }}>
-              <a href="https://bmiuniversity.org/apply/" target="_blank" rel="noopener noreferrer" className="btn btn-gold">Apply Today →</a>
+              <Link href="/apply" className="btn btn-gold">Apply Today →</Link>
               <Link href="/admissions" className="btn btn-outline-white">View Admissions Info</Link>
             </div>
           </div>

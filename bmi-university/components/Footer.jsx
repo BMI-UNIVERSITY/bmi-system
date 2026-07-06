@@ -9,7 +9,7 @@ const quickLinks = [
   { label: "About Us",   href: "/about"      },
   { label: "Contact",    href: "/contact"    },
   { label: "Accreditation", href: "/accreditation" },
-  { label: "Apply Now",  href: "https://bmiuniversity.org/apply/", external: true },
+  { label: "Apply Now",  href: "/apply" },
 ];
 
 const programCategories = [

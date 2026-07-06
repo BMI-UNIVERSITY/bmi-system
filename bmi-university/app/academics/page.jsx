@@ -30,14 +30,12 @@ export default function Academics() {
           {p.title}
         </h3>
         <p style={{ color: "#64748b", fontSize: "0.9rem", lineHeight: 1.7, flexGrow: 1 }}>{p.desc}</p>
-        <a
-          href="https://bmiuniversity.org/apply/"
-          target="_blank"
-          rel="noopener noreferrer"
-          style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", color: "#d4af37", fontWeight: 700, fontSize: "0.85rem", marginTop: "0.5rem", width: "fit-content" }}
-        >
-          Apply Today →
-        </a>
+        <Link
+              href="/apply"
+              style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem", color: "#d4af37", fontWeight: 700, fontSize: "0.85rem", marginTop: "0.5rem", width: "fit-content", textDecoration: "underline" }}
+            >
+              Apply Today →
+            </Link>
       </article>
     ));
 

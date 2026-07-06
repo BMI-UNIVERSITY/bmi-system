@@ -149,15 +149,13 @@ export default function Navbar() {
             </ul>
 
             <div style={{ display: "flex", gap: "0.75rem", alignItems: "center" }}>
-              <a
-                href="https://bmiuniversity.org/apply/"
-                target="_blank"
-                rel="noopener noreferrer"
+              <Link
+                href="/apply"
                 className="btn btn-gold"
                 style={{ whiteSpace: "nowrap", fontSize: "0.9rem", padding: "0.7rem 1.5rem" }}
               >
                 Apply Now →
-              </a>
+              </Link>
               <a
                 href="https://www.paypal.com/donate/?hosted_button_id=NTSHAE86BEUBN"
                 target="_blank"
@@ -264,15 +262,13 @@ export default function Navbar() {
             );
           })}
         </ul>
-        <a
-          href="https://bmiuniversity.org/apply/"
-          target="_blank"
-          rel="noopener noreferrer"
+        <Link
+          href="/apply"
           className="btn btn-gold"
           style={{ marginTop: "2rem", width: "100%", maxWidth: "400px", fontSize: "1.1rem", padding: "1rem" }}
         >
           Apply Now →
-        </a>
+        </Link>
         <a
           href="https://www.paypal.com/donate/?hosted_button_id=NTSHAE86BEUBN"
           target="_blank"

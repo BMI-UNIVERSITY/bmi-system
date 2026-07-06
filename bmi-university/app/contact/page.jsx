@@ -229,9 +229,9 @@ export default function Contact() {
         <p style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "1.2rem", color: "rgba(255,255,255,0.9)", marginBottom: "1.5rem" }}>
           Ready to take the next step? Apply to BMI University today.
         </p>
-        <a href="https://bmiuniversity.org/apply/" target="_blank" rel="noopener noreferrer" className="btn btn-gold" style={{ fontSize: "1rem", padding: "0.9rem 2.5rem" }}>
+        <Link href="/apply" className="btn btn-gold" style={{ fontSize: "1rem", padding: "0.9rem 2.5rem" }}>
           Apply Now →
-        </a>
+        </Link>
       </section>
 
       <style>{`
