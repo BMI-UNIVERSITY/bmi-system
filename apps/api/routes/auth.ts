@@ -7,7 +7,7 @@ import { getOAuthConfig, exchangeCodeForToken, getUserInfo, type OAuthProvider }
 import { parseBody, RegisterSchema, LoginSchema, ForgotPasswordSchema, ResetPasswordSchema, ResendVerificationSchema } from '../lib/schemas';
 import type { Env } from '../lib/types';
 
-export async function handleRegister(request: Request, env: Env): Promise<Response> {
+export async function handleRegister(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
   const parsed = await parseBody(request, RegisterSchema);
   if (parsed instanceof Response) return parsed;
 
@@ -44,7 +44,7 @@ export async function handleRegister(request: Request, env: Env): Promise<Respon
 
   if (env.RESEND_API_KEY) {
     const verifyUrl = `${getPortalUrl(env)}/verify?token=${verificationToken}`;
-    await sendEmail({
+    const emailPromise = sendEmail({
       to: email.toLowerCase(),
       subject: 'BMI University — Verify Your Email Address',
       html: `
@@ -77,6 +77,11 @@ export async function handleRegister(request: Request, env: Env): Promise<Respon
         </div>
       `
     }, env.RESEND_API_KEY);
+    if (ctx) {
+      ctx.waitUntil(emailPromise);
+    } else {
+      await emailPromise;
+    }
   }
 
   return ok({ message: 'Account created! Please check your email to verify your account before logging in.' });

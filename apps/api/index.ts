@@ -60,7 +60,7 @@ type Route = {
 };
 
 const ROUTES: Route[] = [
-  { method: 'POST', path: /^\/api\/auth\/register$/, roles: undefined, handler: async (req, env, p, auth, ctx) => handleRegister(req, env) },
+  { method: 'POST', path: /^\/api\/auth\/register$/, roles: undefined, handler: async (req, env, p, auth, ctx) => handleRegister(req, env, ctx) },
   { method: 'POST', path: /^\/api\/auth\/login$/, roles: undefined, handler: async (req, env, p, auth, ctx) => handleLogin(req, env) },
   { method: 'POST', path: /^\/api\/auth\/refresh$/, roles: undefined, handler: async (req, env, p, auth, ctx) => handleRefresh(req, env) },
   { method: 'DELETE', path: /^\/api\/auth\/logout$/, roles: undefined, handler: async (req, env, p, auth, ctx) => handleLogout(req, env) },
@@ -72,7 +72,7 @@ const ROUTES: Route[] = [
   { method: 'POST', path: /^\/api\/auth\/mfa\/setup$/, roles: [], handler: async (req, env, p, auth, ctx) => handleMfaSetup(req, env, auth!.user.sub) },
   { method: 'POST', path: /^\/api\/auth\/mfa\/enable$/, roles: [], handler: async (req, env, p, auth, ctx) => handleMfaEnable(req, env, auth!.user.sub) },
   { method: 'POST', path: /^\/api\/auth\/mfa\/disable$/, roles: [], handler: async (req, env, p, auth, ctx) => handleMfaDisable(req, env, auth!.user.sub) },
-  { method: 'POST', path: /^\/api\/applications$/, roles: ['applicant', 'student', 'staff', 'admin'], handler: async (req, env, p, auth, ctx) => handleSubmitApplication(req, env, auth!.user.sub) },
+  { method: 'POST', path: /^\/api\/applications$/, roles: ['applicant', 'student', 'staff', 'admin'], handler: async (req, env, p, auth, ctx) => handleSubmitApplication(req, env, auth!.user.sub, ctx) },
   { method: 'GET', path: /^\/api\/applications\/me$/, roles: [], handler: async (req, env, p, auth, ctx) => handleGetMyApplication(req, env, auth!.user.sub) },
   { method: 'GET', path: /^\/api\/applications\/([^/]+)\/logs$/, roles: [], handler: async (req, env, p, auth, ctx) => handleGetStatusLogs(req, env, p[1], auth!.user.sub, auth!.user.role) },
   { method: 'POST', path: /^\/api\/documents\/upload$/, roles: [], handler: async (req, env, p, auth, ctx) => handleUploadDocument(req, env, auth!.user.sub) },

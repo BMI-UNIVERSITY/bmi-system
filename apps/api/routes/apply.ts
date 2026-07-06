@@ -17,7 +17,7 @@ function sanitizeHtml(input: string): string {
     .replace(/'/g, '&#x27;');
 }
 
-export async function handleSubmitApplication(request: Request, env: Env, userId: string): Promise<Response> {
+export async function handleSubmitApplication(request: Request, env: Env, userId: string, ctx?: ExecutionContext): Promise<Response> {
   const parsed = await parseBody(request, SubmitApplicationSchema);
   if (parsed instanceof Response) return parsed;
 
@@ -92,14 +92,15 @@ export async function handleSubmitApplication(request: Request, env: Env, userId
     .first<{ email: string; first_name: string }>();
 
   if (user && env.RESEND_API_KEY) {
-    await sendEmail({
+    const userEmailPromise = sendEmail({
       to: user.email,
       subject: 'BMI University — Application Received',
       html: applicationSubmittedEmail(user.first_name, program, applicationNumber ?? appId),
     }, env.RESEND_API_KEY);
 
+    let adminEmailPromise: Promise<void> | undefined;
     if (env.ADMIN_EMAIL) {
-      await sendEmail({
+      adminEmailPromise = sendEmail({
         to: env.ADMIN_EMAIL,
         subject: `New Application — ${user.first_name} for ${program}`,
         html: `<p>A new application has been submitted.</p>
@@ -108,6 +109,14 @@ export async function handleSubmitApplication(request: Request, env: Env, userId
                <p><b>Application Number:</b> ${applicationNumber ?? 'PENDING'}</p>
                <p><b>Application ID:</b> ${appId}</p>`,
       }, env.RESEND_API_KEY);
+    }
+
+    if (ctx) {
+      ctx.waitUntil(userEmailPromise);
+      if (adminEmailPromise) ctx.waitUntil(adminEmailPromise);
+    } else {
+      await userEmailPromise;
+      if (adminEmailPromise) await adminEmailPromise;
     }
   }
 

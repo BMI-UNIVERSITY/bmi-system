@@ -21,6 +21,7 @@ import { api } from '../lib/api';
 describe('Apply Page (Portal)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
   });
 
   const renderWithRouter = () => {

@@ -17,6 +17,7 @@ vi.mock('../lib/api', () => ({
 describe('Register Page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.clear();
   });
 
   const renderWithRouter = (initialRoute = '/register') => {
@@ -69,7 +70,7 @@ describe('Register Page', () => {
     
     fireEvent.click(screen.getByRole('button', { name: /Create Account/i }));
     
-    expect(await screen.findByText('Password must be at least 8 characters.')).toBeInTheDocument();
+    expect(await screen.findByText('Password must be at least 8 characters')).toBeInTheDocument();
     expect(api.auth.register).not.toHaveBeenCalled();
   });
 

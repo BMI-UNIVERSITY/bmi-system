@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { PROGRAMS } from '@bmi/shared';
 
 const STEPS = ['Program', 'Personal Info', 'Background', 'Statement', 'Review & Submit'];
+const STORAGE_KEY = 'bmi_apply_form';
 
 export default function Apply() {
   const { user } = useAuth();
@@ -12,14 +13,33 @@ export default function Apply() {
   const [step, setStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [form, setForm] = useState({
-    program: '',
-    degree_level: '',
-    prior_education: '',
-    personal_statement: '',
+  const [form, setForm] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        return JSON.parse(saved);
+      }
+    } catch (e) {
+      console.warn('Failed to load saved form:', e);
+    }
+    return {
+      program: '',
+      degree_level: '',
+      prior_education: '',
+      personal_statement: '',
+    };
   });
 
-  const update = (field: string, value: string) => setForm(f => ({ ...f, [field]: value }));
+  // Auto-save to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
+    } catch (e) {
+      console.warn('Failed to save form:', e);
+    }
+  }, [form]);
+
+  const update = useCallback((field: string, value: string) => setForm(f => ({ ...f, [field]: value })), []);
 
   const selectProgram = (p: { label: string; level: string }) => {
     update('program', p.label);
@@ -44,6 +64,8 @@ export default function Apply() {
         personal_statement: form.personal_statement,
         prior_education: form.prior_education,
       });
+      // Clear saved form on success
+      localStorage.removeItem(STORAGE_KEY);
       navigate('/status?submitted=1');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Submission failed. Please try again.');
@@ -66,7 +88,17 @@ export default function Apply() {
 
         <div className="steps">
           {STEPS.map((label, i) => (
-            <div key={label} className="step">
+            <div
+              key={label}
+              className="step"
+              onClick={() => i < step ? setStep(i) : undefined}
+              role="button"
+              tabIndex={i < step ? 0 : -1}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && i < step) setStep(i);
+              }}
+              style={{ cursor: i < step ? 'pointer' : 'default' }}
+            >
               <div className={`step-circle ${i < step ? 'done' : i === step ? 'active' : ''}`}>
                 {i < step ? '✓' : i + 1}
               </div>

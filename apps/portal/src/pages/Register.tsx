@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
+
+const STORAGE_KEY = 'bmi_register_form';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -13,17 +15,36 @@ export default function Register() {
   const prefillProgram = searchParams.get('program') ?? '';
   const isPrefilledFromApply = !!(prefillEmail && prefillFirstName && prefillLastName);
 
-  const [form, setForm] = useState({
-    first_name: prefillFirstName,
-    last_name: prefillLastName,
-    email: prefillEmail,
-    phone: '',
-    password: '',
-    confirm_password: '',
+  const [form, setForm] = useState(() => {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        return {
+          first_name: prefillFirstName || parsed.first_name || '',
+          last_name: prefillLastName || parsed.last_name || '',
+          email: prefillEmail || parsed.email || '',
+          phone: parsed.phone || '',
+          password: '', // Don't persist password for security
+          confirm_password: '',
+        };
+      }
+    } catch (e) {
+      console.warn('Failed to load saved form:', e);
+    }
+    return {
+      first_name: prefillFirstName,
+      last_name: prefillLastName,
+      email: prefillEmail,
+      phone: '',
+      password: '',
+      confirm_password: '',
+    };
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [loading, setLoading] = useState(false);
+  const [validation, setValidation] = useState<Record<string, string>>({});
 
   // Keep form in sync if params arrive after mount (e.g. client-side navigation)
   useEffect(() => {
@@ -37,7 +58,46 @@ export default function Register() {
     }
   }, [prefillEmail, prefillFirstName, prefillLastName]);
 
-  const update = (field: string, value: string) => setForm(f => ({ ...f, [field]: value }));
+  // Auto-save to localStorage
+  useEffect(() => {
+    try {
+      const toSave = {
+        first_name: form.first_name,
+        last_name: form.last_name,
+        email: form.email,
+        phone: form.phone,
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(toSave));
+    } catch (e) {
+      console.warn('Failed to save form:', e);
+    }
+  }, [form.first_name, form.last_name, form.email, form.phone]);
+
+  const validateField = useCallback((field: string, value: string) => {
+    let err = '';
+    if (field === 'first_name' || field === 'last_name') {
+      if (!value.trim()) err = 'This field is required';
+    } else if (field === 'email') {
+      if (!value.trim()) err = 'Email is required';
+      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) err = 'Please enter a valid email address';
+    } else if (field === 'password') {
+      if (!value) err = 'Password is required';
+      else if (value.length < 8) err = 'Password must be at least 8 characters';
+      else if (!/[A-Z]/.test(value)) err = 'Password must contain an uppercase letter';
+      else if (!/[a-z]/.test(value)) err = 'Password must contain a lowercase letter';
+      else if (!/[0-9]/.test(value)) err = 'Password must contain a number';
+      else if (!/[^A-Za-z0-9]/.test(value)) err = 'Password must contain a special character';
+    } else if (field === 'confirm_password') {
+      if (value !== form.password) err = 'Passwords do not match';
+    }
+    return err;
+  }, [form.password]);
+
+  const update = useCallback((field: string, value: string) => {
+    setForm(f => ({ ...f, [field]: value }));
+    const err = validateField(field, value);
+    setValidation(v => ({ ...v, [field]: err }));
+  }, [validateField]);
 
   const getPasswordStrength = (pw: string): { label: string; color: string; score: number } => {
     let score = 0;
@@ -57,12 +117,16 @@ export default function Register() {
     setError('');
     setSuccess('');
 
-    if (form.password !== form.confirm_password) return setError('Passwords do not match.');
-    if (form.password.length < 8) return setError('Password must be at least 8 characters.');
-    if (!/[A-Z]/.test(form.password)) return setError('Password must contain an uppercase letter.');
-    if (!/[a-z]/.test(form.password)) return setError('Password must contain a lowercase letter.');
-    if (!/[0-9]/.test(form.password)) return setError('Password must contain a number.');
-    if (!/[^A-Za-z0-9]/.test(form.password)) return setError('Password must contain a special character.');
+    // Validate all fields
+    const newValidation: Record<string, string> = {};
+    let hasError = false;
+    ['first_name', 'last_name', 'email', 'password', 'confirm_password'].forEach(field => {
+      const err = validateField(field, form[field as keyof typeof form]);
+      if (err) hasError = true;
+      newValidation[field] = err;
+    });
+    setValidation(newValidation);
+    if (hasError) return;
 
     setLoading(true);
     try {
@@ -73,6 +137,9 @@ export default function Register() {
         last_name: form.last_name,
         phone: form.phone || undefined,
       });
+
+      // Clear saved form on success
+      localStorage.removeItem(STORAGE_KEY);
 
       if (prefillProgram) {
         // Came from the university apply page — go straight to the application form
@@ -135,6 +202,7 @@ export default function Register() {
                     readOnly={isPrefilledFromApply}
                     style={isPrefilledFromApply ? { background: '#f1f5f9', color: 'var(--text-muted)' } : undefined}
                   />
+                  {validation.first_name && <span className="form-error">{validation.first_name}</span>}
                 </div>
                 <div className="form-group">
                   <label className="form-label" htmlFor="last_name">Last Name *</label>
@@ -149,6 +217,7 @@ export default function Register() {
                     readOnly={isPrefilledFromApply}
                     style={isPrefilledFromApply ? { background: '#f1f5f9', color: 'var(--text-muted)' } : undefined}
                   />
+                  {validation.last_name && <span className="form-error">{validation.last_name}</span>}
                 </div>
               </div>
               <div className="form-group">
@@ -164,6 +233,7 @@ export default function Register() {
                   readOnly={isPrefilledFromApply}
                   style={isPrefilledFromApply ? { background: '#f1f5f9', color: 'var(--text-muted)' } : undefined}
                 />
+                {validation.email && <span className="form-error">{validation.email}</span>}
               </div>
               {!isPrefilledFromApply && (
                 <div className="form-group">
@@ -191,6 +261,7 @@ export default function Register() {
                     <span style={{ fontSize: '0.75rem', color: strength.color, fontWeight: 600 }}>{strength.label}</span>
                   </div>
                 )}
+                {validation.password && <span className="form-error">{validation.password}</span>}
               </div>
               <div className="form-group">
                 <label className="form-label" htmlFor="confirm_password">Confirm Password *</label>
@@ -203,9 +274,7 @@ export default function Register() {
                   onChange={e => update('confirm_password', e.target.value)}
                   placeholder="Re-enter password"
                 />
-                {form.confirm_password && form.password !== form.confirm_password && (
-                  <span className="form-error">Passwords do not match</span>
-                )}
+                {validation.confirm_password && <span className="form-error">{validation.confirm_password}</span>}
               </div>
               <button type="submit" className="btn btn-gold btn-full" disabled={loading} style={{ marginTop: '0.5rem' }}>
                 {loading ? <><span className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} /> Creating Account...</> : (isPrefilledFromApply ? 'Complete Registration →' : 'Create Account →')}
