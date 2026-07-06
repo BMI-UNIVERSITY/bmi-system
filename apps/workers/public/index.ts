@@ -89,7 +89,7 @@ export default {
   // ─── Cron: Refresh KV Snapshot Every 5 Minutes ─────────────────────────────
   // This is the ONLY place that queries D1 in this Worker.
   // It pre-populates KV so all GET requests are served from cache.
-  async scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
+  async scheduled(_controller: ScheduledController, env: Env, _ctx: ExecutionContext): Promise<void> {
     log.info('Cron: refreshing KV cache snapshots');
 
     const results = await Promise.allSettled([

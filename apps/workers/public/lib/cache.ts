@@ -37,7 +37,7 @@ export interface CacheOptions {
  * 3. D1 direct query (cold-start fallback only)
  */
 export async function cachedResponse(
-  request: Request,
+  _request: Request,
   env: Env,
   opts: CacheOptions,
 ): Promise<Response> {
@@ -80,7 +80,7 @@ export async function cachedResponse(
  * Invalidate a specific KV key. Called by the cron when it has written a
  * fresh snapshot so the next request triggers a Cache API backfill.
  */
-export async function invalidateCacheKey(env: Env, kvKey: string): Promise<void> {
+export async function invalidateCacheKey(_env: Env, kvKey: string): Promise<void> {
   const cache = caches.default;
   await cache.delete(new Request(`https://cache.bmi-public/${kvKey}`));
   // KV is updated by the cron directly — no delete needed here

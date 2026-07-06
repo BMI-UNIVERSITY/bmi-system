@@ -500,8 +500,8 @@ export async function handleOAuthCallback(request: Request, env: Env, provider: 
   }
 
   const user = await env.DB.prepare(
-    'SELECT id, email, first_name, last_name, role, mfa_enabled FROM users WHERE id = ?'
-  ).bind(userId).first<{ id: string; email: string; first_name: string; last_name: string; role: string; mfa_enabled: number }>();
+    'SELECT id, email, first_name, last_name, role, mfa_enabled, is_verified FROM users WHERE id = ?'
+  ).bind(userId).first<{ id: string; email: string; first_name: string; last_name: string; role: string; mfa_enabled: number; is_verified: number }>();
 
   if (!user) {
     return error('User not found', 500);

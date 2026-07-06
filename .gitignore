@@ -18,3 +18,10 @@ bmi-*/package-lock.json
 
 # Runtime data
 data/
+
+# Temporary D1 migration test dirs & artifacts
+apps/api/temp-*/
+apps/api/tmpdb/
+apps/api/tmpdb2/
+apps/api/test-migrations/
+apps/api/*.sql.bak

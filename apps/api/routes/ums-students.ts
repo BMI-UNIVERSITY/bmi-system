@@ -165,7 +165,7 @@ export async function handleUpdateStudent(request: Request, env: Env, studentId:
   const updates: string[] = [];
   const vals: unknown[] = [];
   for (const key of allowed) {
-    if (body[key] !== undefined) { updates.push(`${key} = ?`); vals.push(body[key]); }
+    if ((body as any)[key] !== undefined) { updates.push(`${key} = ?`); vals.push((body as any)[key]); }
   }
 
   // Also update users table fields
@@ -173,7 +173,7 @@ export async function handleUpdateStudent(request: Request, env: Env, studentId:
   const userUpdates: string[] = [];
   const userVals: unknown[] = [];
   for (const f of userFields) {
-    if (body[f] !== undefined) { userUpdates.push(`${f} = ?`); userVals.push(body[f]); }
+    if ((body as any)[f] !== undefined) { userUpdates.push(`${f} = ?`); userVals.push((body as any)[f]); }
   }
 
   if (updates.length) {
