@@ -63,8 +63,8 @@ export default function Footer() {
           <Link href="/" aria-label="BMI University — Home" style={{ display: "flex", alignItems: "center", gap: "12px", textDecoration: "none" }}>
             <img src="/images/bmi-crest-270.png" alt="BMI University Crest" style={{ height: "54px", width: "auto", objectFit: "contain" }} />
             <div style={{ display: "flex", flexDirection: "column", lineHeight: 1 }}>
-              <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 900, fontSize: "1.9rem", color: "#ffffff", letterSpacing: "-0.015em", lineHeight: 0.95 }}>BMI</span>
-              <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "0.6rem", color: "#d4af37", letterSpacing: "0.18em", textTransform: "uppercase", marginTop: "2px" }}>University</span>
+              <span style={{ fontFamily: "Georgia, serif", fontWeight: "bold", fontSize: "1.95rem", color: "#ffffff", letterSpacing: "0.04em", lineHeight: 0.95 }}>BMI</span>
+              <span style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 700, fontSize: "0.55rem", color: "#d4af37", letterSpacing: "0.27em", textTransform: "uppercase", marginTop: "2px" }}>University</span>
             </div>
           </Link>
 

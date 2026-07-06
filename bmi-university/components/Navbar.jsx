@@ -84,19 +84,19 @@ export default function Navbar() {
             />
             <div style={{ display: "flex", flexDirection: "column", lineHeight: 1 }}>
               <span style={{
-                fontFamily: "'Outfit', sans-serif",
-                fontWeight: 900,
-                fontSize: "1.9rem",
+                fontFamily: "Georgia, serif",
+                fontWeight: "bold",
+                fontSize: "1.95rem",
                 color: "#ffffff",
-                letterSpacing: "-0.015em",
+                letterSpacing: "0.04em",
                 lineHeight: 0.95,
               }}>BMI</span>
               <span style={{
                 fontFamily: "'Outfit', sans-serif",
                 fontWeight: 700,
-                fontSize: "0.6rem",
+                fontSize: "0.55rem",
                 color: "#d4af37",
-                letterSpacing: "0.18em",
+                letterSpacing: "0.27em",
                 textTransform: "uppercase",
                 marginTop: "2px",
               }}>University</span>
