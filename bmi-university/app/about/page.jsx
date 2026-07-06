@@ -140,7 +140,18 @@ export default function About() {
             {leadership.map((l, i) => (
               <div key={i} style={{ textAlign: "center" }}>
                 <div style={{ width: "140px", height: "140px", borderRadius: "50%", overflow: "hidden", margin: "0 auto 1.25rem", border: "4px solid #d4af37", boxShadow: "0 4px 20px rgba(212,175,55,0.25)" }}>
-                  <img src={l.img} alt={l.name} style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} loading="lazy" />
+                  <img 
+                    src={l.img} 
+                    alt={l.name} 
+                    style={{ 
+                      width: "100%", 
+                      height: "100%", 
+                      objectFit: "cover", 
+                      display: "block",
+                      transform: l.img.includes("dr-young") ? "scaleX(-1)" : "none"
+                    }} 
+                    loading="lazy" 
+                  />
                 </div>
                 <h3 style={{ fontFamily: "'Outfit', sans-serif", fontWeight: 800, fontSize: "1rem", color: "#0f172a", marginBottom: "0.3rem" }}>{l.name}</h3>
                 <p style={{ color: "#d4af37", fontSize: "0.85rem", fontWeight: 600 }}>{l.role}</p>
