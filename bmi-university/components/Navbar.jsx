@@ -28,10 +28,10 @@ export default function Navbar() {
   }, [pathname]);
 
   const navBg = scrolled
-    ? "bg-white shadow-lg border-b border-gray-100"
-    : "bg-[#0f172a]/30 backdrop-blur-md border-b border-white/10";
+    ? "shadow-lg"
+    : "";
 
-  const linkColor = scrolled ? "#0f172a" : "#ffffff";
+  const linkColor = "#ffffff";
   const activeLinkColor = "#d4af37";
 
   return (
@@ -45,7 +45,8 @@ export default function Navbar() {
           right: 0,
           height: "80px",
           zIndex: 1000,
-          transition: "background 0.35s ease, box-shadow 0.35s ease",
+          background: "#0f172a",
+          transition: "box-shadow 0.35s ease",
         }}
         className={navBg}
       >
@@ -76,20 +77,17 @@ export default function Navbar() {
               src="/images/bmi-crest-270.png"
               alt="BMI University Crest"
               style={{
-                height: scrolled ? "52px" : "60px",
+                height: "56px",
                 width: "auto",
                 objectFit: "contain",
-                transition: "height 0.35s ease",
-                filter: scrolled ? "none" : "drop-shadow(0 2px 8px rgba(0,0,0,0.4))",
               }}
             />
             <span style={{
               fontFamily: "'Outfit', sans-serif",
               fontWeight: 900,
               fontSize: "1.25rem",
-              color: scrolled ? "#0f172a" : "#ffffff",
+              color: "#ffffff",
               letterSpacing: "-0.01em",
-              transition: "color 0.35s ease",
               lineHeight: 1.15,
             }}>
               BMI<br />
@@ -190,7 +188,7 @@ export default function Navbar() {
                   width: "24px",
                   height: "2.5px",
                   borderRadius: "999px",
-                  background: scrolled ? "#0f172a" : "#ffffff",
+                  background: "#ffffff",
                   transition: "all 0.3s ease",
                   transform:
                     mobileOpen
