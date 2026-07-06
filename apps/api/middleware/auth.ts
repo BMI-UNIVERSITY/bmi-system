@@ -5,19 +5,6 @@ import type { Env, JWTPayload } from '../lib/types';
 const RATE_LIMIT_WINDOW = 60;
 const RATE_LIMIT_MAX_REQUESTS = 30;
 
-interface RateLimitEntry {
-  count: number;
-  timestamp: number;
-}
-
-// In-memory rate limit store — avoids costly KV writes on every request.
-// Per-isolate state is acceptable for rate limiting at the edge.
-// Entries are lazily evicted during the rate limit check.
-const rateLimitMap = new Map<string, RateLimitEntry>();
-
-function getNow(): number {
-  return Date.now();
-}
 
 export async function requireAuth(
   request: Request,

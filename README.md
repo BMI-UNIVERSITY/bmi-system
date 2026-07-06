@@ -1,51 +1,29 @@
 # BMI University System — Monorepo
 
-A unified, 100% serverless platform for BMI University, built on the **Cloudflare free tier**.
+A unified, 100% serverless edge-native Student Information System (SIS) for BMI University, built on the **Cloudflare platform**.
 
-## Architecture
+## Documentation Hub
 
-```
+- [**Architecture Overview**](./docs/ARCHITECTURE.md) — Domain workers, DNS routing, and the WriteQueue DO.
+- [**On-Call Runbook**](./docs/RUNBOOK.md) — Alerting, triage, and handling `SQLITE_BUSY` or dead webhooks.
+- [**Caching Strategy**](./docs/cache.md) — Mitigation for D1 read saturation.
+- [**Database Migrations**](./docs/database-migrations.md) — How to apply schema changes.
+- [**Security & Technical Audits**](./docs/audits/) — Historical audit reports and remediation logs. *(Note: These reports document past vulnerabilities that have since been fully patched. They are preserved for historical traceability but do not reflect the current, hardened state of the system.)*
+
+## Repository Structure
+
+```text
 D:\BMI\
 ├── apps/
-│   ├── api/        → Cloudflare Worker  (Single API for all apps)
+│   ├── workers/    → Cloudflare Workers (auth, ums, core, webhooks, public)
 │   ├── portal/     → React + CF Pages   (Public Admissions Portal)
 │   └── ums/        → React + CF Pages   (Internal UMS for Staff & Students)
 ├── packages/
-│   └── shared/     → @bmi/shared        (Types, constants, CORS origins)
+│   ├── shared/     → @bmi/shared        (Types, constants, programs list)
+│   └── middleware/ → @bmi/api-middleware(Logger, Auth, Cache utils)
 ├── bmi-university/ → Next.js + CF Pages (Marketing Website)
-└── .github/
-    └── workflows/  → CI/CD Auto-deploy
+└── docs/           → System documentation and runbooks
 ```
-
-## Single Source of Truth
-
-| Concern | Solution |
-|---|---|
-| **Database** | Cloudflare D1 (`bmi-portal-db`) — one SQL database |
-| **Auth (JWT)** | Cloudflare Worker (`apps/api`) — one login for all apps |
-| **Object Storage** | Cloudflare R2 (`bmi-portal-documents`) |
-| **Session Store** | Cloudflare KV (`SESSIONS`) |
-| **CORS Origins** | `packages/shared/src/domains.ts` |
-
-## Apps
-
-### `apps/api` — Unified Cloudflare Worker
-The single backend serving **both** the Portal and UMS. Handles:
-- Auth (`/api/auth/*`) — shared JWT tokens
-- Applications & Admissions (`/api/applications/*`)
-- UMS — Students, Grades, Courses, Staff, Enrollments (`/api/v1/*`)
-- CMS, Webhooks, Admin tools
-
-### `apps/portal` — Admissions Portal
-For **applicants** and incoming students. Handles applications, document uploads, and status tracking.
-
-### `apps/ums` — University Management System
-For **staff, faculty, registrars, and students**. Manages academic records, grades, courses, and certificates.
-
-### `bmi-university` — Marketing Website
-The public-facing Next.js website.
-
----
 
 ## Local Development
 
@@ -53,64 +31,24 @@ The public-facing Next.js website.
 # Install all workspace dependencies
 npm install
 
-# Start the API worker locally (D1 local SQLite)
-cd apps/api && npm run dev
+# Start a specific worker locally (e.g., ums)
+cd apps/workers/ums && npm run dev
 
-# Run the portal (in a separate terminal)
+# Run the portal or UMS frontends
 cd apps/portal && npm run dev
-
-# Run the UMS (in a separate terminal, proxy points to api on :8787)
 cd apps/ums && npm run dev
 ```
 
 ## Deployment (Cloudflare)
 
-### 1. First-time setup — set secrets
+Deployment is fully automated via GitHub Actions (`.github/workflows/deploy.yml`). Pushing to `main` will detect changes using path filters and deploy only the affected workers or frontends.
+
+### Manual Database Migrations
 ```bash
 cd apps/api
-
-npx wrangler secret put JWT_SECRET
-npx wrangler secret put RESEND_API_KEY
-npx wrangler secret put ADMIN_SETUP_KEY
+npm run db:migrate # Applies tracked migrations to production D1
 ```
 
-### 2. Run database migrations
-```bash
-# Apply the unified schema to your live D1 database
-npm run db:migrate
-```
-
-### 3. Deploy API Worker
-```bash
-npm run deploy
-```
-
-### 4. Deploy frontends
-Cloudflare Pages is connected to this GitHub repo (`BMI-UNIVERSITY/bmi-system`).
-Any push to `main` triggers auto-deployment via GitHub Actions.
-
-**Manual deploy:**
-```bash
-cd apps/portal && npm run deploy
-cd apps/ums && npx wrangler pages deploy dist --project-name=bmi-ums
-```
-
----
-
-## GitHub Actions Secrets Required
-
-Set these in your GitHub repo → **Settings → Secrets → Actions**:
-
-| Secret | Value |
-|---|---|
-| `CLOUDFLARE_API_TOKEN` | Your Cloudflare API token (with Workers & Pages permissions) |
-| `CLOUDFLARE_ACCOUNT_ID` | Your Cloudflare Account ID |
-| `UMS_API_URL` | `https://bmi-api.bmiuniversity.workers.dev` (your worker URL) |
-
----
-
-## Adding a New Origin (No Code Change Required)
-Set the `ALLOWED_ORIGINS_OVERRIDE` environment variable on the Worker via the Cloudflare Dashboard:
-```
-https://your-new-domain.com,https://another-domain.com
-```
+## Environment Config
+Secrets must be set via `wrangler secret put` for each respective worker.
+See [Architecture](./docs/ARCHITECTURE.md) for details on worker boundaries.

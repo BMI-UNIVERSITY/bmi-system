@@ -184,11 +184,15 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
   }
 
   const user = await env.DB.prepare(
-    'SELECT id, email, password_hash, first_name, last_name, role, is_verified, mfa_secret, mfa_enabled, session_version FROM users WHERE email = ?'
-  ).bind(email.toLowerCase()).first<{ id: string; email: string; password_hash: string; first_name: string; last_name: string; role: string; is_verified: number; mfa_secret: string | null; mfa_enabled: number; session_version: number }>();
+    'SELECT id, email, password_hash, first_name, last_name, role, is_verified, mfa_secret, mfa_enabled, session_version, failed_login_attempts, locked_until FROM users WHERE email = ?'
+  ).bind(email.toLowerCase()).first<{ id: string; email: string; password_hash: string; first_name: string; last_name: string; role: string; is_verified: number; mfa_secret: string | null; mfa_enabled: number; session_version: number; failed_login_attempts: number; locked_until: string | null }>();
 
   if (!user) {
     return error('Invalid email or password', 401);
+  }
+
+  if (user.locked_until && new Date(user.locked_until) > new Date()) {
+    return error('Account is temporarily locked due to multiple failed login attempts. Please try again later.', 429);
   }
 
   if (!user.is_verified) {
@@ -197,7 +201,25 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
 
   const valid = await verifyPassword(password, user.password_hash, env.PASSWORD_PEPPER);
   if (!valid) {
+    const attempts = (user.failed_login_attempts || 0) + 1;
+    let lockedUntil = null;
+    if (attempts >= 5) {
+      lockedUntil = new Date(Date.now() + 15 * 60 * 1000).toISOString();
+    }
+    await env.DB.prepare(
+      'UPDATE users SET failed_login_attempts = ?, locked_until = ? WHERE id = ?'
+    ).bind(attempts, lockedUntil, user.id).run();
+
+    if (lockedUntil) {
+      return error('Account is temporarily locked due to multiple failed login attempts. Please try again later.', 429);
+    }
     return error('Invalid email or password', 401);
+  }
+
+  if (user.failed_login_attempts > 0 || user.locked_until) {
+    await env.DB.prepare(
+      'UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ?'
+    ).bind(user.id).run();
   }
 
   if (user.mfa_enabled && user.mfa_secret) {
@@ -387,10 +409,10 @@ export async function handleResetPassword(request: Request, env: Env): Promise<R
   if (!resetToken) return error('Invalid or expired reset token', 404);
   if (new Date(resetToken.expires_at) < new Date()) return error('Reset token has expired', 410);
 
-  // Update password
+  // Update password and clear any brute-force lockouts
   const passwordHash = await hashPassword(body.new_password, env.PASSWORD_PEPPER);
   await env.DB.prepare(
-    `UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?`
+    `UPDATE users SET password_hash = ?, updated_at = datetime('now'), failed_login_attempts = 0, locked_until = NULL WHERE id = ?`
   ).bind(passwordHash, resetToken.user_id).run();
 
   // Mark token as used
@@ -518,11 +540,10 @@ export async function handleOAuthCallback(request: Request, env: Env, provider: 
       const tempPassword = crypto.randomUUID();
       const passwordHash = await hashPassword(tempPassword, env.PASSWORD_PEPPER);
       
-      // DEV_ONLY: force is_verified = 1 (change back to `userInfo.emailVerified ? 1 : 0` to reinstate)
       await env.DB.prepare(
         `INSERT INTO users (id, email, password_hash, first_name, last_name, role, is_verified)
          VALUES (?, ?, ?, ?, ?, ?, ?)`
-      ).bind(userId, userInfo.email, passwordHash, userInfo.firstName, userInfo.lastName, 'applicant', 1).run();
+      ).bind(userId, userInfo.email, passwordHash, userInfo.firstName, userInfo.lastName, 'applicant', userInfo.emailVerified ? 1 : 0).run();
     }
 
     await env.DB.prepare(
@@ -532,11 +553,15 @@ export async function handleOAuthCallback(request: Request, env: Env, provider: 
   }
 
   const user = await env.DB.prepare(
-    'SELECT id, email, first_name, last_name, role, mfa_enabled FROM users WHERE id = ?'
-  ).bind(userId).first<{ id: string; email: string; first_name: string; last_name: string; role: string; mfa_enabled: number }>();
+    'SELECT id, email, first_name, last_name, role, mfa_enabled, is_verified FROM users WHERE id = ?'
+  ).bind(userId).first<{ id: string; email: string; first_name: string; last_name: string; role: string; mfa_enabled: number; is_verified: number }>();
 
   if (!user) {
     return error('User not found', 500);
+  }
+
+  if (!user.is_verified) {
+    return error('Please verify your email address before logging in. Check your inbox for the verification link.', 403);
   }
 
   if (user.mfa_enabled) {

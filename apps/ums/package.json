@@ -92,10 +92,6 @@
     "vite-plugin-pwa": "^1.3.0",
     "vitest": "^4.1.9"
   },
-  "main": "bypass_mfa.js",
-  "directories": {
-    "doc": "docs"
-  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/KIAI-JOSEPH/BMI-PORTAL.git"

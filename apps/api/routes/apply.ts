@@ -6,6 +6,7 @@ import { dispatchWebhook } from '../lib/webhook';
 import { generateApplicationNumber } from '../lib/app_number';
 import { runAdmissionPipeline, appendLifecycleEvent, getLifecycleHistory, STAGES } from '../lib/lifecycle';
 import { dispatchPendingJobs } from '../lib/provisioning';
+import { parseBody, SubmitApplicationSchema } from '../lib/schemas';
 
 function sanitizeHtml(input: string): string {
   return input
@@ -17,43 +18,13 @@ function sanitizeHtml(input: string): string {
 }
 
 export async function handleSubmitApplication(request: Request, env: Env, userId: string): Promise<Response> {
-  let body: {
-    program: string;
-    degree_level: string;
-    personal_statement?: string;
-    prior_education?: string;
-  };
+  const parsed = await parseBody(request, SubmitApplicationSchema);
+  if (parsed instanceof Response) return parsed;
 
-  try {
-    body = await request.json();
-  } catch {
-    return error('Invalid JSON body');
-  }
-
-  const { program, degree_level, personal_statement, prior_education } = body;
-
-  if (!program || !degree_level) {
-    return error('Program and degree level are required');
-  }
+  const { program, degree_level, personal_statement, prior_education } = parsed;
 
   if (!VALID_PROGRAMS.includes(program)) {
-    return error('Invalid program selected');
-  }
-
-  if (!VALID_LEVELS.includes(degree_level as typeof VALID_LEVELS[number])) {
-    return error(`Degree level must be one of: ${VALID_LEVELS.join(', ')}`);
-  }
-
-  if (personal_statement) {
-    if (personal_statement.length > 10000) {
-      return error('Personal statement must not exceed 10,000 characters');
-    }
-  }
-
-  if (prior_education) {
-    if (prior_education.length > 5000) {
-      return error('Prior education description must not exceed 5,000 characters');
-    }
+    return error('Invalid program selected', 400);
   }
 
   const existing = await env.DB.prepare(

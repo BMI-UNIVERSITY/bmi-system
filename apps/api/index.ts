@@ -11,6 +11,7 @@ import { handleListRubrics, handleCreateRubric, handleDeleteRubric } from './rou
 import { error, validateCsrfToken } from './lib/types';
 import type { Env } from './lib/types';
 import backupWorker from './backup';
+import { runArchivalJob } from './archival';
 // Integration routes
 import { handlePublicPrograms, handlePublicStats, handlePublicListPosts, handlePublicGetPost, handlePublicGetPage } from './routes/public';
 import { handleListPosts, handleCreatePost, handleUpdatePost, handleDeletePost, handleListPages, handleCreatePage, handleDeletePage } from './routes/cms';
@@ -271,6 +272,7 @@ export default withSentry(
   },
   async scheduled(controller, env, ctx) {
     await backupWorker.scheduled(controller, env, ctx);
+    await runArchivalJob(env);
   },
 } satisfies ExportedHandler<Env>);
 

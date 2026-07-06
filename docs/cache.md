@@ -159,6 +159,11 @@ export async function readThrough(
 }
 ```
 
+**Guardrail: Filtered Queries Bypass Cache**
+Filtered query parameters (e.g., `?search=doe&status=Active`) explicitly **bypass** the Cache API. Only the unfiltered base list and single-resource GETs are cached.
+- **Why?** Filtered queries are high-cardinality. Caching them with a 30s TTL provides low value and introduces complexity (cache-poisoning or memory exhaustion). 
+- **Implementation:** The `readThrough` middleware checks `url.searchParams.size` (ignoring `page` and `perPage`). If `> 0`, it skips the cache entirely and serves directly from D1 (guarded by `max_concurrent_requests: 2`).
+
 **TTL Values**:
 
 | Endpoint Group | TTL | Rationale |

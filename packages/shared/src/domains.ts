@@ -23,6 +23,9 @@ export const PORTAL_PAGES_URL = 'https://bmi-portal.pages.dev' as const;
 /** The Cloudflare Pages preview URL of the UMS frontend. */
 export const UMS_PAGES_URL = 'https://bmi-ums.pages.dev' as const;
 
+/** The canonical production URL of the backend API Worker. */
+export const API_WORKER_URL = 'https://bmi-api.bmiuniversity107.workers.dev' as const;
+
 /** Local development URLs — always included in allowed origins. */
 export const DEV_ORIGINS = [
   'http://localhost:5173',

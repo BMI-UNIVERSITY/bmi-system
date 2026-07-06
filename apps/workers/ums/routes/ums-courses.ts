@@ -5,6 +5,7 @@
 import { ok, error, json } from '../lib/types';
 import type { Env } from '../lib/types';
 import { generateRegNo } from '../lib/reg_number';
+import { readThrough, invalidateCache } from '@bmi/api-middleware';
 
 function paginate(url: URL) {
   const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
@@ -15,8 +16,9 @@ function paginate(url: URL) {
 // ─── list courses ─────────────────────────────────────────────────────────────
 
 export async function handleListUmsCourses(request: Request, env: Env): Promise<Response> {
-  const url = new URL(request.url);
-  const { page, perPage, offset } = paginate(url);
+  return readThrough(request, 30, async () => {
+    const url = new URL(request.url);
+    const { page, perPage, offset } = paginate(url);
 
   const search = url.searchParams.get('search');
   const departmentId = url.searchParams.get('department_id');
@@ -35,14 +37,15 @@ export async function handleListUmsCourses(request: Request, env: Env): Promise<
   const countRow = await env.DB.prepare(`SELECT COUNT(*) as total FROM courses c ${where}`)
     .bind(...bindings).first<{ total: number }>();
 
-  const rows = await env.DB.prepare(
-    `SELECT c.*, d.name as department_name FROM courses c
-     LEFT JOIN departments d ON c.department_id = d.id
-     ${where}
-     ORDER BY c.code ASC LIMIT ? OFFSET ?`
-  ).bind(...bindings, perPage, offset).all();
+    const rows = await env.DB.prepare(
+      `SELECT c.*, d.name as department_name FROM courses c
+       LEFT JOIN departments d ON c.department_id = d.id
+       ${where}
+       ORDER BY c.code ASC LIMIT ? OFFSET ?`
+    ).bind(...bindings, perPage, offset).all();
 
-  return ok({ items: rows.results, page, perPage, total: countRow?.total ?? 0 });
+    return ok({ items: rows.results, page, perPage, total: countRow?.total ?? 0 });
+  });
 }
 
 // ─── create course ────────────────────────────────────────────────────────────
@@ -62,6 +65,7 @@ export async function handleCreateCourse(request: Request, env: Env): Promise<Re
   ).bind(id, code, title, description || null, parseInt(credits), term, parseInt(capacity), department_id || null).run();
 
   const created = await env.DB.prepare(`SELECT * FROM courses WHERE id = ?`).bind(id).first();
+  await invalidateCache(new URL(request.url).origin + '/api/v1/courses');
   return json({ success: true, data: created }, 201);
 }
 
@@ -84,6 +88,11 @@ export async function handleUpdateCourse(request: Request, env: Env, courseId: s
 
   const updated = await env.DB.prepare(`SELECT * FROM courses WHERE id = ?`).bind(courseId).first();
   if (!updated) return error('Course not found', 404);
+  
+  const baseUrl = new URL(request.url).origin + '/api/v1/courses';
+  await invalidateCache(baseUrl);
+  await invalidateCache(`${baseUrl}/${courseId}`);
+
   return ok(updated);
 }
 
@@ -92,6 +101,11 @@ export async function handleUpdateCourse(request: Request, env: Env, courseId: s
 export async function handleDeleteCourse(request: Request, env: Env, courseId: string): Promise<Response> {
   const result = await env.DB.prepare(`DELETE FROM courses WHERE id = ?`).bind(courseId).run();
   if (!result.meta.changes) return error('Course not found', 404);
+  
+  const baseUrl = new URL(request.url).origin + '/api/v1/courses';
+  await invalidateCache(baseUrl);
+  await invalidateCache(`${baseUrl}/${courseId}`);
+
   return ok({ deleted: true });
 }
 

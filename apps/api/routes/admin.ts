@@ -9,7 +9,16 @@ export async function handleAdminSetup(request: Request, env: Env): Promise<Resp
   }
 
   const setupKey = request.headers.get('X-Admin-Setup-Key');
-  if (!setupKey || setupKey !== env.ADMIN_SETUP_KEY) {
+  if (!setupKey) {
+    return error('Unauthorized', 401);
+  }
+  // Use constant-time comparison to prevent timing oracle attacks.
+  const enc = new TextEncoder();
+  const a = enc.encode(setupKey);
+  const b = enc.encode(env.ADMIN_SETUP_KEY);
+  const keysMatch = a.byteLength === b.byteLength &&
+    crypto.subtle.timingSafeEqual(a, b);
+  if (!keysMatch) {
     return error('Unauthorized', 401);
   }
 

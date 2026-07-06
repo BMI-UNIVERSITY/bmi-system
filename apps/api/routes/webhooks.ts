@@ -12,6 +12,7 @@
 import { ok, error } from '../lib/types';
 import type { Env } from '../lib/types';
 import { verifySignature, dispatchWebhook } from '../lib/webhook';
+import { InboundWebhookSchema } from '../lib/schemas';
 import type { WebhookEventType } from '@bmi/shared';
 
 /** POST /api/webhooks/inbound — receive and verify an inbound signed webhook */
@@ -29,16 +30,15 @@ export async function handleInboundWebhook(request: Request, env: Env): Promise<
     return error('Invalid signature', 401);
   }
 
-  let payload: { type?: string; data?: Record<string, unknown>; id?: string };
-  try {
-    payload = JSON.parse(rawBody);
-  } catch {
-    return error('Invalid JSON body', 400);
+  let payload: { type: string; data: Record<string, unknown>; id?: string };
+  const schemaResult = InboundWebhookSchema.safeParse((() => {
+    try { return JSON.parse(rawBody); } catch { return null; }
+  })());
+  if (!schemaResult.success) {
+    const fields = schemaResult.error.errors.map((e) => `${e.path.join('.')}: ${e.message}`).join('; ');
+    return error(`Invalid webhook payload — ${fields}`, 400);
   }
-
-  if (!payload.type || !payload.data) {
-    return error('Missing required fields: type, data', 400);
-  }
+  payload = schemaResult.data as { type: string; data: Record<string, unknown>; id?: string };
 
   // Log the inbound event for audit/debugging
   await env.DB.prepare(

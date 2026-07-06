@@ -9,7 +9,16 @@ export async function handleAdminSetup(request: Request, env: Env): Promise<Resp
   }
 
   const setupKey = request.headers.get('X-Admin-Setup-Key');
-  if (!setupKey || setupKey !== env.ADMIN_SETUP_KEY) {
+  if (!setupKey) {
+    return error('Unauthorized', 401);
+  }
+  // Use constant-time comparison to prevent timing oracle attacks.
+  const enc = new TextEncoder();
+  const a = enc.encode(setupKey);
+  const b = enc.encode(env.ADMIN_SETUP_KEY);
+  const keysMatch = a.byteLength === b.byteLength &&
+    crypto.subtle.timingSafeEqual(a, b);
+  if (!keysMatch) {
     return error('Unauthorized', 401);
   }
 
@@ -224,3 +233,14 @@ export async function handleGetAuditLogs(request: Request, env: Env): Promise<Re
   return ok({ logs: logs.results, total: totalResult?.total ?? 0, limit, offset });
 }
 
+export async function handleUnlockUser(request: Request, env: Env, userId: string, targetUserId: string): Promise<Response> {
+  const result = await env.DB.prepare(
+    `UPDATE users SET failed_login_attempts = 0, locked_until = NULL WHERE id = ? RETURNING id`
+  ).bind(targetUserId).first<{ id: string }>();
+
+  if (!result) return error('User not found', 404);
+
+  await logAdminAction(env, userId, 'unlock_user', 'user', targetUserId, { reason: 'manual admin override' });
+
+  return ok({ message: 'User account unlocked successfully' });
+}

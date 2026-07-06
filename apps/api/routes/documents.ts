@@ -1,5 +1,6 @@
 import { ok, error, logAdminAction } from '../lib/types';
 import type { Env } from '../lib/types';
+import { parseDocumentUploadQuery } from '../lib/schemas';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_FILES_PER_APP = 20;
@@ -30,15 +31,9 @@ function detectMimeType(bytes: Uint8Array): string | null {
 
 export async function handleUploadDocument(request: Request, env: Env, userId: string): Promise<Response> {
   const url = new URL(request.url);
-  const applicationId = url.searchParams.get('application_id');
-  const docType = url.searchParams.get('doc_type') || 'other';
-
-  const validDocTypes = ['transcript', 'id_document', 'personal_statement', 'other'];
-  if (!validDocTypes.includes(docType)) {
-    return error('Invalid document type');
-  }
-
-  if (!applicationId) return error('application_id query param is required');
+  const queryParsed = parseDocumentUploadQuery(url);
+  if (queryParsed instanceof Response) return queryParsed;
+  const { application_id: applicationId, doc_type: docType } = queryParsed;
 
   const app = await env.DB.prepare('SELECT id, user_id FROM applications WHERE id = ? AND user_id = ?')
     .bind(applicationId, userId).first();

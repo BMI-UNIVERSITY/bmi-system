@@ -5,6 +5,7 @@
  */
 import { ok, error, json } from '../lib/types';
 import type { Env } from '../lib/types';
+import { readThrough, invalidateCache } from '@bmi/api-middleware';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -21,7 +22,8 @@ function paginate(url: URL) {
 // ─── list students ───────────────────────────────────────────────────────────
 
 export async function handleListStudents(request: Request, env: Env): Promise<Response> {
-  const url = new URL(request.url);
+  return readThrough(request, 30, async () => {
+    const url = new URL(request.url);
   const { page, perPage, offset } = paginate(url);
 
   const filters: string[] = [];
@@ -58,11 +60,12 @@ export async function handleListStudents(request: Request, env: Env): Promise<Re
      LIMIT ? OFFSET ?`
   ).bind(...bindings, perPage, offset).all();
 
-  return ok({
-    items: rows.results,
-    page,
-    perPage,
-    total: countRow?.total ?? 0,
+    return ok({
+      items: rows.results,
+      page,
+      perPage,
+      total: countRow?.total ?? 0,
+    });
   });
 }
 
@@ -144,6 +147,7 @@ export async function handleCreateStudent(request: Request, env: Env): Promise<R
      INNER JOIN users u ON s.user_id = u.id WHERE s.user_id = ?`
   ).bind(userId).first();
 
+  await invalidateCache(new URL(request.url).origin + '/api/v1/students');
   return json({ success: true, data: created }, 201);
 }
 
@@ -193,6 +197,10 @@ export async function handleUpdateStudent(request: Request, env: Env, studentId:
      INNER JOIN users u ON s.user_id = u.id WHERE s.user_id = ?`
   ).bind(uid).first();
 
+  const baseUrl = new URL(request.url).origin + '/api/v1/students';
+  await invalidateCache(baseUrl);
+  await invalidateCache(`${baseUrl}/${studentId}`);
+
   return ok(updated);
 }
 
@@ -206,5 +214,10 @@ export async function handleDeleteStudent(request: Request, env: Env, studentId:
 
   // Cascades to students table automatically (ON DELETE CASCADE)
   await env.DB.prepare(`DELETE FROM users WHERE id = ?`).bind(student.user_id).run();
+  
+  const baseUrl = new URL(request.url).origin + '/api/v1/students';
+  await invalidateCache(baseUrl);
+  await invalidateCache(`${baseUrl}/${studentId}`);
+
   return ok({ deleted: true });
 }

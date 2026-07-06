@@ -5,6 +5,7 @@
  */
 import { ok, error, json } from '../lib/types';
 import type { Env } from '../lib/types';
+import { parseBody, CreateStudentSchema, UpdateStudentSchema } from '../lib/schemas';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -100,17 +101,15 @@ export async function handleGetStudent(
 // ─── create student ──────────────────────────────────────────────────────────
 
 export async function handleCreateStudent(request: Request, env: Env): Promise<Response> {
-  const body = await request.json() as Record<string, unknown>;
-  const {
-    email, first_name, last_name, phone, password_hash = 'RESET_REQUIRED',
-    reg_no, gender, date_of_birth, nationality, admission_date, programme,
-    status = 'Active', avatar_color = 'bg-purple-600', study_center_id,
-    gpa, year_of_study, degree_level,
-  } = body as Record<string, string>;
+  const parsed = await parseBody(request, CreateStudentSchema);
+  if (parsed instanceof Response) return parsed;
 
-  if (!email || !first_name || !last_name || !reg_no || !admission_date || !programme) {
-    return error('Missing required fields: email, first_name, last_name, reg_no, admission_date, programme');
-  }
+  const {
+    email, first_name, last_name, phone, password_hash,
+    reg_no, gender, date_of_birth, nationality, admission_date, programme,
+    status, avatar_color, study_center_id,
+    gpa, year_of_study, degree_level,
+  } = parsed;
 
   // Check if user exists already
   const existingUser = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first<{ id: string }>();
@@ -150,7 +149,8 @@ export async function handleCreateStudent(request: Request, env: Env): Promise<R
 // ─── update student ──────────────────────────────────────────────────────────
 
 export async function handleUpdateStudent(request: Request, env: Env, studentId: string): Promise<Response> {
-  const body = await request.json() as Record<string, unknown>;
+  const body = await parseBody(request, UpdateStudentSchema);
+  if (body instanceof Response) return body;
 
   // Find student
   const student = await env.DB.prepare(

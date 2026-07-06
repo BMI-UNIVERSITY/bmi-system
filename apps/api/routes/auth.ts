@@ -4,30 +4,14 @@ import { sendEmail } from '../lib/email';
 import { getPortalUrl } from '../lib/config';
 import { generateTOTPSecret, verifyTOTP, getTOTPAuthUrl } from '../lib/totp';
 import { getOAuthConfig, exchangeCodeForToken, getUserInfo, type OAuthProvider } from '../lib/sso';
+import { parseBody, RegisterSchema, LoginSchema, ForgotPasswordSchema, ResetPasswordSchema, ResendVerificationSchema } from '../lib/schemas';
 import type { Env } from '../lib/types';
 
 export async function handleRegister(request: Request, env: Env): Promise<Response> {
-  let body: { email: string; password: string; first_name: string; last_name: string; phone?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return error('Invalid JSON body');
-  }
+  const parsed = await parseBody(request, RegisterSchema);
+  if (parsed instanceof Response) return parsed;
 
-  const { email, password, first_name, last_name, phone } = body;
-
-  if (!email || !password || !first_name || !last_name) {
-    return error('Email, password, first name, and last name are required');
-  }
-
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
-    return error('Invalid email address');
-  }
-
-  if (email.length > 254) {
-    return error('Email address is too long');
-  }
+  const { email, password, first_name: cleanFirstName, last_name: cleanLastName, phone } = parsed;
 
   const strength = validatePasswordStrength(password);
   if (!strength.valid) {
@@ -36,14 +20,6 @@ export async function handleRegister(request: Request, env: Env): Promise<Respon
 
   if (isCommonPassword(password)) {
     return error('This password is too common. Please choose a stronger password.');
-  }
-
-  const sanitizedName = (name: string) => name.trim().replace(/<[^>]*>/g, '').substring(0, 100);
-  const cleanFirstName = sanitizedName(first_name);
-  const cleanLastName = sanitizedName(last_name);
-
-  if (!cleanFirstName || !cleanLastName) {
-    return error('First and last name are required');
   }
 
   const existing = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email.toLowerCase()).first();
@@ -171,17 +147,10 @@ export async function handleResendVerification(request: Request, env: Env): Prom
 }
 
 export async function handleLogin(request: Request, env: Env): Promise<Response> {
-  let body: { email: string; password: string; mfa_token?: string };
-  try {
-    body = await request.json();
-  } catch {
-    return error('Invalid JSON body');
-  }
+  const parsed = await parseBody(request, LoginSchema);
+  if (parsed instanceof Response) return parsed;
 
-  const { email, password, mfa_token } = body;
-  if (!email || !password) {
-    return error('Email and password are required');
-  }
+  const { email, password, mfa_token } = parsed;
 
   const user = await env.DB.prepare(
     'SELECT id, email, password_hash, first_name, last_name, role, is_verified, mfa_secret, mfa_enabled, session_version FROM users WHERE email = ?'
@@ -518,11 +487,10 @@ export async function handleOAuthCallback(request: Request, env: Env, provider: 
       const tempPassword = crypto.randomUUID();
       const passwordHash = await hashPassword(tempPassword, env.PASSWORD_PEPPER);
       
-      // DEV_ONLY: force is_verified = 1 (change back to `userInfo.emailVerified ? 1 : 0` to reinstate)
       await env.DB.prepare(
         `INSERT INTO users (id, email, password_hash, first_name, last_name, role, is_verified)
          VALUES (?, ?, ?, ?, ?, ?, ?)`
-      ).bind(userId, userInfo.email, passwordHash, userInfo.firstName, userInfo.lastName, 'applicant', 1).run();
+      ).bind(userId, userInfo.email, passwordHash, userInfo.firstName, userInfo.lastName, 'applicant', userInfo.emailVerified ? 1 : 0).run();
     }
 
     await env.DB.prepare(
@@ -537,6 +505,10 @@ export async function handleOAuthCallback(request: Request, env: Env, provider: 
 
   if (!user) {
     return error('User not found', 500);
+  }
+
+  if (!user.is_verified) {
+    return error('Please verify your email address before logging in.', 403);
   }
 
   if (user.mfa_enabled) {

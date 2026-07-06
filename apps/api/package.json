@@ -16,7 +16,8 @@
   },
   "dependencies": {
     "@bmi/shared": "file:../../packages/shared",
-    "@sentry/cloudflare": "10.62.0"
+    "@sentry/cloudflare": "10.62.0",
+    "zod": "3.25.67"
   },
   "devDependencies": {
     "@cloudflare/vitest-pool-workers": "0.16.20",
