@@ -29,7 +29,7 @@ export default function Navbar() {
 
   const navBg = scrolled
     ? "bg-white shadow-lg border-b border-gray-100"
-    : "bg-transparent";
+    : "bg-[#0f172a]/30 backdrop-blur-md border-b border-white/10";
 
   const linkColor = scrolled ? "#0f172a" : "#ffffff";
   const activeLinkColor = "#d4af37";
