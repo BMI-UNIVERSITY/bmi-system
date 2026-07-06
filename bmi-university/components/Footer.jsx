@@ -72,8 +72,30 @@ export default function Footer() {
             Developing Christ-centered men and women with the values, knowledge, and skills essential to impact the world.
           </p>
 
-          <Link href="/accreditation" style={{ display: "inline-flex", alignItems: "center", gap: "6px", color: "#d4af37", fontSize: "0.8rem", fontWeight: 700, textDecoration: "none" }}>
-            🏅 Accredited by QAHE
+          <Link href="/accreditation" aria-label="QAHE Accreditation" style={{ display: "inline-block", marginTop: "4px" }}>
+            <div style={{
+              background: "#ffffff",
+              padding: "6px 10px",
+              borderRadius: "6px",
+              display: "inline-flex",
+              alignItems: "center",
+              boxShadow: "0 2px 10px rgba(0,0,0,0.12)",
+              transition: "transform 0.2s, box-shadow 0.2s",
+            }}
+              onMouseEnter={e => { e.currentTarget.style.transform = "translateY(-1px)"; e.currentTarget.style.boxShadow = "0 4px 12px rgba(0,0,0,0.18)"; }}
+              onMouseLeave={e => { e.currentTarget.style.transform = "translateY(0)"; e.currentTarget.style.boxShadow = "0 2px 10px rgba(0,0,0,0.12)"; }}
+            >
+              <img 
+                src="/images/qahe-logo.jpg" 
+                alt="QAHE Accredited Institution" 
+                style={{ 
+                  height: "40px", 
+                  width: "auto", 
+                  objectFit: "contain",
+                  display: "block"
+                }} 
+              />
+            </div>
           </Link>
 
           {/* Social icons */}
