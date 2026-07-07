@@ -36,9 +36,28 @@ function paginate<T>(items: T[], page: number, perPage: number) {
 }
 
 /** GET /api/public/programs — full program catalog with live seat availability */
-export async function handlePublicPrograms(request: Request, env: Env): Promise<Response> {
+export async function handlePublicPrograms(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
   const level = url.searchParams.get('level'); // optional filter
+
+  const cacheUrl = new URL(request.url);
+  cacheUrl.search = ''; // Strip search params so caching is at the endpoint level
+  const cacheKey = new Request(cacheUrl.toString(), request);
+  const cache = caches.default;
+
+  // 1. Try Cache API first
+  let cachedRes = await cache.match(cacheKey);
+  if (cachedRes) {
+    if (!level) return cachedRes;
+    
+    // Filter the cached response manually
+    const body = await cachedRes.clone().json<{ success: boolean; data: any[] }>();
+    const filtered = body.data.filter((p: any) => p.level === level);
+    return new Response(JSON.stringify({ success: true, data: filtered }), {
+      status: 200,
+      headers: cachedRes.headers,
+    });
+  }
 
   // Get course capacity vs enrollment counts from DB
   const courseCounts = await env.DB.prepare(
@@ -65,11 +84,22 @@ export async function handlePublicPrograms(request: Request, env: Env): Promise<
     available_seats: seatMap.get(p.label) ?? null,
   }));
 
-  if (level) {
-    programs = programs.filter((p) => p.level === level);
+  const responseToCache = cachedOk(programs);
+  
+  // Cache the full program catalog using Cache API
+  if (ctx) {
+    ctx.waitUntil(cache.put(cacheKey, responseToCache.clone()));
+  } else {
+    // Local dev without ExecutionContext may not cleanly support put
+    await cache.put(cacheKey, responseToCache.clone()).catch(() => {});
   }
 
-  return cachedOk(programs);
+  if (level) {
+    programs = programs.filter((p) => p.level === level);
+    return cachedOk(programs);
+  }
+
+  return responseToCache;
 }
 
 /** GET /api/public/stats — aggregate counts, no PII */

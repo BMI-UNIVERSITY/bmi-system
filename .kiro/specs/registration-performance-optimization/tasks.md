@@ -12,14 +12,14 @@ Ruthlessly prioritized performance optimization for BMI student registration wor
 
 ## Tasks
 
-- [ ] 1. **CRITICAL: Email Queue Implementation (Blocks Everything)**
+- [x] 1. **CRITICAL: Email Queue Implementation (Blocks Everything)**
   - Move all email sending (verification, notifications) to Cloudflare Queues
   - Update `apps/api/routes/auth.ts` handleRegister to queue emails instead of await
   - Update `apps/api/routes/apply.ts` handleSubmitApplication for async emails
   - Create Queue Consumer Worker for Resend API integration
   - Reduces API response time from ~600ms to ~50ms (12x improvement)
 
-- [ ] 2. **CRITICAL: Database Indexes for Registration Flow**
+- [x] 2. **CRITICAL: Database Indexes for Registration Flow**
   - Add missing indexes on `users(email)`, `applications(user_id)`, `applications(status)`
   - Add composite indexes for common query patterns
   - Add indexes on `email_verifications(token)`, `applications(application_number)`
@@ -61,7 +61,7 @@ Ruthlessly prioritized performance optimization for BMI student registration wor
   - Track D1 quota usage (reads/writes/day)
   - Avoid third-party analytics that consume Worker requests
 
-- [ ] 8. **DEFER: Frontend UX Polish**
+- [x] 8. **DEFER: Frontend UX Polish**
   - Real-time validation (client-side only - no API calls)
   - Progress indicators and error feedback
   - Session timeout warnings

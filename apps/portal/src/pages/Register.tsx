@@ -1,8 +1,23 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from '../lib/api';
+import { z } from 'zod';
 
 const STORAGE_KEY = 'bmi_register_form';
+
+const passwordSchema = z.string()
+  .min(8, 'Password must be at least 8 characters')
+  .regex(/[A-Z]/, 'Password must contain an uppercase letter')
+  .regex(/[a-z]/, 'Password must contain a lowercase letter')
+  .regex(/[0-9]/, 'Password must contain a number')
+  .regex(/[^A-Za-z0-9]/, 'Password must contain a special character');
+
+const RegisterSchema = z.object({
+  first_name: z.string().min(1, 'This field is required').max(100, 'First name too long'),
+  last_name: z.string().min(1, 'This field is required').max(100, 'Last name too long'),
+  email: z.string().email('Please enter a valid email address').max(254, 'Email too long'),
+  password: passwordSchema,
+});
 
 export default function Register() {
   const navigate = useNavigate();
@@ -73,30 +88,58 @@ export default function Register() {
     }
   }, [form.first_name, form.last_name, form.email, form.phone]);
 
-  const validateField = useCallback((field: string, value: string) => {
-    let err = '';
-    if (field === 'first_name' || field === 'last_name') {
-      if (!value.trim()) err = 'This field is required';
-    } else if (field === 'email') {
-      if (!value.trim()) err = 'Email is required';
-      else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) err = 'Please enter a valid email address';
-    } else if (field === 'password') {
-      if (!value) err = 'Password is required';
-      else if (value.length < 8) err = 'Password must be at least 8 characters';
-      else if (!/[A-Z]/.test(value)) err = 'Password must contain an uppercase letter';
-      else if (!/[a-z]/.test(value)) err = 'Password must contain a lowercase letter';
-      else if (!/[0-9]/.test(value)) err = 'Password must contain a number';
-      else if (!/[^A-Za-z0-9]/.test(value)) err = 'Password must contain a special character';
-    } else if (field === 'confirm_password') {
-      if (value !== form.password) err = 'Passwords do not match';
+  const validateField = useCallback((field: string, value: string, formState: typeof form) => {
+    if (field === 'confirm_password') {
+      return value !== formState.password ? 'Passwords do not match' : '';
     }
-    return err;
-  }, [form.password]);
+    
+    // Use Zod schema for field validation
+    const schemaMap: Record<string, z.ZodTypeAny> = {
+      first_name: RegisterSchema.shape.first_name,
+      last_name: RegisterSchema.shape.last_name,
+      email: RegisterSchema.shape.email,
+      password: RegisterSchema.shape.password,
+    };
+
+    const schema = schemaMap[field];
+    if (schema) {
+      const result = schema.safeParse(value);
+      if (!result.success) {
+        return result.error.errors[0].message;
+      }
+    }
+    return '';
+  }, []);
+
+  const debounceTimers = useRef<Record<string, number>>({});
 
   const update = useCallback((field: string, value: string) => {
-    setForm(f => ({ ...f, [field]: value }));
-    const err = validateField(field, value);
-    setValidation(v => ({ ...v, [field]: err }));
+    setForm(f => {
+      const newForm = { ...f, [field]: value };
+      
+      // Clear existing debounce timer
+      if (debounceTimers.current[field]) {
+        clearTimeout(debounceTimers.current[field]);
+      }
+
+      // Debounce email and password validation for better UX
+      if (field === 'email' || field === 'password') {
+        debounceTimers.current[field] = setTimeout(() => {
+          const err = validateField(field, value, newForm);
+          setValidation(v => ({ ...v, [field]: err }));
+          
+          // Also re-validate confirm password if password changes
+          if (field === 'password' && newForm.confirm_password) {
+            setValidation(v => ({ ...v, confirm_password: validateField('confirm_password', newForm.confirm_password, newForm) }));
+          }
+        }, 500) as any;
+      } else {
+        const err = validateField(field, value, newForm);
+        setValidation(v => ({ ...v, [field]: err }));
+      }
+
+      return newForm;
+    });
   }, [validateField]);
 
   const getPasswordStrength = (pw: string): { label: string; color: string; score: number } => {
@@ -121,7 +164,7 @@ export default function Register() {
     const newValidation: Record<string, string> = {};
     let hasError = false;
     ['first_name', 'last_name', 'email', 'password', 'confirm_password'].forEach(field => {
-      const err = validateField(field, form[field as keyof typeof form]);
+      const err = validateField(field, form[field as keyof typeof form], form);
       if (err) hasError = true;
       newValidation[field] = err;
     });

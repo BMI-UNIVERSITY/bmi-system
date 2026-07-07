@@ -1,11 +1,24 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { useAuth } from '../hooks/useAuth';
 import { PROGRAMS } from '@bmi/shared';
+import { z } from 'zod';
 
 const STEPS = ['Program', 'Personal Info', 'Background', 'Statement', 'Review & Submit'];
 const STORAGE_KEY = 'bmi_apply_form';
+
+// Zod schemas (matching backend definitions)
+const SubmitApplicationSchema = z.object({
+  program: z.string().min(1, 'Program is required'),
+  degree_level: z.string().min(1, 'Degree level is required'),
+  personal_statement: z.string()
+    .min(100, 'Personal statement must be at least 100 characters')
+    .max(10000, 'Personal statement must not exceed 10000 characters'),
+  prior_education: z.string()
+    .min(20, 'Prior education must be at least 20 characters')
+    .max(5000, 'Prior education must not exceed 5000 characters'),
+});
 
 export default function Apply() {
   const { user } = useAuth();
@@ -39,6 +52,78 @@ export default function Apply() {
     }
   }, [form]);
 
+  // Auto-save to API (debounced 30s, quota protection)
+  const lastSavedAt = useRef<number>(0);
+  const saveTimeout = useRef<number | null>(null);
+  const [draftStatus, setDraftStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  // Session timeout logic
+  const [showTimeoutWarning, setShowTimeoutWarning] = useState(false);
+  const sessionTimeoutRef = useRef<number | null>(null);
+
+  const resetSessionTimer = useCallback(() => {
+    setShowTimeoutWarning(false);
+    if (sessionTimeoutRef.current) clearTimeout(sessionTimeoutRef.current as any);
+    // 15 minutes = 900000 ms before warning shows
+    sessionTimeoutRef.current = setTimeout(() => {
+      setShowTimeoutWarning(true);
+    }, 15 * 60 * 1000) as any;
+  }, []);
+
+  useEffect(() => {
+    // Listen to user activity to reset timer
+    const events = ['mousedown', 'keydown', 'scroll', 'touchstart'];
+    const handleActivity = () => {
+      if (!showTimeoutWarning) {
+        resetSessionTimer();
+      }
+    };
+    events.forEach(e => window.addEventListener(e, handleActivity));
+    resetSessionTimer();
+    return () => {
+      events.forEach(e => window.removeEventListener(e, handleActivity));
+      if (sessionTimeoutRef.current) clearTimeout(sessionTimeoutRef.current as any);
+    };
+  }, [resetSessionTimer, showTimeoutWarning]);
+
+  useEffect(() => {
+    // Only auto-save if >50% complete (Step 2 or higher)
+    if (step < 2) return;
+
+    if (saveTimeout.current) {
+      clearTimeout(saveTimeout.current as any);
+    }
+
+    const now = Date.now();
+    const timeSinceLastSave = now - lastSavedAt.current;
+    
+    // Ensure we don't hit the API more than once every 30 seconds
+    const delay = Math.max(30000 - timeSinceLastSave, 2000);
+
+    setDraftStatus('idle'); // Indicate pending save
+
+    saveTimeout.current = setTimeout(() => {
+      setDraftStatus('saving');
+      api.applications.saveDraft({
+        current_step: step,
+        application_data: form
+      })
+      .then(() => {
+        lastSavedAt.current = Date.now();
+        setDraftStatus('saved');
+        setTimeout(() => setDraftStatus('idle'), 3000);
+      })
+      .catch(err => {
+        console.warn('Background draft save failed:', err);
+        setDraftStatus('error');
+      });
+    }, delay);
+
+    return () => {
+      if (saveTimeout.current) clearTimeout(saveTimeout.current as any);
+    };
+  }, [form, step]);
+
   const update = useCallback((field: string, value: string) => setForm((f: any) => ({ ...f, [field]: value })), []);
 
   const selectProgram = (p: { label: string; level: string }) => {
@@ -49,13 +134,20 @@ export default function Apply() {
   const next = () => setStep(s => Math.min(s + 1, STEPS.length - 1));
   const prev = () => setStep(s => Math.max(s - 1, 0));
 
-  const canProceedStep0 = form.program && form.degree_level;
+  const canProceedStep0 = SubmitApplicationSchema.pick({ program: true, degree_level: true }).safeParse(form).success;
   const canProceedStep1 = true;
-  const canProceedStep2 = form.prior_education.trim().length >= 20;
-  const canProceedStep3 = form.personal_statement.trim().length >= 100;
+  const canProceedStep2 = SubmitApplicationSchema.pick({ prior_education: true }).safeParse(form).success;
+  const canProceedStep3 = SubmitApplicationSchema.pick({ personal_statement: true }).safeParse(form).success;
 
   const handleSubmit = async () => {
     setError('');
+    
+    const validation = SubmitApplicationSchema.safeParse(form);
+    if (!validation.success) {
+      setError('Please fix the errors in the form before submitting.');
+      return;
+    }
+
     setLoading(true);
     try {
       await api.applications.submit({
@@ -81,10 +173,34 @@ export default function Apply() {
           <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: 'clamp(1.8rem, 4vw, 2.5rem)', fontWeight: 900 }}>
             Your Application
           </h1>
-          <p style={{ color: 'var(--text-muted)', marginTop: '0.5rem' }}>
-            Welcome, {user?.first_name}. Complete all steps to submit your application.
-          </p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem', flexWrap: 'wrap', gap: '1rem' }}>
+            <p style={{ color: 'var(--text-muted)', margin: 0 }}>
+              Welcome, {user?.first_name}. Complete all steps to submit your application.
+            </p>
+            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+              {step > 1 && (
+                <span style={{ fontSize: '0.8rem', color: draftStatus === 'saving' ? 'var(--navy)' : draftStatus === 'saved' ? 'var(--success)' : draftStatus === 'error' ? 'var(--danger)' : 'var(--text-muted)' }}>
+                  {draftStatus === 'saving' ? 'Saving draft...' : draftStatus === 'saved' ? '✓ Draft saved' : draftStatus === 'error' ? '⚠️ Save failed' : ''}
+                </span>
+              )}
+              <span className="badge badge-undergraduate" style={{ background: 'var(--slate)', color: 'white' }}>
+                Step {step + 1} of {STEPS.length} — {Math.round((step / (STEPS.length - 1)) * 100)}% complete
+              </span>
+            </div>
+          </div>
         </div>
+
+        {showTimeoutWarning && (
+          <div className="alert alert-warning" style={{ marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <strong>Session Timeout Warning</strong>
+              <p style={{ margin: 0 }}>You have been inactive for 15 minutes. To prevent data loss, please continue your session.</p>
+            </div>
+            <button className="btn btn-navy" onClick={resetSessionTimer} style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}>
+              Continue Session
+            </button>
+          </div>
+        )}
 
         <div className="steps">
           {STEPS.map((label, i) => (

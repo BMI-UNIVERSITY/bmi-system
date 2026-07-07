@@ -162,6 +162,12 @@ export const SubmitApplicationSchema = z.object({
     .optional(),
 });
 
+export const ApplicationDraftSchema = z.object({
+  current_step: z.number().int().min(1).max(10).optional().default(1),
+  application_data: z.record(z.any()),
+});
+
+
 export const UpdateApplicationStatusSchema = z.object({
   status: z.enum(VALID_APP_STATUSES, {
     errorMap: () => ({ message: 'Invalid status value' }),

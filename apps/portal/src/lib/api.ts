@@ -113,6 +113,9 @@ export const api = {
   },
 
   applications: {
+    saveDraft: (body: { current_step: number; application_data: any }) =>
+      request<{ message: string; throttled: boolean }>('/applications/draft', { method: 'PATCH', body: JSON.stringify(body) }),
+
     submit: (body: { program: string; degree_level: string; personal_statement?: string; prior_education?: string }) =>
       request<{ application_id: string; status: string }>('/applications', { method: 'POST', body: JSON.stringify(body) }),
 

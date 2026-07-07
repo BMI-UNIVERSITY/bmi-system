@@ -6,8 +6,8 @@ import { dispatchWebhook } from '../lib/webhook';
 import { generateApplicationNumber } from '../lib/app_number';
 import { runAdmissionPipeline, appendLifecycleEvent, getLifecycleHistory, STAGES } from '../lib/lifecycle';
 import { dispatchPendingJobs } from '../lib/provisioning';
-import { parseBody, SubmitApplicationSchema } from '../lib/schemas';
-import { createApplicationWithDependencies, executeAdmissionPipelineOptimized, executeWithMonitoring, executeBatch } from '../lib/performance';
+import { parseBody, SubmitApplicationSchema, ApplicationDraftSchema } from '../lib/schemas';
+import { executeAdmissionPipelineOptimized, executeWithMonitoring, executeBatch } from '../lib/performance';
 
 function sanitizeHtml(input: string): string {
   return input
@@ -94,6 +94,18 @@ export async function handleSubmitApplication(request: Request, env: Env, userId
     return error('Failed to submit application. Please try again.');
   }
 
+  // Delete draft upon successful submission
+  if (ctx) {
+    ctx.waitUntil(
+      executeWithMonitoring(
+        env.DB.prepare('DELETE FROM application_drafts WHERE user_id = ?').bind(userId),
+        'delete_application_draft'
+      ).catch(e => console.error('[draft] Failed to delete draft:', e))
+    );
+  } else {
+    await env.DB.prepare('DELETE FROM application_drafts WHERE user_id = ?').bind(userId).run().catch(() => {});
+  }
+
   // Async operations for non-critical tasks
   let applicationNumber: string | null = null;
   
@@ -139,6 +151,45 @@ export async function handleSubmitApplication(request: Request, env: Env, userId
     _perf: { duration_ms: Math.round(duration) }
   });
 }
+
+export async function handleSaveDraft(request: Request, env: Env, userId: string): Promise<Response> {
+  const parsed = await parseBody(request, ApplicationDraftSchema);
+  if (parsed instanceof Response) return parsed;
+
+  const { current_step, application_data } = parsed;
+
+  // Enforce 60-second cooldown
+  const existing = await env.DB.prepare(
+    'SELECT updated_at FROM application_drafts WHERE user_id = ?'
+  ).bind(userId).first<{ updated_at: string }>();
+
+  if (existing && existing.updated_at) {
+    // SQLite datetime is UTC: '2026-07-06 16:22:26'
+    // To safely parse in JS, append 'Z'
+    const updatedStr = existing.updated_at.replace(' ', 'T') + 'Z';
+    const secondsSinceLastUpdate = (Date.now() - new Date(updatedStr).getTime()) / 1000;
+    
+    if (secondsSinceLastUpdate < 60) {
+      return ok({ message: 'Draft saved (cooldown)', throttled: true });
+    }
+  }
+
+  // Insert or Update the draft
+  await executeWithMonitoring(
+    env.DB.prepare(`
+      INSERT INTO application_drafts (user_id, application_data, current_step, updated_at, created_at)
+      VALUES (?, ?, ?, datetime('now'), datetime('now'))
+      ON CONFLICT(user_id) DO UPDATE SET 
+        application_data = excluded.application_data,
+        current_step = excluded.current_step,
+        updated_at = datetime('now')
+    `).bind(userId, JSON.stringify(application_data), current_step),
+    'save_application_draft'
+  );
+
+  return ok({ message: 'Draft saved successfully', throttled: false });
+}
+
 
 // Optimized application creation with enhanced batching
 async function createApplicationWithDependenciesOptimized(
@@ -380,18 +431,28 @@ export async function handleUpdateStatus(
       'promote_user_to_student'
     );
 
-    // Use optimized admission pipeline
+    // Use optimized admission pipeline in the background
     try {
-      const result = await executeAdmissionPipelineOptimized(env.DB, {
-        applicationId: appId,
-        userId: app.user_id,
-        actorId: adminId,
-        program: app.program,
-      });
-      pipelineResult = { uid: result.uid, registration_number: result.regNo };
-
-      // Kick off background processing of provisioning jobs
-      ctx.waitUntil(dispatchPendingJobs(env).catch(console.error));
+      if (ctx) {
+        ctx.waitUntil((async () => {
+          const result = await executeAdmissionPipelineOptimized(env.DB, {
+            applicationId: appId,
+            userId: app.user_id,
+            actorId: adminId,
+            program: app.program,
+          });
+          await dispatchPendingJobs(env);
+        })().catch(e => console.error('[lifecycle] Admission pipeline background error:', e)));
+      } else {
+        const result = await executeAdmissionPipelineOptimized(env.DB, {
+          applicationId: appId,
+          userId: app.user_id,
+          actorId: adminId,
+          program: app.program,
+        });
+        pipelineResult = { uid: result.uid, registration_number: result.regNo };
+        await dispatchPendingJobs(env);
+      }
     } catch (e) {
       console.error('[lifecycle] Admission pipeline error:', e);
     }

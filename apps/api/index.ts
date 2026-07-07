@@ -1,6 +1,6 @@
 import { withSentry } from '@sentry/cloudflare';
 import { handleRegister, handleLogin, handleRefresh, handleLogout, handleMe, handleVerifyEmail, handleResendVerification, handleForgotPassword, handleResetPassword, handleMfaSetup, handleMfaEnable, handleMfaDisable, handleOAuthLogin, handleOAuthCallback } from './routes/auth';
-import { handleSubmitApplication, handleGetMyApplication, handleListApplications, handleGetApplication, handleUpdateStatus, handleGetStatusLogs, handleGetLifecycle } from './routes/apply';
+import { handleSubmitApplication, handleGetMyApplication, handleListApplications, handleGetApplication, handleUpdateStatus, handleGetStatusLogs, handleGetLifecycle, handleSaveDraft } from './routes/apply';
 import { handleUploadDocument, handleDownloadDocument, handleDeleteDocument } from './routes/documents';
 import { handleRequestRecommendation, handleGetRecommendationInfo, handleUploadRecommendation, handleListRecommendations } from './routes/recommendations';
 import { requireAuth, rateLimit, withCors, getCorsHeaders, createLogger, requestLogger } from '@bmi/api-middleware';
@@ -74,6 +74,7 @@ const ROUTES: Route[] = [
   { method: 'POST', path: /^\/api\/auth\/mfa\/setup$/, roles: [], handler: async (req, env, p, auth, ctx) => handleMfaSetup(req, env, auth!.user.sub) },
   { method: 'POST', path: /^\/api\/auth\/mfa\/enable$/, roles: [], handler: async (req, env, p, auth, ctx) => handleMfaEnable(req, env, auth!.user.sub) },
   { method: 'POST', path: /^\/api\/auth\/mfa\/disable$/, roles: [], handler: async (req, env, p, auth, ctx) => handleMfaDisable(req, env, auth!.user.sub) },
+  { method: 'PATCH', path: /^\/api\/applications\/draft$/, roles: ['applicant', 'student'], handler: async (req, env, p, auth, ctx) => handleSaveDraft(req, env, auth!.user.sub) },
   { method: 'POST', path: /^\/api\/applications$/, roles: ['applicant', 'student', 'staff', 'admin'], handler: async (req, env, p, auth, ctx) => handleSubmitApplication(req, env, auth!.user.sub, ctx) },
   { method: 'GET', path: /^\/api\/applications\/me$/, roles: [], handler: async (req, env, p, auth, ctx) => handleGetMyApplication(req, env, auth!.user.sub) },
   { method: 'GET', path: /^\/api\/applications\/([^/]+)\/logs$/, roles: [], handler: async (req, env, p, auth, ctx) => handleGetStatusLogs(req, env, p[1], auth!.user.sub, auth!.user.role) },
@@ -114,7 +115,7 @@ const ROUTES: Route[] = [
   { method: 'POST', path: /^\/api\/admin\/performance\/maintenance$/, roles: ['admin'], handler: async (req, env, p, auth, ctx) => handleRunMaintenance(req, env) },
   { method: 'GET', path: /^\/api\/admin\/performance\/health$/, roles: ['admin'], handler: async (req, env, p, auth, ctx) => handleGetSystemHealth(req, env) },
   { method: 'DELETE', path: /^\/api\/admin\/performance\/metrics$/, roles: ['admin'], handler: async (req, env, p, auth, ctx) => handleClearMetrics(req, env) },
-  { method: 'GET', path: /^\/api\/public\/programs$/, cacheTTL: 300, roles: undefined, handler: async (req, env, p, auth, ctx) => handlePublicPrograms(req, env) },
+  { method: 'GET', path: /^\/api\/public\/programs$/, cacheTTL: 300, roles: undefined, handler: async (req, env, p, auth, ctx) => handlePublicPrograms(req, env, ctx) },
   { method: 'GET', path: /^\/api\/public\/stats$/, cacheTTL: 300, roles: undefined, handler: async (req, env, p, auth, ctx) => handlePublicStats(req, env) },
   { method: 'GET', path: /^\/api\/public\/cms\/posts$/, roles: undefined, handler: async (req, env, p, auth, ctx) => handlePublicListPosts(req, env) },
   { method: 'GET', path: /^\/api\/public\/cms\/posts\/([^/]+)$/, roles: undefined, handler: async (req, env, p, auth, ctx) => handlePublicGetPost(req, env, p[1]) },
