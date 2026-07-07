@@ -1,71 +1,117 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
+import { SharedArray } from 'k6/data';
+
+// Load pre-seeded credentials from fixture file created by generate-seed.cjs
+const users = new SharedArray('users', function () {
+  return JSON.parse(open('./test-users.json'));
+});
 
 export const options = {
-  vus: 100, // 100 concurrent users
-  duration: '1m', // Run for 1 minute
+  stages: [
+    { duration: '30s', target: 30 },   // Ramp up to 30 users
+    { duration: '30s', target: 100 },  // Ramp up to 100 users
+    { duration: '60s', target: 100 },  // Sustain at 100 concurrent users
+    { duration: '30s', target: 0 },    // Ramp down
+  ],
   thresholds: {
-    http_req_failed: ['rate<0.01'], // http errors should be less than 1%
-    http_req_duration: ['p(95)<1000'], // 95% of requests should be below 1s
+    // Free tier targets: p(95) < 500ms, error rate < 1%
+    http_req_duration: ['p(95)<500'],
+    http_req_failed:   ['rate<0.01'],
   },
 };
 
-// Assuming STAGING_URL is set as an environment variable
-// e.g. k6 run -e STAGING_URL=https://bmi-api-staging.bmiuniversity107.workers.dev load-test.js
 const BASE_URL = __ENV.STAGING_URL || 'http://127.0.0.1:8787';
 
-export function setup() {
-  return {
-    // Shared setup data if needed
-  };
-}
+export default function () {
+  // Each VU picks a stable user from the fixture pool
+  const user = users[__VU % users.length];
 
-export default function (data) {
-  // Generate a random user ID for each VU iteration to simulate different users
-  const userId = `k6-user-${__VU}-${__ITER}-${Date.now()}`;
-  
-  // Create a payload for a draft
-  const draftPayload = JSON.stringify({
-    current_step: 2,
-    application_data: {
-      program: 'BS-CS',
-      personal_info: {
-        first_name: 'Test',
-        last_name: 'User'
-      }
+  // ── Step 1: Login ─────────────────────────────────────────────────────────
+  const loginRes = http.post(
+    `${BASE_URL}/api/auth/login`,
+    JSON.stringify({ email: user.email, password: user.password }),
+    { headers: { 'Content-Type': 'application/json' } }
+  );
+
+  const loginOk = check(loginRes, {
+    'login 200': (r) => r.status === 200,
+  });
+
+  if (!loginOk) return; // abort iteration if login failed
+
+  // Extract the JWT from the Set-Cookie header (bmi_token=<jwt>; ...)
+  // The cookie has the Secure flag so browsers won't send it back over plain HTTP.
+  // The auth middleware also accepts Authorization: Bearer, so we use that instead.
+  // See: packages/api-middleware/src/auth.ts -> requireAuth()
+  const setCookie = loginRes.headers['Set-Cookie'] || '';
+  const tokenMatch = setCookie.match(/bmi_token=([^;]+)/);
+  const jwt = tokenMatch ? tokenMatch[1] : '';
+
+  const loginHasToken = check(loginRes, {
+    'login has token': () => jwt.length > 0,
+  });
+
+  if (!loginHasToken) return;
+
+  // The login response body includes the CSRF token
+  let csrfToken = '';
+  try {
+    const loginBody = loginRes.json();
+    if (loginBody && loginBody.data && loginBody.data.csrf_token) {
+      csrfToken = loginBody.data.csrf_token;
     }
-  });
+  } catch (e) {}
 
-  const headers = {
+  const authHeaders = {
     'Content-Type': 'application/json',
-    // Mock Authorization if your staging API allows mock tokens, or pass a valid token via __ENV
-    'Authorization': `Bearer ${__ENV.TEST_TOKEN || 'test-token'}`,
-    // Mock the user sub for the backend if middleware allows it
-    'X-Mock-User-Id': userId 
+    'Authorization': `Bearer ${jwt}`,
+    'X-CSRF-Token': csrfToken,
+    'Cookie': `csrf_token=${csrfToken}`,
   };
 
-  // 1. Simulate saving a draft
-  let res = http.patch(`${BASE_URL}/api/applications/draft`, draftPayload, { headers });
-  
-  check(res, {
-    'draft status is 200': (r) => r.status === 200,
-  });
+  sleep(0.5);
 
-  // Small delay to simulate user typing
-  sleep(1);
+  // ── Step 2: Programs listing (Cache API hit after first request) ───────────
+  const programsRes = http.get(`${BASE_URL}/api/public/programs`);
+  check(programsRes, { 'programs 200': (r) => r.status === 200 });
 
-  // 2. Simulate submitting the final application
-  const submitPayload = JSON.stringify({
-    program: 'BS-CS',
-    degree_level: 'undergraduate',
-    personal_statement: 'This is a load test application',
-  });
+  sleep(0.5);
 
-  let submitRes = http.post(`${BASE_URL}/api/applications`, submitPayload, { headers });
-  
-  check(submitRes, {
-    'submit status is 200': (r) => r.status === 200,
-  });
+  // ── Step 3: Auto-save draft ────────────────────────────────────────────────
+  const draftRes = http.patch(
+    `${BASE_URL}/api/applications/draft`,
+    JSON.stringify({
+      current_step: 2,
+      application_data: {
+        program: 'BA in Biblical Studies',
+        degree_level: 'undergraduate',
+        prior_education: 'High school diploma from Test High School.',
+        personal_statement:
+          'This is my personal statement for the load test application. ' +
+          'It comfortably meets the 100-character minimum required by the Zod schema.',
+      },
+    }),
+    { headers: authHeaders }
+  );
+  check(draftRes, { 'draft 200': (r) => r.status === 200 });
+
+  sleep(0.5);
+
+  // ── Step 4: Submit final application ──────────────────────────────────────
+  const submitRes = http.post(
+    `${BASE_URL}/api/applications`,
+    JSON.stringify({
+      program: 'BA in Biblical Studies',
+      degree_level: 'undergraduate',
+      personal_statement:
+        'This is my personal statement for the load test application. ' +
+        'It comfortably meets the 100-character minimum required by the Zod schema.',
+      prior_education: 'High school diploma from Test High School.',
+    }),
+    { headers: authHeaders }
+  );
+  check(submitRes, { 'submit 200': (r) => r.status === 200 });
 
   sleep(1);
 }
