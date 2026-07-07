@@ -1,0 +1,4 @@
+
+.dev.vars
+*.bak
+scripts/k6*

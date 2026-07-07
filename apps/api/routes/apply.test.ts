@@ -131,6 +131,7 @@ describe('handleSubmitApplication', () => {
     env.DB.first = vi.fn()
       .mockResolvedValueOnce({ count: 0 })
       .mockResolvedValueOnce({ value: '3' })
+      .mockResolvedValueOnce(null)
       .mockResolvedValueOnce({ count: 3 });
       
     const req = makeRequest({

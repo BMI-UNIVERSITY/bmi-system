@@ -8,7 +8,7 @@
  * All responses are cache-friendly (5-min CDN TTL).
  */
 
-
+import { error } from '../lib/types';
 import type { Env } from '../lib/types';
 import { PROGRAMS } from '../lib/programs';
 

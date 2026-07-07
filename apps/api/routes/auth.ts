@@ -31,12 +31,9 @@ export async function handleRegister(request: Request, env: Env, ctx?: Execution
   }
 
   // Use optimized user lookup with early exit
-  const existingUser = await executeWithMonitoring(
-    env.DB.prepare('SELECT 1 FROM users WHERE email = ? LIMIT 1').bind(email.toLowerCase()),
-    'check_existing_user_registration'
-  );
+  const existingUser = await env.DB.prepare('SELECT 1 FROM users WHERE email = ? LIMIT 1').bind(email.toLowerCase()).first();
   
-  if (existingUser.result?.results?.length > 0) {
+  if (existingUser) {
     return error('An account with this email already exists', 409);
   }
 
@@ -212,15 +209,10 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
 
   const { email, password, mfa_token } = parsed;
 
-  // Use optimized user lookup with performance monitoring
-  const userResult = await executeWithMonitoring(
-    env.DB.prepare(
-      'SELECT id, email, password_hash, first_name, last_name, role, is_verified, mfa_secret, mfa_enabled, session_version FROM users WHERE email = ? LIMIT 1'
-    ).bind(email.toLowerCase()),
-    'user_login_lookup'
-  );
-  
-  const user = userResult.result?.results?.[0] as any;
+  // Use optimized user lookup
+  const user = await env.DB.prepare(
+    'SELECT id, email, password_hash, first_name, last_name, role, is_verified, mfa_secret, mfa_enabled, session_version FROM users WHERE email = ? LIMIT 1'
+  ).bind(email.toLowerCase()).first<any>();
 
   if (!user) {
     return error('Invalid email or password', 401);

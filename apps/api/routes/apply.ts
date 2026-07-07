@@ -30,48 +30,33 @@ export async function handleSubmitApplication(request: Request, env: Env, userId
     return error('Invalid program selected', 400);
   }
 
-  // Parallelize all validation queries for better performance
-  const validationPromises = [
-    executeWithMonitoring(
-      env.DB.prepare('SELECT COUNT(*) as count FROM applications WHERE user_id = ? AND status NOT IN (\'rejected\')').bind(userId),
-      'check_existing_application'
-    ),
-    executeWithMonitoring(
-      env.DB.prepare('SELECT value FROM app_config WHERE key = \'max_applications_per_user\''),
-      'get_max_applications_config'
-    ),
-    executeWithMonitoring(
-      env.DB.prepare('SELECT value FROM app_config WHERE key = \'application_deadline\''),
-      'get_application_deadline'
-    )
-  ];
-
-  const [existingApp, maxApps, deadline] = await Promise.all(validationPromises);
+  const [existingApp, maxApps, deadline] = await Promise.all([
+    env.DB.prepare('SELECT COUNT(*) as count FROM applications WHERE user_id = ? AND status NOT IN (\'rejected\')').bind(userId).first<{count: number}>(),
+    env.DB.prepare('SELECT value FROM app_config WHERE key = \'max_applications_per_user\'').first<{value: string}>(),
+    env.DB.prepare('SELECT value FROM app_config WHERE key = \'application_deadline\'').first<{value: string}>()
+  ]);
 
   // Fast validation checks
-  const existing = (existingApp.result as any)?.count || 0;
+  const existing = existingApp?.count || 0;
   if (existing > 0) {
     return error('You already have an active application. Please contact admissions to submit a new one.', 409);
   }
 
-  const maxAppsConfig = maxApps.result as any;
+  const maxAppsConfig = maxApps?.value;
   if (maxAppsConfig) {
-    const totalCountResult = await executeWithMonitoring(
-      env.DB.prepare('SELECT COUNT(*) as count FROM applications WHERE user_id = ?').bind(userId),
-      'check_total_applications'
-    );
-    const totalCount = (totalCountResult.result as any)?.count || 0;
+    const totalCountResult = await env.DB.prepare('SELECT COUNT(*) as count FROM applications WHERE user_id = ?').bind(userId).first<{count: number}>();
+    const totalApps = totalCountResult?.count || 0;
 
-    if (totalCount >= parseInt(maxAppsConfig.value)) {
-      return error(`You have reached the maximum of ${maxAppsConfig.value} applications. Please contact admissions.`, 403);
+    if (totalApps >= parseInt(maxAppsConfig)) {
+      return error(`You have reached the maximum of ${maxAppsConfig} applications allowed per user.`, 403);
     }
   }
 
-  const deadlineConfig = deadline.result as any;
-  if (deadlineConfig && deadlineConfig.value) {
-    const deadlineDate = new Date(deadlineConfig.value);
-    if (deadlineDate < new Date()) {
-      return error('The application deadline has passed. Please contact admissions for more information.', 403);
+  const deadlineConfig = deadline?.value;
+  if (deadlineConfig) {
+    const deadlineDate = new Date(deadlineConfig);
+    if (new Date() > deadlineDate) {
+      return error('The application deadline has passed.', 403);
     }
   }
 
@@ -443,7 +428,7 @@ export async function handleUpdateStatus(
           await dispatchPendingJobs(env);
         })().catch(e => console.error('[lifecycle] Admission pipeline background error:', e)));
       } else {
-        await executeAdmissionPipelineOptimized(env.DB, {
+        const result = await executeAdmissionPipelineOptimized(env.DB, {
           applicationId: appId,
           userId: app.user_id,
           actorId: adminId,
