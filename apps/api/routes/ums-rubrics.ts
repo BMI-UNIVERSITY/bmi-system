@@ -14,7 +14,7 @@ export async function handleListRubrics(request: Request, env: Env): Promise<Res
       let criteria = [];
       try {
         criteria = JSON.parse(row.criteria as string || '[]');
-      } catch (e) {
+      } catch {
         criteria = [];
       }
       return {
@@ -24,7 +24,7 @@ export async function handleListRubrics(request: Request, env: Env): Promise<Res
     });
 
     return ok(formatted);
-  } catch (err) {
+  } catch {
     return error('Failed to fetch rubrics');
   }
 }
@@ -47,7 +47,7 @@ export async function handleCreateRubric(request: Request, env: Env): Promise<Re
     ).run();
 
     return handleListRubrics(request, env);
-  } catch (err) {
+  } catch {
     return error('Failed to create rubric');
   }
 }
@@ -56,7 +56,7 @@ export async function handleDeleteRubric(request: Request, env: Env, id: string)
   try {
     await env.DB.prepare(`DELETE FROM rubrics WHERE id = ?`).bind(id).run();
     return ok({ id });
-  } catch (err) {
+  } catch {
     return error('Failed to delete rubric');
   }
 }

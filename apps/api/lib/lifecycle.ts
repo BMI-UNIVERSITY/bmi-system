@@ -229,7 +229,6 @@ export async function runAdmissionPipeline(
 
       if (!existingStudent) {
         const now = new Date().toISOString();
-        const year = new Date().getUTCFullYear();
         // Placeholder reg_no — will be overwritten by Phase 4 at enrollment
         const placeholderRegNo = `PENDING-${userId.slice(0, 8).toUpperCase()}`;
 

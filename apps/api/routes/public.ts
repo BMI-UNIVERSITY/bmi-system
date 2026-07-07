@@ -8,7 +8,7 @@
  * All responses are cache-friendly (5-min CDN TTL).
  */
 
-import { ok, error } from '../lib/types';
+
 import type { Env } from '../lib/types';
 import { PROGRAMS } from '../lib/programs';
 
@@ -28,13 +28,6 @@ function cachedOk<T>(data: T): Response {
   });
 }
 
-function paginate<T>(items: T[], page: number, perPage: number) {
-  const total = items.length;
-  const start = (page - 1) * perPage;
-  const results = items.slice(start, start + perPage);
-  return { results, total, page, per_page: perPage, total_pages: Math.ceil(total / perPage) };
-}
-
 /** GET /api/public/programs — full program catalog with live seat availability */
 export async function handlePublicPrograms(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
   const url = new URL(request.url);
@@ -46,7 +39,7 @@ export async function handlePublicPrograms(request: Request, env: Env, ctx?: Exe
   const cache = caches.default;
 
   // 1. Try Cache API first
-  let cachedRes = await cache.match(cacheKey);
+  const cachedRes = await cache.match(cacheKey);
   if (cachedRes) {
     if (!level) return cachedRes;
     

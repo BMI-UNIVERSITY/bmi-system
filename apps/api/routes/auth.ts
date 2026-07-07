@@ -4,8 +4,8 @@ import { sendEmail } from '../lib/email';
 import { getPortalUrl } from '../lib/config';
 import { generateTOTPSecret, verifyTOTP, getTOTPAuthUrl } from '../lib/totp';
 import { getOAuthConfig, exchangeCodeForToken, getUserInfo, type OAuthProvider } from '../lib/sso';
-import { parseBody, RegisterSchema, LoginSchema, ForgotPasswordSchema, ResetPasswordSchema, ResendVerificationSchema } from '../lib/schemas';
-import { findUserByEmail, executeWithMonitoring, executeBatch } from '../lib/performance';
+import { parseBody, RegisterSchema, LoginSchema } from '../lib/schemas';
+import { executeWithMonitoring, executeBatch } from '../lib/performance';
 import type { Env } from '../lib/types';
 
 export async function handleRegister(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {

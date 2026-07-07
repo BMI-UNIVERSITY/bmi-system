@@ -1,10 +1,10 @@
 import { ok, error, logAdminAction } from '../lib/types';
 import { sendEmail, applicationSubmittedEmail, statusUpdateEmail } from '../lib/email';
 import type { Env } from '../lib/types';
-import { VALID_PROGRAMS, VALID_LEVELS } from '../lib/programs';
+import { VALID_PROGRAMS } from '../lib/programs';
 import { dispatchWebhook } from '../lib/webhook';
 import { generateApplicationNumber } from '../lib/app_number';
-import { runAdmissionPipeline, appendLifecycleEvent, getLifecycleHistory, STAGES } from '../lib/lifecycle';
+import { getLifecycleHistory } from '../lib/lifecycle';
 import { dispatchPendingJobs } from '../lib/provisioning';
 import { parseBody, SubmitApplicationSchema, ApplicationDraftSchema } from '../lib/schemas';
 import { executeAdmissionPipelineOptimized, executeWithMonitoring, executeBatch } from '../lib/performance';
@@ -204,7 +204,6 @@ async function createApplicationWithDependenciesOptimized(
   }
 ): Promise<string> {
   const { appId, userId, program, degreeLevel, personalStatement, priorEducation } = applicationData;
-  const now = new Date().toISOString();
   
   const operations = [
     // Main application record with optimized fields
@@ -435,7 +434,7 @@ export async function handleUpdateStatus(
     try {
       if (ctx) {
         ctx.waitUntil((async () => {
-          const result = await executeAdmissionPipelineOptimized(env.DB, {
+          await executeAdmissionPipelineOptimized(env.DB, {
             applicationId: appId,
             userId: app.user_id,
             actorId: adminId,
@@ -444,7 +443,7 @@ export async function handleUpdateStatus(
           await dispatchPendingJobs(env);
         })().catch(e => console.error('[lifecycle] Admission pipeline background error:', e)));
       } else {
-        const result = await executeAdmissionPipelineOptimized(env.DB, {
+        await executeAdmissionPipelineOptimized(env.DB, {
           applicationId: appId,
           userId: app.user_id,
           actorId: adminId,

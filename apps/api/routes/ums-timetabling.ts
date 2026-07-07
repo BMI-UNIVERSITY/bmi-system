@@ -1,5 +1,5 @@
 import { Env } from '../lib/types';
-import { ok, error } from '../lib/types';
+import { ok } from '../lib/types';
 
 export async function handleListTimetabling(request: Request, env: Env): Promise<Response> {
   const rows = await env.DB.prepare(

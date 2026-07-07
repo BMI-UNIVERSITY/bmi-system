@@ -2,7 +2,7 @@
  * BMI UMS – Stats & Catalog Routes
  * Computed analytics endpoints + catalog lookups for faculties/departments/programs.
  */
-import { ok, error, json } from '../lib/types';
+import { ok, error } from '../lib/types';
 import type { Env } from '../lib/types';
 
 // ═══════════════════════════════════════════════════════════════════════════════

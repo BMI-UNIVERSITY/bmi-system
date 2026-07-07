@@ -8,7 +8,7 @@ import { handleGetDashboard, handleGetCourses, handleEnroll, handleGetFinances, 
 import { handleAdminSetup, handleListUsers, handleUpdateUserRole, handleDeleteUser, handleAdminResetPassword, handleGetAuditLogs, handleBulkEmails } from './routes/admin';
 import { handleListTimetabling, handleCreateTimetabling } from './routes/ums-timetabling';
 import { handleListRubrics, handleCreateRubric, handleDeleteRubric } from './routes/ums-rubrics';
-import { handleGetPerformanceMetrics, handleGetQueryAnalysis, handleRunMaintenance, handleGetSystemHealth, handleClearMetrics, handleGetPerformanceAlerts } from './routes/performance';
+import { handleGetPerformanceMetrics, handleGetQueryAnalysis, handleRunMaintenance, handleGetSystemHealth, handleClearMetrics } from './routes/performance';
 import { trackResponseTime } from './lib/performance';
 import { error, validateCsrfToken } from './lib/types';
 import type { Env } from './lib/types';

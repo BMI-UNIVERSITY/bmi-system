@@ -1,7 +1,7 @@
 /**
  * BMI UMS – Dashboard Analytics Routes
  */
-import { ok, error, json } from '../lib/types';
+import { ok } from '../lib/types';
 import type { Env } from '../lib/types';
 
 export async function handleGetRevenueTrend(request: Request, env: Env): Promise<Response> {

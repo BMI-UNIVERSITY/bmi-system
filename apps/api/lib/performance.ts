@@ -3,7 +3,7 @@
  * Provides query performance tracking, batch operations, and monitoring
  */
 
-import type { D1Database, D1Result } from '@cloudflare/workers-types';
+import type { D1Database } from '@cloudflare/workers-types';
 
 export interface QueryMetrics {
   query: string;
@@ -209,7 +209,7 @@ export async function executeBatch(
       try {
         await db.batch(chunk);
         successfulOperations += chunk.length;
-      } catch (e) {
+      } catch {
         // If batch fails, try operations individually to identify failures
         for (let opIndex = 0; opIndex < chunk.length; opIndex++) {
           const globalIndex = chunkIndex * maxBatchSize + opIndex;
