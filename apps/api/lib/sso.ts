@@ -112,38 +112,43 @@ export async function getUserInfo(
   }
 
   switch (provider) {
-    case 'google':
+    case 'google': {
+      const g = data as { sub: string; email: string; given_name: string; family_name: string; name: string; email_verified: boolean };
       return {
-        id: data.sub,
-        email: data.email,
-        firstName: data.given_name || data.name.split(' ')[0],
-        lastName: data.family_name || data.name.split(' ').slice(1).join(' '),
-        emailVerified: data.email_verified,
+        id: g.sub,
+        email: g.email,
+        firstName: g.given_name || g.name.split(' ')[0],
+        lastName: g.family_name || g.name.split(' ').slice(1).join(' '),
+        emailVerified: g.email_verified,
       };
+    }
     case 'github': {
+      const gh = data as { id: number; email: string; name: string | null; login: string };
       const emailRes = await fetch('https://api.github.com/user/emails', {
         headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' },
       });
       const emails = await emailRes.json();
       type GitHubEmail = { primary: boolean; email: string; verified: boolean };
       const emailsArr = emails as GitHubEmail[];
-      const primaryEmail = emailsArr.find(e => e.primary)?.email ?? data.email;
+      const primaryEmail = emailsArr.find(e => e.primary)?.email ?? gh.email;
       return {
-        id: data.id.toString(),
+        id: gh.id.toString(),
         email: primaryEmail,
-        firstName: data.name?.split(' ')[0] || data.login,
-        lastName: data.name?.split(' ').slice(1).join(' ') || '',
+        firstName: gh.name?.split(' ')[0] || gh.login,
+        lastName: gh.name?.split(' ').slice(1).join(' ') || '',
         emailVerified: true,
       };
     }
-    case 'microsoft':
+    case 'microsoft': {
+      const ms = data as { id: string; mail: string; userPrincipalName: string; givenName: string; surname: string; displayName: string };
       return {
-        id: data.id,
-        email: data.mail || data.userPrincipalName,
-        firstName: data.givenName || data.displayName?.split(' ')[0],
-        lastName: data.surname || data.displayName?.split(' ').slice(1).join(' '),
+        id: ms.id,
+        email: ms.mail || ms.userPrincipalName,
+        firstName: ms.givenName || ms.displayName?.split(' ')[0],
+        lastName: ms.surname || ms.displayName?.split(' ').slice(1).join(' '),
         emailVerified: true,
       };
+    }
     default:
       throw new Error('Unsupported provider');
   }

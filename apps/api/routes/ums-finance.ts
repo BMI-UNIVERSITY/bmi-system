@@ -49,13 +49,14 @@ export async function handleListTransactions(request: Request, env: Env): Promis
   
   const { results } = await env.PLATFORM_CONTEXT!.db.prepare(dataQuery).bind(...bindings, perPage, offset).all();
 
-  const items = results.map((inv: Record<string, unknown>) => ({
+  interface InvoiceRow { id: string; student_id: string; first_name: string | null; last_name: string | null; amount: number; status: string; created_at: string }
+  const items = results.map((inv: InvoiceRow) => ({
     id: inv.id,
     studentId: inv.student_id,
     studentName: `${inv.first_name || ''} ${inv.last_name || ''}`.trim() || 'Unknown Student',
     amount: inv.amount,
-    amt: inv.amount, // Provide amt for UI compatibility
-    type: 'Tuition', // Defaulting since D1 doesn't store type yet
+    amt: inv.amount,
+    type: 'Tuition',
     status: inv.status === 'paid' ? 'Paid' : (inv.status === 'unpaid' ? 'Pending' : 'Failed'),
     date: inv.created_at,
     reference: inv.id.substring(0, 8).toUpperCase()

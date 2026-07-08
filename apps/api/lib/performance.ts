@@ -251,7 +251,7 @@ export async function executeBatch(
  * Optimized user lookup with caching-friendly query patterns
  */
 export async function findUserByEmail(db: IDatabase, email: string): Promise<Record<string, unknown> | null> {
-  const { result } = await executeWithMonitoring(
+  const { result } = await executeWithMonitoring<Record<string, unknown> | null>(
     db.prepare('SELECT id, email, password_hash, first_name, last_name, role, is_verified, mfa_secret, mfa_enabled, session_version FROM users WHERE email = ? LIMIT 1')
       .bind(email.toLowerCase()),
     'user_lookup_by_email'

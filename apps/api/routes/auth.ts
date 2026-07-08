@@ -210,9 +210,10 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
   const { email, password, mfa_token } = parsed;
 
   // Use optimized user lookup
+  interface UserRow { id: string; email: string; password_hash: string; first_name: string; last_name: string; role: string; is_verified: number; mfa_secret: string | null; mfa_enabled: number; session_version: number }
   const user = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT id, email, password_hash, first_name, last_name, role, is_verified, mfa_secret, mfa_enabled, session_version FROM users WHERE email = ? LIMIT 1'
-  ).bind(email.toLowerCase()).first<Record<string, unknown>>();
+  ).bind(email.toLowerCase()).first<UserRow>();
 
   if (!user) {
     return error('Invalid email or password', 401);

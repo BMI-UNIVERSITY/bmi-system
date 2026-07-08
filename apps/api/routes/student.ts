@@ -141,7 +141,8 @@ export async function handleGetTranscript(request: Request, env: Env, userId: st
   let totalPoints = 0;
   let totalCredits = 0;
   
-  const withGrades = (classes as Array<Record<string, unknown>>).map((c) => {
+  interface CourseRow { code: string; title: string; credits: number; term: string; enrollment_id: string; status: string; avg_pct: number | null }
+  const withGrades = (classes as CourseRow[]).map((c) => {
     let letter_grade = 'N/A';
     if (c.avg_pct !== null) {
       const gradeInfo = percentageToGrade(c.avg_pct);

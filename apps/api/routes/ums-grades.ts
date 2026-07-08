@@ -64,7 +64,8 @@ export async function handleListGrades(
      LIMIT ? OFFSET ?`
   ).bind(...bindings, perPage, offset).all();
 
-  const mappedResults = rows.results.map((r: Record<string, unknown>) => {
+  interface GradeRow { score: number | null; max_score: number | null; [key: string]: unknown }
+  const mappedResults = rows.results.map((r: GradeRow) => {
     const { letter_grade, grade_point } = calculateGrade(r.score, r.max_score);
     return { ...r, letter_grade, grade_point };
   });

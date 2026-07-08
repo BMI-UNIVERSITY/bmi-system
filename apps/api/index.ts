@@ -52,7 +52,7 @@ const log = createLogger('bmi-api');
 
 interface AuthResult {
   user: { sub: string; email: string; role: string; sv: number };
-  token: string;
+  token?: string;
 }
 
 type RouteHandler = (
