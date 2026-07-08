@@ -5,7 +5,7 @@ import type { IDatabase } from '@bmi/ports';
  */
 
 
-import { executeBatch, executeWithMonitoring } from './performance';
+import { executeBatch } from './performance';
 
 export interface BulkAdmissionRequest {
   applicationIds: string[];
@@ -41,21 +41,19 @@ export async function processBulkAdmissions(
   // Process in chunks to avoid overwhelming the database
   for (let i = 0; i < applicationIds.length; i += batchSize) {
     const chunk = applicationIds.slice(i, i + batchSize);
-    
-    // Get application data for the chunk
-    const placeholders = chunk.map(() => '?').join(',');
-    const appsResult = await executeWithMonitoring(
-      db.prepare(`
-        SELECT a.id, a.user_id, a.program, u.first_name, u.last_name
-        FROM applications a 
-        JOIN users u ON a.user_id = u.id 
-        WHERE a.id IN (${placeholders}) AND a.status = 'under_review'
-      `).bind(...chunk),
-      'bulk_admission_get_applications'
-    );
 
+    // Get application data for the chunk.
+    // NOTE: Must use db.query() here, NOT executeWithMonitoring():
+    // executeWithMonitoring calls .run() which discards .results in the D1 adapter.
+    const placeholders = chunk.map(() => '?').join(',');
     type AppRow = { id: string; user_id: string; program: string; first_name: string; last_name: string };
-    const applications = (appsResult.result as unknown as { results?: AppRow[] })?.results ?? [];
+    const applications = await db.query<AppRow>(
+      `SELECT a.id, a.user_id, a.program, u.first_name, u.last_name
+       FROM applications a
+       JOIN users u ON a.user_id = u.id
+       WHERE a.id IN (${placeholders}) AND a.status = 'under_review'`,
+      chunk
+    );
 
     // Process each application in the chunk
     for (const app of applications) {
@@ -63,13 +61,13 @@ export async function processBulkAdmissions(
         // Update application status and user role in batch
         const statusOps = [
           db.prepare(
-            'UPDATE applications SET status = ?, reviewer_id = ?, reviewed_at = datetime(\'now\') WHERE id = ?'
+            "UPDATE applications SET status = ?, reviewer_id = ?, reviewed_at = datetime('now') WHERE id = ?"
           ).bind('accepted', adminId, app.id),
-          
+
           db.prepare(
-            'UPDATE users SET role = \'student\', updated_at = datetime(\'now\') WHERE id = ?'
+            "UPDATE users SET role = 'student', updated_at = datetime('now') WHERE id = ?"
           ).bind(app.user_id),
-          
+
           db.prepare(
             `INSERT INTO application_status_logs (id, application_id, changed_by, old_status, new_status, notes)
              VALUES (?, ?, ?, 'under_review', 'accepted', 'Bulk admission processed')`
@@ -77,7 +75,7 @@ export async function processBulkAdmissions(
         ];
 
         const batchResult = await executeBatch(db, statusOps);
-        
+
         if (batchResult.success) {
           // Run simplified admission pipeline
           const { uid, regNo } = await executeSimplifiedAdmissionPipeline(db, {
@@ -140,19 +138,21 @@ async function executeSimplifiedAdmissionPipeline(
 ): Promise<{ uid: string | null; regNo: string | null }> {
   const { applicationId, userId, actorId, program, firstName, lastName } = context;
 
-  // Check for existing UID
-  const existingPersonResult = await executeWithMonitoring(
-    db.prepare('SELECT p.uid FROM users u LEFT JOIN persons p ON u.person_id = p.id WHERE u.id = ?').bind(userId),
-    'bulk_admission_check_uid'
+  // Check for existing UID.
+  // Must use db.queryOne(), NOT executeWithMonitoring():
+  // executeWithMonitoring calls .run() which discards row data in the D1 adapter.
+  type PersonRow = { uid?: string };
+  const existingPerson = await db.queryOne<PersonRow>(
+    'SELECT p.uid FROM users u LEFT JOIN persons p ON u.person_id = p.id WHERE u.id = ?',
+    [userId]
   );
-  
-  let uid = (existingPersonResult.result as unknown as { uid?: string })?.uid;
+  let uid = existingPerson?.uid;
 
   // Generate UID if needed
   if (!uid) {
     const { generateUID } = await import('./uid');
     uid = await generateUID(db);
-    
+
     const personId = crypto.randomUUID().replace(/-/g, '');
     const now = new Date().toISOString();
 
@@ -160,7 +160,7 @@ async function executeSimplifiedAdmissionPipeline(
       db.prepare(
         'INSERT INTO persons (id, uid, first_name, last_name, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
       ).bind(personId, uid, firstName, lastName, now, now),
-      
+
       db.prepare(
         'UPDATE users SET person_id = ?, updated_at = ? WHERE id = ?'
       ).bind(personId, now, userId)
@@ -169,47 +169,49 @@ async function executeSimplifiedAdmissionPipeline(
     await executeBatch(db, personOps);
   }
 
-  // Create student record if not exists
-  const existingStudentResult = await executeWithMonitoring(
-    db.prepare('SELECT user_id FROM students WHERE user_id = ?').bind(userId),
-    'bulk_admission_check_student'
+  // Create student record if not exists.
+  // Must use db.queryOne(), NOT executeWithMonitoring():
+  // executeWithMonitoring calls .run() which discards row data in the D1 adapter.
+  const existingStudent = await db.queryOne<{ user_id: string }>(
+    'SELECT user_id FROM students WHERE user_id = ?',
+    [userId]
   );
 
-  if (!existingStudentResult.result) {
+  if (!existingStudent) {
     const now = new Date().toISOString();
     const placeholderRegNo = `PENDING-${userId.slice(0, 8).toUpperCase()}`;
-    
-    await executeWithMonitoring(
-      db.prepare(
-        'INSERT INTO students (user_id, reg_no, admission_date, programme, status, created_at, updated_at) VALUES (?, ?, ?, ?, \'Active\', ?, ?)'
-      ).bind(userId, placeholderRegNo, now.split('T')[0], program, now, now),
-      'bulk_admission_create_student'
-    );
+
+    await db.prepare(
+      "INSERT INTO students (user_id, reg_no, admission_date, programme, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'Active', ?, ?)"
+    ).bind(userId, placeholderRegNo, now.split('T')[0], program, now, now).run();
   }
 
-  // Generate registration number
+  // Generate registration number.
+  // Must use db.queryOne(), NOT executeWithMonitoring():
+  // executeWithMonitoring calls .run() which discards row data in the D1 adapter.
   let regNo: string | null = null;
   try {
-    const progResult = await executeWithMonitoring(
-      db.prepare('SELECT id, code, level FROM programs WHERE lower(trim(name)) = lower(trim(?)) OR lower(trim(code)) = lower(trim(?)) LIMIT 1')
-        .bind(program, program),
-      'bulk_admission_find_program'
+    const progInfo = await db.queryOne<{ id: string; code: string; level: string }>(
+      'SELECT id, code, level FROM programs WHERE lower(trim(name)) = lower(trim(?)) OR lower(trim(code)) = lower(trim(?)) LIMIT 1',
+      [program, program]
     );
-    
-    const progInfo = progResult.result as unknown as { id: string; code: string; level: string } | null;
-    if (progInfo) {
+
+    if (!progInfo) {
+      console.warn(
+        `[RegNo] No programs row matched "${program}" in bulk admission — ` +
+        'student enrolled with placeholder reg_no. Seed the programs table to fix.'
+      );
+    } else {
       const { generateRegNo } = await import('./reg_number');
       const year = new Date().getUTCFullYear();
       regNo = await generateRegNo(db, progInfo.id, progInfo.code, year, progInfo.level);
-      
-      await executeWithMonitoring(
-        db.prepare('UPDATE students SET reg_no = ?, updated_at = ? WHERE user_id = ?')
-          .bind(regNo, new Date().toISOString(), userId),
-        'bulk_admission_set_regno'
-      );
+
+      await db.prepare('UPDATE students SET reg_no = ?, updated_at = ? WHERE user_id = ?')
+        .bind(regNo, new Date().toISOString(), userId)
+        .run();
     }
   } catch (e) {
-    console.error('RegNo generation failed in bulk admission:', e);
+    console.error('[RegNo] generateRegNo failed in bulk admission:', e);
   }
 
   // Add lifecycle events in batch
@@ -219,7 +221,7 @@ async function executeSimplifiedAdmissionPipeline(
        (id, uid, application_id, stage, status, idempotency_key, actor_id, notes)
        VALUES (lower(hex(randomblob(16))), ?, ?, 'application_accepted', 'completed', ?, ?, 'Bulk admission processed')`
     ).bind(uid, applicationId, `${applicationId}:bulk_accepted`, actorId),
-    
+
     db.prepare(
       `INSERT OR IGNORE INTO lifecycle_events
        (id, uid, application_id, stage, status, idempotency_key, actor_id, notes)
@@ -229,7 +231,7 @@ async function executeSimplifiedAdmissionPipeline(
 
   await executeBatch(db, lifecycleOps);
 
-  return { uid, regNo };
+  return { uid: uid ?? null, regNo };
 }
 
 /**
@@ -247,60 +249,30 @@ export async function bulkCleanupExpiredRecords(db: IDatabase): Promise<{
   const tablesProcessed: string[] = [];
 
   const cleanupTables = [
-    {
-      table: 'email_verifications',
-      condition: 'expires_at < ?',
-      params: [now]
-    },
-    {
-      table: 'password_reset_tokens', 
-      condition: 'expires_at < ?',
-      params: [now]
-    },
-    {
-      table: 'sessions',
-      condition: 'expires_at < ?',
-      params: [now]
-    },
-    {
-      table: 'rate_limits',
-      condition: 'datetime(window_start, \'+1 hour\') < ?',
-      params: [now]
-    },
-    {
-      table: 'oauth_accounts',
-      condition: 'expires_at IS NOT NULL AND expires_at < ?',
-      params: [now]
-    }
+    { table: 'email_verifications',  condition: 'expires_at < ?',                              params: [now] },
+    { table: 'password_reset_tokens', condition: 'expires_at < ?',                             params: [now] },
+    { table: 'sessions',             condition: 'expires_at < ?',                              params: [now] },
+    { table: 'rate_limits',          condition: "datetime(window_start, '+1 hour') < ?",       params: [now] },
+    { table: 'oauth_accounts',       condition: 'expires_at IS NOT NULL AND expires_at < ?',   params: [now] }
   ];
 
   try {
     for (const cleanup of cleanupTables) {
-      const result = await executeWithMonitoring(
-        db.prepare(`DELETE FROM ${cleanup.table} WHERE ${cleanup.condition}`)
-          .bind(...cleanup.params),
-        `bulk_cleanup_${cleanup.table}`
-      );
-      
-      const changes = (result.result as unknown as { changes?: number })?.changes ?? 0;
+      // DELETE is a write — .run() is correct here; it returns {success, meta:{changes}}.
+      const result = await db.prepare(`DELETE FROM ${cleanup.table} WHERE ${cleanup.condition}`)
+        .bind(...cleanup.params)
+        .run();
+      const changes = (result as unknown as { meta?: { changes?: number }; changes?: number })?.meta?.changes
+        ?? (result as unknown as { changes?: number })?.changes
+        ?? 0;
       totalDeleted += changes;
       tablesProcessed.push(`${cleanup.table}(${changes})`);
     }
 
-    return {
-      success: true,
-      recordsDeleted: totalDeleted,
-      tablesProcessed,
-      duration: Date.now() - startTime
-    };
+    return { success: true, recordsDeleted: totalDeleted, tablesProcessed, duration: Date.now() - startTime };
   } catch (e) {
     console.error('Bulk cleanup failed:', e);
-    return {
-      success: false,
-      recordsDeleted: totalDeleted,
-      tablesProcessed,
-      duration: Date.now() - startTime
-    };
+    return { success: false, recordsDeleted: totalDeleted, tablesProcessed, duration: Date.now() - startTime };
   }
 }
 
@@ -317,29 +289,22 @@ export async function optimizeDatabaseIndexes(db: IDatabase): Promise<{
   const recommendations: string[] = [];
 
   try {
-    // Get current indexes
-    const indexesResult = await executeWithMonitoring(
-      db.prepare('SELECT name, tbl_name FROM sqlite_master WHERE type = \'index\' AND name NOT LIKE \'sqlite_%\''),
-      'analyze_database_indexes'
-    );
-    
+    // Get current indexes.
+    // Must use db.query() not executeWithMonitoring():
+    // executeWithMonitoring calls .run() which discards .results in the D1 adapter.
     type IndexRow = { name: string; tbl_name: string };
     type TableRow = { name: string };
-    const indexes = (indexesResult.result as unknown as { results?: IndexRow[] })?.results ?? [];
-
-    // Run SQLite's built-in optimization
-    await executeWithMonitoring(
-      db.prepare('PRAGMA optimize'),
-      'pragma_optimize'
+    const indexes = await db.query<IndexRow>(
+      "SELECT name, tbl_name FROM sqlite_master WHERE type = 'index' AND name NOT LIKE 'sqlite_%'"
     );
+
+    // Run SQLite's built-in optimization (write-side command — .run() is correct)
+    await db.prepare('PRAGMA optimize').run();
 
     // Analyze table statistics
-    const tablesResult = await executeWithMonitoring(
-      db.prepare('SELECT name FROM sqlite_master WHERE type = \'table\' AND name NOT LIKE \'sqlite_%\''),
-      'get_table_names'
+    const tables = await db.query<TableRow>(
+      "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
     );
-    
-    const tables = (tablesResult.result as unknown as { results?: TableRow[] })?.results ?? [];
 
     // Check for tables that might need indexes
     const largeTableChecks = await Promise.all(
@@ -367,12 +332,7 @@ export async function optimizeDatabaseIndexes(db: IDatabase): Promise<{
       recommendations.push('Database has relatively few indexes - monitor query performance for optimization opportunities');
     }
 
-    return {
-      success: true,
-      indexesAnalyzed: indexes.length,
-      recommendations,
-      duration: Date.now() - startTime
-    };
+    return { success: true, indexesAnalyzed: indexes.length, recommendations, duration: Date.now() - startTime };
   } catch (e) {
     console.error('Database optimization failed:', e);
     return {

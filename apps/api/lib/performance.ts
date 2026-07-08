@@ -251,12 +251,12 @@ export async function executeBatch(
  * Optimized user lookup with caching-friendly query patterns
  */
 export async function findUserByEmail(db: IDatabase, email: string): Promise<Record<string, unknown> | null> {
-  const { result } = await executeWithMonitoring<Record<string, unknown> | null>(
-    db.prepare('SELECT id, email, password_hash, first_name, last_name, role, is_verified, mfa_secret, mfa_enabled, session_version FROM users WHERE email = ? LIMIT 1')
-      .bind(email.toLowerCase()),
-    'user_lookup_by_email'
+  // Use queryOne() (backed by .first()), NOT executeWithMonitoring:
+  // executeWithMonitoring calls .run() which discards row data in the D1 adapter.
+  return db.queryOne<Record<string, unknown>>(
+    'SELECT id, email, password_hash, first_name, last_name, role, is_verified, mfa_secret, mfa_enabled, session_version FROM users WHERE email = ? LIMIT 1',
+    [email.toLowerCase()]
   );
-  return result;
 }
 
 /**
@@ -390,7 +390,16 @@ export async function executeAdmissionPipelineOptimized(
       `SELECT id, code, level FROM programs WHERE lower(trim(name)) = lower(trim(?)) OR lower(trim(code)) = lower(trim(?)) LIMIT 1`
     ).bind(program, program).first<{ id: string; code: string; level: string }>();
 
-    if (progInfo) {
+    if (!progInfo) {
+      // programs table is empty or this program label has no matching row.
+      // ACTION REQUIRED: seed the programs table (via UMS Degree Programs screen
+      // or a new migration) so accepted students receive a real registration number
+      // instead of the permanent placeholder 'PENDING-XXXXXXXX'.
+      console.warn(
+        `[RegNo] No programs row matched "${program}". ` +
+        'Student enrolled with placeholder reg_no — seed the programs table to fix.'
+      );
+    } else {
       const year = new Date().getUTCFullYear();
       regNo = await generateRegNo(db, progInfo.id, progInfo.code, year, progInfo.level);
       
@@ -408,7 +417,21 @@ export async function executeAdmissionPipelineOptimized(
       await executeBatch(db, updateOps);
     }
   } catch (e) {
-    console.error('RegNo generation failed:', e);
+    // Distinguish between a missing programs row (expected until the table is seeded)
+    // and a genuine error from generateRegNo.
+    // ACTION REQUIRED: if regNo is always null, run:
+    //   SELECT * FROM programs;
+    // If empty, seed the table via the UMS Degree Programs screen or a migration.
+    if (!regNo) {
+      console.warn(
+        '[RegNo] programs table lookup returned no row for program:', program,
+        '— student enrolled with placeholder reg_no. Seed the programs table to fix.'
+      );
+    } else {
+      // generateRegNo itself threw — rethrow so the caller can log/alert properly.
+      console.error('[RegNo] generateRegNo failed for', program, ':', e);
+      throw e;
+    }
   }
 
   return { uid, regNo };

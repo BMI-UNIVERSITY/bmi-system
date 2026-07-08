@@ -241,14 +241,13 @@ async function sendApplicationNotificationsOptimized(
 ): Promise<void> {
   if (!env.RESEND_API_KEY) return;
 
-  // Get user data with single query
-  const userResult = await executeWithMonitoring(
-    env.PLATFORM_CONTEXT!.db.prepare('SELECT email, first_name FROM users WHERE id = ?').bind(userId),
-    'get_user_for_notification_email'
-  );
-  
+  // Get user data with single query — must use .first(), not executeWithMonitoring,
+  // because executeWithMonitoring calls .run() which discards row data in the D1 adapter.
   type UserRow = { email: string; first_name: string };
-  const user = userResult.result as unknown as UserRow | null;
+  const user = await env.PLATFORM_CONTEXT!.db
+    .prepare('SELECT email, first_name FROM users WHERE id = ?')
+    .bind(userId)
+    .first<UserRow>();
   if (!user) return;
 
   // Prepare email promises for parallel execution
@@ -334,7 +333,7 @@ export async function handleGetApplication(request: Request, env: Env): Promise<
   const appId = url.pathname.split('/')[4];
 
   const app = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT a.*, u.first_name, u.last_name, u.email,
+    `SELECT a.*, u.first_name, u.last_name, u.email, u.phone,
        (SELECT json_group_array(json_object('id', d.id, 'doc_type', d.doc_type, 'file_name', d.file_name, 'uploaded_at', d.uploaded_at))
         FROM documents d WHERE d.application_id = a.id) as documents
      FROM applications a JOIN users u ON a.user_id = u.id WHERE a.id = ?`
@@ -374,17 +373,19 @@ export async function handleUpdateStatus(
     return error(`Status must be one of: ${validStatuses.join(', ')}`);
   }
 
-  const appResult = await executeWithMonitoring(
-    env.PLATFORM_CONTEXT!.db.prepare(
+  // Must use .first(), not executeWithMonitoring: the latter calls .run() internally,
+  // which in the D1 adapter discards .results and returns only {success, meta}.
+  // That makes `app` always truthy but with all fields undefined — the 404 never
+  // fires and old_status / email / user_id propagate as undefined downstream.
+  type AppRow = { id: string; status: string; program: string; user_id: string; email: string; first_name: string };
+  const app = await env.PLATFORM_CONTEXT!.db
+    .prepare(
       `SELECT a.id, a.status, a.program, a.user_id, u.email, u.first_name
        FROM applications a JOIN users u ON a.user_id = u.id
        WHERE a.id = ?`
-    ).bind(appId),
-    'get_application_for_status_update'
-  );
-  
-  type AppRow = { id: string; status: string; program: string; user_id: string; email: string; first_name: string };
-  const app = appResult.result as unknown as AppRow | null;
+    )
+    .bind(appId)
+    .first<AppRow>();
   if (!app) return error('Application not found', 404);
 
   const oldStatus = app.status;
