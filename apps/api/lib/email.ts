@@ -53,9 +53,10 @@ export async function processEmailDelivery(payload: EmailPayload, ctx: PlatformC
 export function applicationSubmittedEmail(firstName: string, program: string, applicationId: string): string {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 40px 20px;">
-      <div style="background: #0f172a; padding: 24px; border-radius: 8px 8px 0 0; text-align: center;">
-        <h1 style="color: #d4af37; margin: 0; font-size: 24px;">BMI University</h1>
-        <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Application Received</p>
+      <div style="background: #0f172a; padding: 28px 24px 20px; border-radius: 8px 8px 0 0; text-align: center;">
+        <img src="https://bmi-portal.hkmministries.org/bmi-logo.png" alt="BMI University" style="height: 72px; width: auto; margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto;" />
+        <h1 style="color: #d4af37; margin: 0; font-size: 22px; letter-spacing: 0.5px;">BMI University</h1>
+        <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0; font-size: 13px;">Application Received</p>
       </div>
       <div style="background: #fff; padding: 32px; border-radius: 0 0 8px 8px; border: 1px solid #e2e8f0;">
         <h2 style="color: #0f172a;">Dear ${firstName},</h2>
@@ -103,9 +104,10 @@ export function statusUpdateEmail(firstName: string, newStatus: string, program:
 
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 40px 20px;">
-      <div style="background: #0f172a; padding: 24px; border-radius: 8px 8px 0 0; text-align: center;">
-        <h1 style="color: #d4af37; margin: 0; font-size: 24px;">BMI University</h1>
-        <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Application Update</p>
+      <div style="background: #0f172a; padding: 28px 24px 20px; border-radius: 8px 8px 0 0; text-align: center;">
+        <img src="https://bmi-portal.hkmministries.org/bmi-logo.png" alt="BMI University" style="height: 72px; width: auto; margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto;" />
+        <h1 style="color: #d4af37; margin: 0; font-size: 22px; letter-spacing: 0.5px;">BMI University</h1>
+        <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0; font-size: 13px;">Application Update</p>
       </div>
       <div style="background: #fff; padding: 32px; border-radius: 0 0 8px 8px; border: 1px solid #e2e8f0;">
         <h2 style="color: #0f172a;">Dear ${firstName},</h2>
