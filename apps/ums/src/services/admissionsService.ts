@@ -96,7 +96,7 @@ export const admissionsService = {
    * Get audit log of status changes for an application
    */
   async getStatusLogs(id: string) {
-    const response = await authFetch(`${API_URL.replace('/v1', '')}/applications/${id}/lifecycle`);
+    const response = await authFetch(`${API_URL.replace('/v1', '')}/applications/${id}/logs`);
     if (!response.ok) {
       throw new Error('Failed to load application audit logs');
     }
