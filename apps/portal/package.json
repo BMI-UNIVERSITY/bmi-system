@@ -33,7 +33,7 @@
   },
   "dependencies": {
     "@bmi/shared": "file:../../packages/shared",
-    "@sentry/browser": "^10.62.0",
+    "@sentry/browser": "^10.64.0",
     "@sentry/react": "^10.62.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
