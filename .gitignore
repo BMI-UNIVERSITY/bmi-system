@@ -16,6 +16,9 @@ bmi-*/package-lock.json
 # Generated tarballs
 *.tgz
 
+# Turbo cache
+.turbo
+
 # Runtime data
 data/
 
