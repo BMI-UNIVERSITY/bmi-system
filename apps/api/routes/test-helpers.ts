@@ -52,6 +52,10 @@ export function makeContext(db?: any) {
     queryOne: rawDb.queryOne ?? vi.fn().mockResolvedValue(null),
     getPlatform: rawDb.getPlatform ?? vi.fn().mockReturnValue('test-mock'),
   };
+
+  // Mock storage with in-memory store
+  const mockStorageFiles = new Map<string, Buffer>();
+
   return {
     db: mockDb,
     kv: {
@@ -83,6 +87,95 @@ export function makeContext(db?: any) {
     tracer: {
       getRequestId: vi.fn().mockReturnValue('test-request-id'),
       setTag: vi.fn(),
+    },
+    identity: {
+      createUser: vi.fn(),
+      getUser: vi.fn(),
+      getUserByEmail: vi.fn(),
+      updateUser: vi.fn(),
+      deleteUser: vi.fn(),
+      validateCredentials: vi.fn(),
+      setupMfa: vi.fn(),
+      verifyMfa: vi.fn(),
+      resetPassword: vi.fn(),
+    },
+    lms: {
+      getCourses: vi.fn(),
+      getCourse: vi.fn(),
+      enrollStudent: vi.fn(),
+      dropStudent: vi.fn(),
+      getEnrollments: vi.fn(),
+      getGrades: vi.fn(),
+      syncGrade: vi.fn(),
+    },
+    email: {
+      createMailbox: vi.fn(),
+      deleteMailbox: vi.fn(),
+      sendEmail: vi.fn(),
+      resetMailboxPassword: vi.fn(),
+    },
+    payment: {
+      createPaymentIntent: vi.fn().mockResolvedValue({
+        id: 'pi_mock_123',
+        amount: 1000,
+        currency: 'USD',
+        status: 'succeeded'
+      }),
+      getPaymentIntent: vi.fn(),
+      cancelPaymentIntent: vi.fn(),
+      handleWebhook: vi.fn(),
+    },
+    document: {
+      generateDocument: vi.fn(),
+      getDocument: vi.fn(),
+      getDocumentsByUser: vi.fn(),
+      verifyDocument: vi.fn().mockImplementation((params: any) => {
+        if (params.documentId === 'UNKNOWN-123') {
+          return Promise.resolve({ valid: false, error: 'Certificate not found', code: 'NOT_FOUND', document: null, hashVerified: false });
+        }
+        return Promise.resolve({
+          valid: true,
+          document: {
+            serial_number: params.documentId || 'TEST-123',
+            student_name: 'Test Student',
+            degree_title: 'Bachelor of Science',
+            issue_date: '2026-05-20',
+            gpa: 3.8,
+            status: 'ISSUED'
+          },
+          hashVerified: true
+        });
+      }),
+    },
+    notification: {
+      send: vi.fn(),
+      getNotifications: vi.fn(),
+      markAsRead: vi.fn(),
+      markAllAsRead: vi.fn(),
+    },
+    storage: {
+      upload: vi.fn().mockImplementation((input: any) => {
+        mockStorageFiles.set(input.key, input.data);
+        return Promise.resolve({
+          id: crypto.randomUUID(),
+          key: input.key,
+          url: `https://mock.storage/${input.key}`,
+          size: input.data.byteLength,
+          mimeType: input.mimeType,
+          createdAt: new Date(),
+          metadata: input.metadata,
+        });
+      }),
+      download: vi.fn().mockImplementation((key: string) => {
+        return Promise.resolve(mockStorageFiles.get(key) || Buffer.from(''));
+      }),
+      delete: vi.fn().mockImplementation((key: string) => {
+        mockStorageFiles.delete(key);
+        return Promise.resolve();
+      }),
+      getUrl: vi.fn().mockImplementation((key: string) => {
+        return Promise.resolve(`https://mock.storage/${key}`);
+      }),
     },
   };
 }

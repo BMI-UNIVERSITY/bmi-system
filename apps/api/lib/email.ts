@@ -33,26 +33,17 @@ export async function sendEmail(env: Env, payload: EmailPayload): Promise<boolea
   }
 }
 
-export async function processEmailDelivery(payload: EmailPayload, resendApiKey: string): Promise<boolean> {
-  if (!resendApiKey) return false;
+import type { PlatformContext } from '@bmi/bootstrap';
+
+export async function processEmailDelivery(payload: EmailPayload, ctx: PlatformContext): Promise<boolean> {
   try {
-    const response = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${resendApiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: FROM_ADDRESS,
-        to: [payload.to],
-        subject: payload.subject,
-        html: payload.html,
-      }),
+    await ctx.email.sendEmail({
+      to: payload.to,
+      from: FROM_ADDRESS,
+      subject: payload.subject,
+      html: payload.html,
     });
-    if (!response.ok) {
-      console.error('Email send failed:', await response.text());
-    }
-    return response.ok;
+    return true;
   } catch (err) {
     console.error('Email send error:', err);
     return false;

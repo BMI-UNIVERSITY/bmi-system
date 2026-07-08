@@ -72,9 +72,11 @@ export async function handleUploadDocument(request: Request, env: Env, userId: s
 
   const r2Key = `documents/${userId}/${applicationId}/${docType}-${crypto.randomUUID()}.${ext}`;
 
-  await env.DOCUMENTS.put(r2Key, fileBuffer, {
-    httpMetadata: { contentType: detectedMime },
-    customMetadata: { userId, applicationId, docType, originalName: safeFileName },
+  const storedFile = await env.PLATFORM_CONTEXT!.storage.upload({
+    key: r2Key,
+    data: Buffer.from(fileBuffer),
+    mimeType: detectedMime,
+    metadata: { userId, applicationId, docType, originalName: safeFileName },
   });
 
   const docId = crypto.randomUUID();
@@ -123,8 +125,8 @@ export async function handleDownloadDocument(
     return error('Access denied', 403);
   }
 
-  const object = await env.DOCUMENTS.get(doc.r2_key);
-  if (!object) return error('File not found in storage', 404);
+  const buffer = await env.PLATFORM_CONTEXT!.storage.download(doc.r2_key);
+  if (!buffer) return error('File not found in storage', 404);
 
   // Inline-viewable MIME types — browser renders these natively
   const INLINE_TYPES = new Set([
@@ -153,7 +155,7 @@ export async function handleDownloadDocument(
     request.headers.get('User-Agent') || null
   ).run().catch(e => console.error('Audit log write failed:', e));
 
-  return new Response(object.body, {
+  return new Response(buffer, {
     headers: {
       'Content-Type': doc.mime_type,
       'Content-Disposition': disposition,
@@ -181,7 +183,7 @@ export async function handleDeleteDocument(
 
   if (!doc) return error('Document not found', 404);
 
-  await env.DOCUMENTS.delete(doc.r2_key);
+  await env.PLATFORM_CONTEXT!.storage.delete(doc.r2_key);
   await env.PLATFORM_CONTEXT!.db.prepare('DELETE FROM documents WHERE id = ?').bind(docId).run();
 
   await logAdminAction(env, adminId, 'delete_document', 'document', docId, { file_name: doc.file_name }, request);

@@ -136,19 +136,18 @@ describe('student routes', () => {
       expect(res.status).toBe(400);
     });
 
-    it('pays invoice and returns sandbox flag', async () => {
-
+    it('pays invoice and returns payment intent id', async () => {
       const db = {
         prepare: vi.fn().mockReturnValue({
           bind: vi.fn().mockReturnValue({
-            first: vi.fn().mockResolvedValue({ status: 'unpaid' }),
+            first: vi.fn().mockResolvedValue({ id: 'inv1', amount: 1000, status: 'unpaid' }),
             run: vi.fn().mockResolvedValue({}),
           }),
         }),
       };
       const res = await handlePayInvoice(new Request('http://localhost'), makeEnv(db), 'u1', 'inv1');
       const body = await res.json() as any;
-      expect(body.data.sandbox).toBe(true);
+      expect(body.data.paymentIntentId).toBe('pi_mock_123');
     });
   });
 

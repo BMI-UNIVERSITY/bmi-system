@@ -87,28 +87,36 @@ export async function handleVerifyCertificate(request: Request, env: Env): Promi
   const body: any = await request.json().catch(() => ({}));
   const serial = body.serial || body.serial_number;
   if (!serial) return error('Serial number is required', 400);
+  
+  // Use IDocumentGenerator to verify the document
+  const verification = await env.PLATFORM_CONTEXT!.document.verifyDocument({
+    documentId: serial,
+    type: 'certificate',
+    hash: body.hash
+  });
+  
+  if (!verification.valid) {
+    return ok({ valid: false, error: verification.error, code: verification.code || 'INVALID' });
+  }
+  
+  // Bump verification count
   const cert = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT c.*, u.first_name || ' ' || u.last_name as student_name
      FROM certificates c LEFT JOIN users u ON c.student_id = u.id
      WHERE c.serial_number = ?`
   ).bind(serial).first();
-  if (!cert) return ok({ valid: false, error: 'Certificate not found', code: 'NOT_FOUND' });
-  // Bump verification count
-  await env.PLATFORM_CONTEXT!.db.prepare(`UPDATE certificates SET verification_count = verification_count + 1, updated_at=datetime('now') WHERE id=?`).bind((cert as any).id).run();
+  
+  if (cert) {
+    await env.PLATFORM_CONTEXT!.db.prepare(`UPDATE certificates SET verification_count = verification_count + 1, updated_at=datetime('now') WHERE id=?`).bind((cert as any).id).run();
+  }
+  
   return ok({
-    valid: (cert as any).status === 'ISSUED',
-    certificate: {
-      serial_number: (cert as any).serial_number,
-      student_name: (cert as any).student_name,
-      degree_title: (cert as any).degree_title,
-      issue_date: (cert as any).issue_date,
-      gpa: (cert as any).gpa,
-      status: (cert as any).status,
-    },
+    valid: true,
+    certificate: verification.document,
     verification: {
       timestamp: new Date().toISOString(),
       method: body.method || 'online',
-      hash_verified: !!body.hash && body.hash === (cert as any).content_hash,
+      hash_verified: verification.hashVerified,
       verification_count: ((cert as any).verification_count || 0) + 1,
     }
   });

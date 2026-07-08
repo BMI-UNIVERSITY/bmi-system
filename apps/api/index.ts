@@ -42,6 +42,11 @@ import {
   handleStudentStatsOverview, handleStaffStatsOverview, handleCourseStatsOverview, handleFinanceStats,
   handleVerifyCertificate, handleCertificateVerificationStats,
 } from './routes/ums-stats';
+import { handleClaimAccount } from './routes/claim';
+import { handleLmsCourses, handleLmsGrades } from './routes/lms';
+import { handleCreatePaymentIntent, handlePaymentWebhook } from './routes/payment';
+import { handleRegistrationStep } from './routes/registration';
+import { handleTransitionToAlumni } from './routes/alumni';
 
 const log = createLogger('bmi-api');
 
@@ -203,6 +208,14 @@ const ROUTES: Route[] = [
   { method: 'GET', path: /^\/api\/v1\/finance\/stats$/, roles: ['admin', 'staff'], handler: async (req, env, p, auth, ctx) => handleFinanceStats(req, env) },
   { method: 'POST', path: /^\/api\/v1\/documents\/verify$/, roles: undefined, handler: async (req, env, p, auth, ctx) => handleVerifyCertificate(req, env) },
   { method: 'GET', path: /^\/api\/v1\/certificates\/verification\/stats$/, roles: ['admin', 'staff'], handler: async (req, env, p, auth, ctx) => handleCertificateVerificationStats(req, env) },
+  // Multi-Agent Implementation Routes
+  { method: 'POST', path: /^\/api\/claim$/, roles: undefined, handler: async (req, env, p, auth, ctx) => handleClaimAccount(req, env, ctx) },
+  { method: 'GET', path: /^\/api\/lms\/courses$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleLmsCourses(req, env, auth!.user.sub) },
+  { method: 'GET', path: /^\/api\/lms\/grades$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleLmsGrades(req, env, auth!.user.sub) },
+  { method: 'POST', path: /^\/api\/payment\/create-intent$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleCreatePaymentIntent(req, env, auth!.user.sub) },
+  { method: 'POST', path: /^\/api\/payment\/webhook$/, roles: undefined, handler: async (req, env, p, auth, ctx) => handlePaymentWebhook(req, env) },
+  { method: 'POST', path: /^\/api\/registration\/([^/]+)$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleRegistrationStep(req, env, auth!.user.sub, p[1]) },
+  { method: 'POST', path: /^\/api\/alumni\/transition$/, roles: ['admin'], handler: async (req, env, p, auth, ctx) => handleTransitionToAlumni(req, env, auth!.user.sub) },
 ];
 
 import { bootstrap } from '@bmi/bootstrap';
@@ -322,12 +335,12 @@ export default withSentry(
       let status = 'failed';
       let errorMessage = '';
       try {
-        const success = await processEmailDelivery(payload, env.RESEND_API_KEY || '');
+        const success = await processEmailDelivery(payload, context);
         if (success) {
           status = 'sent';
           msg.ack();
         } else {
-          errorMessage = 'Resend API returned failure';
+          errorMessage = 'Email provider returned failure';
           msg.retry();
         }
       } catch (err: any) {

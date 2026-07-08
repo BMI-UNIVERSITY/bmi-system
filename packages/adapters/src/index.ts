@@ -6,6 +6,8 @@ export * from './cloudflare/CloudflareWriteQueueAdapter';
 export * from './cloudflare/EnvironmentSecretsAdapter';
 export * from './cloudflare/CloudflareLoggerAdapter';
 export * from './cloudflare/CloudflareTracerAdapter';
+export * from './cloudflare/ResendEmailAdapter';
+export * from './cloudflare/CloudflareR2StorageAdapter';
 // Memory Adapters
 export * from './memory/MemoryDatabaseAdapter';
 export * from './memory/MemoryKVAdapter';
@@ -28,3 +30,10 @@ export * from './aws/PostgresWriteQueueAdapter';
 export * from './aws/RedisAdapter';
 export * from './aws/SQSAdapter';
 export * from './aws/AWSSecretsAdapter';
+
+// Open Adapters
+export * from './keycloak/KeycloakAdapter';
+export * from './moodle/MoodleAdapter';
+export * from './mailcow/MailcowAdapter';
+export * from './stripe/StripeAdapter';
+export * from './pdf/PdfDocumentAdapter';

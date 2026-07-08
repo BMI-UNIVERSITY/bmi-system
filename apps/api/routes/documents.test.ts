@@ -27,11 +27,7 @@ function makeEnv(overrides: Record<string, unknown> = {}) {
     getPlatform: vi.fn().mockReturnValue('test'),
   };
 
-  const documents = {
-    put: vi.fn().mockResolvedValue(undefined),
-    get: vi.fn(),
-    delete: vi.fn().mockResolvedValue(undefined),
-  };
+  const mockStorageFiles = new Map<string, Buffer>();
 
   const context = {
     db,
@@ -42,11 +38,78 @@ function makeEnv(overrides: Record<string, unknown> = {}) {
     secrets: { get: vi.fn().mockResolvedValue(null), getSecret: vi.fn().mockResolvedValue(null) },
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
     tracer: { getRequestId: vi.fn().mockReturnValue('test-id'), setTag: vi.fn() },
+    identity: {
+      createUser: vi.fn(),
+      getUser: vi.fn(),
+      getUserByEmail: vi.fn(),
+      updateUser: vi.fn(),
+      deleteUser: vi.fn(),
+      validateCredentials: vi.fn(),
+      setupMfa: vi.fn(),
+      verifyMfa: vi.fn(),
+      resetPassword: vi.fn(),
+    },
+    lms: {
+      getCourses: vi.fn(),
+      getCourse: vi.fn(),
+      enrollStudent: vi.fn(),
+      dropStudent: vi.fn(),
+      getEnrollments: vi.fn(),
+      getGrades: vi.fn(),
+      syncGrade: vi.fn(),
+    },
+    email: {
+      createMailbox: vi.fn(),
+      deleteMailbox: vi.fn(),
+      sendEmail: vi.fn(),
+      resetMailboxPassword: vi.fn(),
+    },
+    payment: {
+      createPaymentIntent: vi.fn(),
+      getPaymentIntent: vi.fn(),
+      cancelPaymentIntent: vi.fn(),
+      handleWebhook: vi.fn(),
+    },
+    document: {
+      generateDocument: vi.fn(),
+      getDocument: vi.fn(),
+      getDocumentsByUser: vi.fn(),
+      verifyDocument: vi.fn(),
+    },
+    notification: {
+      send: vi.fn(),
+      getNotifications: vi.fn(),
+      markAsRead: vi.fn(),
+      markAllAsRead: vi.fn(),
+    },
+    storage: {
+      upload: vi.fn().mockImplementation((input: any) => {
+        mockStorageFiles.set(input.key, input.data);
+        return Promise.resolve({
+          id: crypto.randomUUID(),
+          key: input.key,
+          url: `https://mock.storage/${input.key}`,
+          size: input.data.byteLength,
+          mimeType: input.mimeType,
+          createdAt: new Date(),
+          metadata: input.metadata,
+        });
+      }),
+      download: vi.fn().mockImplementation((key: string) => {
+        return Promise.resolve(mockStorageFiles.get(key) || Buffer.from(''));
+      }),
+      delete: vi.fn().mockImplementation((key: string) => {
+        mockStorageFiles.delete(key);
+        return Promise.resolve();
+      }),
+      getUrl: vi.fn().mockImplementation((key: string) => {
+        return Promise.resolve(`https://mock.storage/${key}`);
+      }),
+    },
   };
 
   return {
     PLATFORM_CONTEXT: context,
-    DOCUMENTS: documents,
     WRITE_QUEUE: { get: vi.fn(), idFromName: vi.fn() },
     ENVIRONMENT: 'test',
     ...overrides,
@@ -150,7 +213,7 @@ describe('handleUploadDocument', () => {
     );
     const res = await handleUploadDocument(req, env as any, 'user-1');
     expect(res.status).toBe(200);
-    expect(env.DOCUMENTS.put).toHaveBeenCalledOnce();
+    expect(env.PLATFORM_CONTEXT.storage.upload).toHaveBeenCalledOnce();
     const body = await res.json() as any;
     expect(body.data.document_id).toBeDefined();
     expect(body.data.doc_type).toBe('transcript');
@@ -195,12 +258,9 @@ describe('handleDownloadDocument', () => {
       file_name: 'transcript.pdf',
       mime_type: 'application/pdf',
     });
-    const mockR2Object = {
-      body: new ReadableStream(),
-      writeHttpMetadata: vi.fn(),
-      httpMetadata: { contentType: 'application/pdf' },
-    };
-    env.DOCUMENTS.get = vi.fn().mockResolvedValue(mockR2Object);
+    // Set up mock file in storage
+    const testPdf = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E]);
+    env.PLATFORM_CONTEXT.storage.download = vi.fn().mockResolvedValue(testPdf);
     env.PLATFORM_CONTEXT.db.run = vi.fn().mockResolvedValue({});
     const req = new Request('http://localhost/api/documents/doc-1/download');
     const res = await handleDownloadDocument(req, env as any, 'doc-1', 'admin-user', 'admin');
@@ -215,7 +275,9 @@ describe('handleDownloadDocument', () => {
       id: 'doc-1', user_id: 'user-1', r2_key: 'key',
       file_name: 'report.pdf', mime_type: 'application/pdf',
     });
-    env.DOCUMENTS.get = vi.fn().mockResolvedValue({ body: new ReadableStream() });
+    // Set up mock file in storage
+    const testPdf = Buffer.from([0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E]);
+    env.PLATFORM_CONTEXT.storage.download = vi.fn().mockResolvedValue(testPdf);
     env.PLATFORM_CONTEXT.db.run = vi.fn().mockResolvedValue({});
     const req = new Request('http://localhost/api/documents/doc-1/download');
     const res = await handleDownloadDocument(req, env as any, 'doc-1', 'user-1', 'student');
@@ -229,7 +291,9 @@ describe('handleDownloadDocument', () => {
       file_name: 'document.docx',
       mime_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     });
-    env.DOCUMENTS.get = vi.fn().mockResolvedValue({ body: new ReadableStream() });
+    // Set up mock file in storage
+    const testDocx = Buffer.from([0x50, 0x4B, 0x03, 0x04]);
+    env.PLATFORM_CONTEXT.storage.download = vi.fn().mockResolvedValue(testDocx);
     env.PLATFORM_CONTEXT.db.run = vi.fn().mockResolvedValue({});
     const req = new Request('http://localhost/api/documents/doc-1/download');
     const res = await handleDownloadDocument(req, env as any, 'doc-1', 'user-1', 'student');

@@ -1,3 +1,4 @@
+
 import {
   IDatabase,
   IKVStore,
@@ -25,6 +26,16 @@ import {
   EnvironmentSecretsAdapter,
   CloudflareLoggerAdapter,
   CloudflareTracerAdapter,
+  ResendEmailAdapter,
+  CloudflareR2StorageAdapter,
+  MemoryIdentityAdapter,
+  MemoryLMSAdapter,
+  MemoryEmailAdapter,
+  MemoryPaymentAdapter,
+  MemoryDocumentAdapter,
+  MemoryNotificationAdapter,
+  MemoryStorageAdapter,
+  // Infrastructure adapters
   MemoryDatabaseAdapter,
   MemoryKVAdapter,
   InMemoryQueueAdapter,
@@ -37,13 +48,11 @@ import {
   RedisAdapter,
   SQSAdapter,
   AWSSecretsAdapter,
-  MemoryIdentityAdapter,
-  MemoryLMSAdapter,
-  MemoryEmailAdapter,
-  MemoryPaymentAdapter,
-  MemoryDocumentAdapter,
-  MemoryNotificationAdapter,
-  MemoryStorageAdapter,
+  KeycloakAdapter,
+  MoodleAdapter,
+  MailcowAdapter,
+  StripeAdapter,
+  PdfDocumentAdapter,
 } from '@bmi/adapters';
 
 import { Pool } from 'pg';
@@ -79,6 +88,8 @@ export function bootstrap(env: any): PlatformContext {
       return buildAWS(env);
     case 'local':
       return buildLocal(env);
+    case 'open':
+      return buildOpen(env);
     default:
       throw new Error(`Unknown provider: ${provider}`);
   }
@@ -86,6 +97,17 @@ export function bootstrap(env: any): PlatformContext {
 
 function buildCloudflare(env: any): PlatformContext {
   const tracer = new CloudflareTracerAdapter();
+  
+  // Email provider: use Resend if API key is available, else memory
+  const emailProvider = env.RESEND_API_KEY 
+    ? new ResendEmailAdapter(env.RESEND_API_KEY)
+    : new MemoryEmailAdapter();
+    
+  // Storage provider: use R2 if bucket is available, else memory
+  const storageProvider = env.R2_BUCKET && env.R2_PUBLIC_URL
+    ? new CloudflareR2StorageAdapter(env.R2_BUCKET, env.R2_PUBLIC_URL)
+    : new MemoryStorageAdapter();
+
   return {
     db: new D1DatabaseAdapter(env.DB),
     kv: new CloudflareKVAdapter(env.KV),
@@ -95,13 +117,13 @@ function buildCloudflare(env: any): PlatformContext {
     secrets: new EnvironmentSecretsAdapter(env),
     logger: new CloudflareLoggerAdapter(tracer.getRequestId()),
     tracer,
-    identity: new MemoryIdentityAdapter(),
-    lms: new MemoryLMSAdapter(),
-    email: new MemoryEmailAdapter(),
-    payment: new MemoryPaymentAdapter(),
-    document: new MemoryDocumentAdapter(),
-    notification: new MemoryNotificationAdapter(),
-    storage: new MemoryStorageAdapter(),
+    identity: new MemoryIdentityAdapter(), // TODO: replace with Keycloak/Okta adapter
+    lms: new MemoryLMSAdapter(), // TODO: replace with Moodle/Canvas adapter
+    email: emailProvider,
+    payment: new MemoryPaymentAdapter(), // TODO: replace with Stripe/PayPal adapter
+    document: new MemoryDocumentAdapter(), // TODO: replace with pdf-lib/Puppeteer adapter
+    notification: new MemoryNotificationAdapter(), // TODO: replace with Twilio/Slack adapter
+    storage: storageProvider,
   };
 }
 
@@ -153,6 +175,35 @@ function buildAWS(env: any): PlatformContext {
     shutdown: async () => {
       await pgPool.end();
       redisClient.disconnect();
-    }
+    },
+  };
+}
+
+function buildOpen(env: any): PlatformContext {
+  const tracer = new CloudflareTracerAdapter();
+  
+  const pgPool = new Pool({ connectionString: env.DATABASE_URL });
+  const redisClient = new Redis(env.REDIS_URL);
+
+  return {
+    db: new PostgresDatabaseAdapter(pgPool),
+    kv: new RedisAdapter(redisClient),
+    queue: new InMemoryQueueAdapter(), // Can use RabbitMQ or Redis queues in future
+    rateLimiter: new PostgresRateLimiterAdapter(pgPool),
+    writeQueue: new PostgresWriteQueueAdapter(pgPool),
+    secrets: new EnvironmentSecretsAdapter(env),
+    logger: new CloudflareLoggerAdapter(tracer.getRequestId()),
+    tracer,
+    identity: new KeycloakAdapter(env.KEYCLOAK_URL, env.KEYCLOAK_REALM || 'bmi', env.KEYCLOAK_CLIENT || 'bmi-client', env.KEYCLOAK_SECRET || ''),
+    lms: new MoodleAdapter(env.MOODLE_URL, env.MOODLE_TOKEN),
+    email: new MailcowAdapter(env.MAILCOW_URL, env.MAILCOW_API_KEY),
+    payment: env.STRIPE_SECRET_KEY ? new StripeAdapter(env.STRIPE_SECRET_KEY) : new MemoryPaymentAdapter(),
+    document: new PdfDocumentAdapter(),
+    notification: new MemoryNotificationAdapter(),
+    storage: new MemoryStorageAdapter(),
+    shutdown: async () => {
+      await pgPool.end();
+      redisClient.disconnect();
+    },
   };
 }

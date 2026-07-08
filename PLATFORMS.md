@@ -82,3 +82,34 @@ To add support for a new platform (e.g., Google Cloud Platform):
 1. Implement the required interfaces from `@bmi/ports` in `@bmi/adapters/src/gcp/`.
 2. Update `@bmi/bootstrap/src/index.ts` to recognize the `PLATFORM_PROVIDER === 'gcp'`.
 3. Map the GCP adapters in the factory.
+
+---
+
+## 4. Open-Source Self-Hosted (100% Zero Lock-in)
+
+For institutions that want complete control and 100% open-source backing services, we provide the `open` platform provider. This wires up the system to connect with enterprise open-source tools.
+
+### Features
+- **Database**: PostgreSQL
+- **Identity**: Keycloak (via `KeycloakAdapter`)
+- **LMS**: Moodle (via `MoodleAdapter`)
+- **Email**: Mailcow (via `MailcowAdapter`)
+- **Payment**: Stripe (default production) or Mock (via `StripeAdapter` / `MockPaymentAdapter`)
+- **Documents**: pdf-lib (via `PdfDocumentAdapter`)
+
+### Local Setup via Docker Compose
+We provide a `docker-compose.yml` to spin up Keycloak, PostgreSQL, Redis, and Moodle locally:
+
+```bash
+docker compose up -d
+```
+
+### Usage
+Set the necessary environment variables and set the provider to `open`:
+```bash
+PLATFORM_PROVIDER=open \
+DATABASE_URL=postgres://bmi_user:bmi_password@localhost:5432/bmi_db \
+REDIS_URL=redis://localhost:6379 \
+KEYCLOAK_URL=http://localhost:8080 \
+npm run dev --workspace=@bmi/api
+```
