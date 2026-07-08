@@ -15,7 +15,7 @@
     "test:ui": "vitest --ui"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20260625.1",
+    "@cloudflare/workers-types": "^5.20260706.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
@@ -29,7 +29,7 @@
     "typescript": "^5.8.2",
     "vite": "^8.1.3",
     "vitest": "^4.1.9",
-    "wrangler": "^4.104.0"
+    "wrangler": "^4.107.0"
   },
   "dependencies": {
     "@bmi/shared": "file:../../packages/shared",

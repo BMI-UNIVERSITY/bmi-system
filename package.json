@@ -10,8 +10,19 @@
   "scripts": {
     "prepare": "npm run build --workspace=@bmi/shared && npm run build --workspace=@bmi/rate-limiter && npm run build --workspace=@bmi/api-middleware"
   },
-  "resolutions": {
-    "uuid": "^11.1.1"
+  "overrides": {
+    "cookie": "^0.7.0",
+    "esbuild": "^0.25.0",
+    "postcss": "^8.5.10",
+    "undici": "^6.26.1",
+    "uuid": "^11.1.1",
+    "ws": "^8.20.2",
+    "next": {
+      "postcss": "^8.5.10"
+    },
+    "exceljs": {
+      "uuid": "^11.1.1"
+    }
   },
   "optionalDependencies": {
     "lightningcss-linux-x64-gnu": "1.32.0",
