@@ -219,13 +219,15 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
     return error('Invalid email or password', 401);
   }
 
-  if (!user.is_verified) {
-    return error('Please verify your email address before logging in. Check your inbox for the verification link.', 403);
-  }
-
+  // Verify password first — this prevents account enumeration via the
+  // "please verify your email" response path (Medium finding #9).
   const valid = await verifyPassword(password, user.password_hash, env.PASSWORD_PEPPER);
   if (!valid) {
     return error('Invalid email or password', 401);
+  }
+
+  if (!user.is_verified) {
+    return error('Please verify your email address before logging in. Check your inbox for the verification link.', 403);
   }
 
   if (user.mfa_enabled && user.mfa_secret) {

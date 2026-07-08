@@ -10,6 +10,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [mfaToken, setMfaToken] = useState('');
   const [error, setError] = useState('');
+  const [showResend, setShowResend] = useState(false);
   const [loading, setLoading] = useState(false);
   const [requiresMfa, setRequiresMfa] = useState(false);
   const [tempLoginData, setTempLoginData] = useState<any>(null);
@@ -38,8 +39,10 @@ export default function Login() {
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Login failed.';
       if (msg.includes('verify your email')) {
-        setError(`${msg} <a href="/register" style="color:#d4af37;font-weight:600;">Resend verification email</a>`);
+        setError(msg);
+        setShowResend(true);
       } else {
+        setShowResend(false);
         setError(msg);
       }
     } finally {
@@ -61,7 +64,12 @@ export default function Login() {
         </div>
         <div className="card">
           {error && (
-            <div className="alert alert-danger" style={{ marginBottom: '1.5rem' }} dangerouslySetInnerHTML={{ __html: error }} />
+            <div className="alert alert-danger" style={{ marginBottom: '1.5rem' }}>
+              {error}
+              {showResend && (
+                <> <Link to="/register" style={{ color: '#d4af37', fontWeight: 600 }}>Resend verification email</Link></>
+              )}
+            </div>
           )}
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
             {!requiresMfa ? (
