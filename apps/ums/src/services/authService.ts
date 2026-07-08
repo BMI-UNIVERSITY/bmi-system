@@ -503,7 +503,7 @@ export async function resetPassword(
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ token, password, passwordConfirm }),
+      body: JSON.stringify({ token, new_password: password }),
     }, 8000);
 
     const data: AuthResponse = await response.json();
