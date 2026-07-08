@@ -16,6 +16,7 @@ import { ScrollToTop } from "../components/ScrollToTop";
 
 // Lazy-loaded page components for code splitting
 const Dashboard = lazy(() => import("../components/Dashboard"));
+const Admissions = lazy(() => import("../components/Admissions"));
 const Students = lazy(() => import("../components/Students"));
 const Staff = lazy(() => import("../components/Staff"));
 const Attendance = lazy(() => import("../components/Attendance"));
@@ -114,6 +115,14 @@ export function AppRoutes() {
         />
 
         {/* Standard Modules */}
+        <Route
+          path="/admissions"
+          element={
+            <RoleGuard allowedRoles={["registrar", "staff"]}>
+              <Admissions />
+            </RoleGuard>
+          }
+        />
         <Route path="/students" element={<Students />} />
         <Route
           path="/staff"

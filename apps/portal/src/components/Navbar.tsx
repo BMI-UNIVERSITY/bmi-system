@@ -41,9 +41,7 @@ export default function Navbar() {
           </>
         ) : (
           <>
-            {(user.role === 'admin' || user.role === 'staff') ? (
-              <Link to="/admin" className={`navbar-link${location.pathname.startsWith('/admin') ? ' active' : ''}`}>Admin</Link>
-            ) : user.role === 'student' ? (
+            {user.role === 'student' ? (
               <>
                 <Link to="/student/dashboard" className={`navbar-link${location.pathname === '/student/dashboard' ? ' active' : ''}`}>Dashboard</Link>
                 <Link to="/student/academics" className={`navbar-link${location.pathname === '/student/academics' ? ' active' : ''}`}>Academics</Link>

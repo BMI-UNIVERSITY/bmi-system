@@ -11,7 +11,6 @@ import ResetPassword from './pages/ResetPassword';
 import MfaSetup from './pages/MfaSetup';
 import Apply from './pages/Apply';
 import Status from './pages/Status';
-import Admin from './pages/Admin';
 import Recommend from './pages/Recommend';
 import Settings from './pages/Settings';
 
@@ -110,14 +109,6 @@ export default function App() {
           element={
             <ProtectedRoute roles={['student']}>
               <StudentSettings />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/admin"
-          element={
-            <ProtectedRoute roles={['admin', 'staff']}>
-              <Admin />
             </ProtectedRoute>
           }
         />

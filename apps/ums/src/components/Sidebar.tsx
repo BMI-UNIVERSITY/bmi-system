@@ -27,6 +27,7 @@ import {
   X,
   GraduationCap,
   Activity,
+  ClipboardList,
 } from "lucide-react";
 import { NavItem } from "../types";
 import { useUIStore } from "../stores/uiStore";
@@ -103,6 +104,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   const allMenuItems: NavItem[] = [
     ...roleItems,
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { id: "admissions", label: "Admissions", icon: ClipboardList },
     { id: "students", label: "Students", icon: Users },
     { id: "staff", label: "Staff & Faculty", icon: Briefcase },
     { id: "attendance", label: "Attendance", icon: CalendarCheck },
@@ -158,6 +160,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       case "registrar":
         return [
           "dashboard",
+          "admissions",
           "students",
           "staff",
           "attendance",
@@ -176,6 +179,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       case "staff":
         return [
           "dashboard",
+          "admissions",
           "students",
           "library",
           "hostels",
