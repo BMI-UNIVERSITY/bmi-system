@@ -149,7 +149,7 @@ describe('ums-grades routes', () => {
 
     it('updates grade fields successfully', async () => {
       const updated = { id: 'g1', score: 75, max_score: 100, assessment_type: 'quiz' };
-      let call = 0;
+
       const db = {
         prepare: vi.fn().mockReturnValue({
           bind: vi.fn().mockReturnValue({

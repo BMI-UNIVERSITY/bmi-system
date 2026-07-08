@@ -13,17 +13,7 @@ const cacheMatchMock = vi.fn().mockResolvedValue(undefined); // no cache hit by 
   default: { match: cacheMatchMock, put: cachePutMock },
 };
 
-function makeDB(firstVal: any = null, allResults: any[] = []) {
-  const firstMock = vi.fn().mockResolvedValue(firstVal);
-  const allMock = vi.fn().mockResolvedValue({ results: allResults });
-  return {
-    prepare: vi.fn().mockReturnValue({
-      bind: vi.fn().mockReturnValue({ first: firstMock, all: allMock }),
-      first: firstMock,
-      all: allMock,
-    }),
-  };
-}
+
 
 describe('public routes', () => {
   it('handlePublicStats returns aggregate counts', async () => {

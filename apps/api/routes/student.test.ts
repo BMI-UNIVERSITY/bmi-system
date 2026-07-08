@@ -136,7 +136,7 @@ describe('student routes', () => {
     });
 
     it('pays invoice and returns sandbox flag', async () => {
-      let call = 0;
+
       const db = {
         prepare: vi.fn().mockReturnValue({
           bind: vi.fn().mockReturnValue({

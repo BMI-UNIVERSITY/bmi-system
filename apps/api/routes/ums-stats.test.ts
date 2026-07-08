@@ -12,9 +12,7 @@ import {
   handleCertificateVerificationStats,
 } from './ums-stats';
 
-function makeFirstMock(value: any) {
-  return vi.fn().mockResolvedValue(value);
-}
+
 
 function makeAllMock(results: any[] = []) {
   return { results };

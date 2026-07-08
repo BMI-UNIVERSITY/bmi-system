@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { handleInboundWebhook } from './webhooks';
-import { verifySignature } from '../lib/webhook';
+
 
 // Pre-compute a valid signature for tests
 async function makeSignedRequest(body: string, secret: string): Promise<Request> {

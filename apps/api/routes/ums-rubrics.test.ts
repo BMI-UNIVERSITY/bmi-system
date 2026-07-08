@@ -5,20 +5,6 @@ import {
   handleDeleteRubric,
 } from './ums-rubrics';
 
-function makeDB(overrides: Record<string, any> = {}) {
-  const allMock = vi.fn().mockResolvedValue({ results: [] });
-  const runMock = vi.fn().mockResolvedValue({ meta: { changes: 1 } });
-  return {
-    prepare: vi.fn().mockReturnValue({
-      all: allMock,
-      bind: vi.fn().mockReturnValue({ all: allMock, run: runMock, first: vi.fn().mockResolvedValue(null) }),
-    }),
-    _allMock: allMock,
-    _runMock: runMock,
-    ...overrides,
-  };
-}
-
 describe('ums-rubrics routes', () => {
   it('handleListRubrics returns formatted rubrics with parsed criteria', async () => {
     const db = {
