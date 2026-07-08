@@ -25,7 +25,7 @@ describe('admissionsService', () => {
 
       const result = await admissionsService.listApplications();
       expect(result).toEqual(mockData);
-      expect(authFetch).toHaveBeenCalledWith('http://localhost:8787/api/v1/admin/applications');
+      expect(authFetch).toHaveBeenCalledWith('http://localhost:8787/api/admin/applications');
     });
 
     it('appends query parameters when provided', async () => {
@@ -36,7 +36,7 @@ describe('admissionsService', () => {
       } as Response);
 
       await admissionsService.listApplications({ status: 'submitted', limit: 10 });
-      expect(authFetch).toHaveBeenCalledWith('http://localhost:8787/api/v1/admin/applications?status=submitted&limit=10');
+      expect(authFetch).toHaveBeenCalledWith('http://localhost:8787/api/admin/applications?status=submitted&limit=10');
     });
   });
 
@@ -49,7 +49,7 @@ describe('admissionsService', () => {
 
       const result = await admissionsService.updateStatus('app1', 'accepted', 'Looks good');
       expect(result).toEqual({ success: true });
-      expect(authFetch).toHaveBeenCalledWith('http://localhost:8787/api/v1/admin/applications/app1/status', {
+      expect(authFetch).toHaveBeenCalledWith('http://localhost:8787/api/admin/applications/app1/status', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ status: 'accepted', notes: 'Looks good' }),
