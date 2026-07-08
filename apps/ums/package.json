@@ -73,7 +73,7 @@
     "@typescript-eslint/parser": "^8.60.0",
     "@vitejs/plugin-react": "^5.2.0",
     "@vitest/coverage-v8": "^4.1.5",
-    "@vitest/ui": "^4.1.5",
+    "@vitest/ui": "^4.1.10",
     "autoprefixer": "^10.4.23",
     "axe-core": "^4.10.3",
     "csv-parse": "^6.2.1",
