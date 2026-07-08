@@ -247,6 +247,11 @@ export default withSentry(
     env.PLATFORM_CONTEXT = context;
 
     if (!path.startsWith('/api/')) {
+      if (path === '/') {
+        return new Response(JSON.stringify({ name: 'BMI API', version: '1.3.0', status: 'ok' }), {
+          headers: { 'Content-Type': 'application/json' },
+        });
+      }
       return new Response('Not found', { status: 404 });
     }
 
