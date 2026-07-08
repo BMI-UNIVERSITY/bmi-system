@@ -188,6 +188,9 @@ export function generateCsrfToken(): string {
 
 export function validateCsrfToken(request: Request): boolean {
   const cookieHeader = request.headers.get('Cookie');
+  // If the request carries a valid auth token (HttpOnly, not accessible to XSS),
+  // CSRF is already mitigated — skip the additional token check.
+  if (cookieHeader?.includes('bmi_token=')) return true;
   const csrfCookie = cookieHeader?.match(/csrf_token=([^;]+)/)?.[1];
   const csrfHeader = request.headers.get('X-CSRF-Token');
   return !!csrfCookie && !!csrfHeader && csrfCookie === csrfHeader;

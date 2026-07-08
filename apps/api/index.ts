@@ -272,8 +272,6 @@ export default withSentry(
         '/api/auth/reset-password',
         '/api/auth/resend-verification',
         '/api/admin/setup',
-        '/api/applications/draft',
-        '/api/applications',
       ];
       const isCsrfExempt = csrfExemptPaths.some(p => path.startsWith(p)) || path.startsWith('/api/recommendations/');
       if (stateChangingMethods.includes(method) && !isCsrfExempt) {
