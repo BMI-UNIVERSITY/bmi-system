@@ -20,7 +20,7 @@ describe('admissionsService', () => {
       const mockData = [{ id: '1', status: 'submitted' }];
       vi.mocked(authFetch).mockResolvedValueOnce({
         ok: true,
-        json: async () => mockData,
+        json: async () => ({ success: true, data: mockData }),
       } as Response);
 
       const result = await admissionsService.listApplications();
@@ -32,7 +32,7 @@ describe('admissionsService', () => {
       const mockData = [{ id: '1', status: 'submitted' }];
       vi.mocked(authFetch).mockResolvedValueOnce({
         ok: true,
-        json: async () => mockData,
+        json: async () => ({ success: true, data: mockData }),
       } as Response);
 
       await admissionsService.listApplications({ status: 'submitted', limit: 10 });
