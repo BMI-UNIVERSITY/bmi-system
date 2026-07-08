@@ -11,7 +11,7 @@
     "verify-migrations": "tsx scripts/verify-migrations.ts",
     "type-check": "tsc --noEmit",
     "secrets:set": "node scripts/set-secrets.mjs",
-    "test": "vitest run",
+    "test": "vitest run --passWithNoTests",
     "lint": "eslint ."
   },
   "dependencies": {

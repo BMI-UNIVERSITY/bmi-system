@@ -3,6 +3,7 @@
 
 import { error, ok } from '../lib/types';
 import type { Env } from '../lib/types';
+import { enqueueTranscriptJob } from '../queue-consumer';
 
 export async function handleGetDashboard(request: Request, env: Env, userId: string): Promise<Response> {
   // Get upcoming invoices
@@ -114,33 +115,36 @@ export async function handleDropCourse(request: Request, env: Env, userId: strin
 }
 
 export async function handleGetTranscript(request: Request, env: Env, userId: string): Promise<Response> {
-  const { results: classes } = await env.DB.prepare(
-    `SELECT c.code, c.title, c.credits, c.term, e.grade, e.status
-     FROM enrollments e 
-     JOIN courses c ON e.course_id = c.id 
-     WHERE e.student_id = ? AND e.status != 'waitlisted'
-     ORDER BY c.term DESC, c.code ASC`
-  ).bind(userId).all();
-  
-  // Calculate GPA
-  const gradePoints: Record<string, number> = {
-    'A+': 4.0, 'A': 4.0, 'A-': 3.7, 'B+': 3.3, 'B': 3.0, 'B-': 2.7,
-    'C+': 2.3, 'C': 2.0, 'C-': 1.7, 'D+': 1.3, 'D': 1.0, 'F': 0.0
-  };
-  
-  let totalPoints = 0;
-  let totalCredits = 0;
-  
-  for (const c of classes as any[]) {
-    if (c.grade && gradePoints[c.grade] !== undefined) {
-      totalPoints += gradePoints[c.grade] * c.credits;
-      totalCredits += c.credits;
-    }
+  const url = new URL(request.url);
+  const format = (url.searchParams.get('format') || 'pdf') as 'pdf' | 'csv';
+
+  try {
+    const jobId = await enqueueTranscriptJob(env, userId, format);
+    return ok({ message: 'Transcript generation started', jobId, status: 'queued' });
+  } catch (err: any) {
+    return error(err.message || 'Failed to enqueue transcript job', 500);
   }
-  
-  const gpa = totalCredits > 0 ? (totalPoints / totalCredits).toFixed(2) : null;
-  
-  return ok({ classes, gpa });
+}
+
+export async function handleGetTranscriptStatus(request: Request, env: Env, userId: string, jobId: string): Promise<Response> {
+  const job = await env.DB.prepare(
+    'SELECT status, r2_key, error, requested_at, completed_at FROM transcript_jobs WHERE id = ? AND student_id = ?'
+  ).bind(jobId, userId).first();
+
+  if (!job) {
+    return error('Transcript job not found', 404);
+  }
+
+  if (job.status === 'complete' && job.r2_key) {
+    // Generate a pre-signed URL or directly serve the file if small.
+    // For now we'll just return the URL route where they can download it.
+    return ok({
+      ...job,
+      download_url: `/api/v1/documents/${encodeURIComponent(job.r2_key as string)}`
+    });
+  }
+
+  return ok(job);
 }
 
 export async function handleGetSettings(request: Request, env: Env, userId: string): Promise<Response> {

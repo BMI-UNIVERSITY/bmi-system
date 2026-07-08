@@ -1,0 +1,54 @@
+version: 2
+updates:
+  # Monorepo root and all workspace packages
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "08:00"
+    open-pull-requests-limit: 10
+    labels:
+      - "dependencies"
+      - "security"
+    # Group non-breaking patch/minor updates to reduce PR noise
+    groups:
+      cloudflare-ecosystem:
+        patterns:
+          - "@cloudflare/*"
+          - "wrangler"
+        update-types:
+          - "minor"
+          - "patch"
+      react-ecosystem:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "react-*"
+          - "@types/react*"
+        update-types:
+          - "minor"
+          - "patch"
+      testing-tools:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "playwright"
+          - "@playwright/*"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Manually review major Next.js upgrades — they often have breaking edge runtime changes
+      - dependency-name: "next"
+        update-types: ["version-update:semver-major"]
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels:
+      - "dependencies"
+      - "ci"

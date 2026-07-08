@@ -8,7 +8,7 @@
     "bmi-university"
   ],
   "scripts": {
-    "prepare": "npm run build --workspace=@bmi/shared && npm run build --workspace=@bmi/api-middleware"
+    "prepare": "npm run build --workspace=@bmi/shared && npm run build --workspace=@bmi/rate-limiter && npm run build --workspace=@bmi/api-middleware"
   },
   "resolutions": {
     "uuid": "^11.1.1"

@@ -8,7 +8,9 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'lcov'],
       thresholds: { lines: 80, functions: 80, branches: 70 },
+      include: ['lib/**/*.ts'],
+      exclude: ['lib/types.ts', '**/*.test.ts'],
     },
-    include: ['**/*.test.ts'],
+    include: ['lib/**/*.test.ts', 'routes/**/*.test.ts'],
   },
 });

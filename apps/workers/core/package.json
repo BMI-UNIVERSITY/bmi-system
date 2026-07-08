@@ -5,11 +5,12 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@bmi/shared": "*",
-    "@bmi/api-middleware": "*"
+    "@bmi/api-middleware": "*",
+    "@bmi/shared": "*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "4.20250620.0",

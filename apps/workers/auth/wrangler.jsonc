@@ -24,9 +24,23 @@
     }
   ],
 
+  // JWT signing keys — rotated every 30 days via cron trigger
+  "kv_namespaces": [
+    {
+      "binding": "AUTH_KEYS",
+      "id": "REPLACE_WITH_KV_NAMESPACE_ID"
+    }
+  ],
+
+  // Monthly key rotation: midnight on the 1st of every month
+  "triggers": {
+    "crons": ["0 0 1 * *"]
+  },
+
   "durable_objects": {
     "bindings": [
-      { "name": "WRITE_QUEUE", "class_name": "WriteQueue" }
+      { "name": "WRITE_QUEUE", "class_name": "WriteQueue" },
+      { "name": "RATE_LIMITER", "class_name": "RateLimiter" }
     ]
   },
   
@@ -34,6 +48,10 @@
     {
       "tag": "v1",
       "new_sqlite_classes": ["WriteQueue"]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["RateLimiter"]
     }
   ],
 

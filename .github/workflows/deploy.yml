@@ -47,6 +47,7 @@ jobs:
               - 'apps/workers/auth/**'
               - 'packages/shared/**'
               - 'packages/api-middleware/**'
+              - 'packages/rate-limiter/**'
               - '.github/workflows/deploy.yml'
             worker-ums:
               - 'apps/workers/ums/**'
@@ -57,6 +58,7 @@ jobs:
               - 'apps/workers/core/**'
               - 'packages/shared/**'
               - 'packages/api-middleware/**'
+              - 'packages/rate-limiter/**'
               - '.github/workflows/deploy.yml'
             portal:
               - 'apps/portal/**'

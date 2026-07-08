@@ -31,6 +31,32 @@ export interface LogEntry {
 
 const LEVELS: Record<LogLevel, number> = { debug: 0, info: 1, warn: 2, error: 3 };
 
+/**
+ * Keys whose values are automatically replaced with '[REDACTED]' before logging.
+ * Add any new PII fields here as the schema grows.
+ */
+const SENSITIVE_KEYS = new Set([
+  'email', 'password', 'token', 'secret', 'studentId', 'student_id',
+  'name', 'first_name', 'last_name', 'phone', 'address',
+  'refresh_token', 'access_token', 'jwt', 'authorization', 'cookie',
+  'pepper', 'PASSWORD_PEPPER', 'JWT_SECRET', 'RESEND_API_KEY',
+  'WEBHOOK_SECRET', 'BACKUP_ENCRYPTION_KEY',
+]);
+
+function redact(obj: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (SENSITIVE_KEYS.has(k)) {
+      out[k] = '[REDACTED]';
+    } else if (v !== null && typeof v === 'object' && !Array.isArray(v)) {
+      out[k] = redact(v as Record<string, unknown>);
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
 /** Minimum level to emit. Set to 'debug' in dev via LOG_LEVEL env var. */
 let MIN_LEVEL: LogLevel = 'info';
 
@@ -42,11 +68,9 @@ function emit(level: LogLevel, worker: string, msg: string, context: Record<stri
     level,
     worker,
     msg,
-    ...context,
+    ...redact(context), // ← PII fields are masked before writing
   };
 
-  // Cloudflare Workers captures stdout as trace events for Logpush.
-  // JSON.stringify is safe — Workers runtime never has circular references here.
   const line = JSON.stringify(entry);
 
   if (level === 'error') {

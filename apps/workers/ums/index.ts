@@ -1,7 +1,7 @@
-import { requireAuth, rateLimit, withCors, getCorsHeaders, createLogger, requestLogger } from '@bmi/api-middleware';
+import { requireAuth, rateLimit, withCors, getCorsHeaders, createLogger, requestLogger, withRequestId, addTraceToResponse } from '@bmi/api-middleware';
 import type { Env } from './lib/types';
 
-import { handleGetDashboard, handleGetCourses, handleEnroll, handleGetFinances, handlePayInvoice, handleDropCourse, handleGetTranscript, handleGetSettings, handleUpdateSettings, handleGetTickets, handleCreateTicket } from './routes/student';
+import { handleGetDashboard, handleGetCourses, handleEnroll, handleGetFinances, handlePayInvoice, handleDropCourse, handleGetTranscript, handleGetTranscriptStatus, handleGetSettings, handleUpdateSettings, handleGetTickets, handleCreateTicket } from './routes/student';
 import { handleListTimetabling, handleCreateTimetabling } from './routes/ums-timetabling';
 import { handleListRubrics, handleCreateRubric, handleDeleteRubric } from './routes/ums-rubrics';
 import { handleListStudents, handleGetStudent, handleCreateStudent, handleUpdateStudent, handleDeleteStudent } from './routes/ums-students';
@@ -52,6 +52,7 @@ const ROUTES: Route[] = [
   { method: 'POST', path: /^\/api\/student\/enroll$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleEnroll(req, env, auth!.user.sub) },
   { method: 'POST', path: /^\/api\/student\/courses\/([^/]+)\/drop$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleDropCourse(req, env, auth!.user.sub, p[1]) },
   { method: 'GET', path: /^\/api\/student\/transcript$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleGetTranscript(req, env, auth!.user.sub) },
+  { method: 'GET', path: /^\/api\/student\/transcript\/status\/([^/]+)$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleGetTranscriptStatus(req, env, auth!.user.sub, p[1]) },
   { method: 'GET', path: /^\/api\/student\/settings$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleGetSettings(req, env, auth!.user.sub) },
   { method: 'PUT', path: /^\/api\/student\/settings$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleUpdateSettings(req, env, auth!.user.sub) },
   { method: 'GET', path: /^\/api\/student\/support$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleGetTickets(req, env, auth!.user.sub) },
@@ -145,11 +146,22 @@ const ROUTES: Route[] = [
   { method: 'GET', path: /^\/api\/v1\/certificates\/verification\/stats$/, roles: ['admin', 'staff'], handler: async (req, env, p, auth, ctx) => handleCertificateVerificationStats(req, env) },
 ];
 
+import { handleTranscriptQueue } from './queue-consumer';
+
 export default {
+  async queue(batch: MessageBatch<any>, env: Env): Promise<void> {
+    if (batch.queue === 'bmi-transcript-jobs') {
+      await handleTranscriptQueue(batch, env);
+    }
+  },
+
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const { reqId, tracedRequest } = withRequestId(request);
+    request = tracedRequest;
     const url = new URL(request.url);
     const path = url.pathname;
     const method = request.method;
+    const rlog = requestLogger(log, request).child({ reqId });
 
     if (method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: getCorsHeaders(request, env.ALLOWED_ORIGINS_OVERRIDE) });
@@ -178,24 +190,27 @@ export default {
             }
 
             const response = await route.handler(request, env, match, authData, ctx);
-            return withCors(response, request, env.ALLOWED_ORIGINS_OVERRIDE);
+            return addTraceToResponse(withCors(response, request, env.ALLOWED_ORIGINS_OVERRIDE), reqId);
           }
         }
       }
 
-      return withCors(new Response('Method not allowed or endpoint not found', { status: 404 }), request, env.ALLOWED_ORIGINS_OVERRIDE);
+      return addTraceToResponse(withCors(new Response('Method not allowed or endpoint not found', { status: 404 }), request, env.ALLOWED_ORIGINS_OVERRIDE), reqId);
     } catch (err: any) {
-      requestLogger(log, request).error('Unhandled worker error', {
+      rlog.error('Unhandled worker error', {
         err: err?.message ?? String(err),
         stack: err?.stack?.split('\n')[1]?.trim(),
       });
-      return withCors(
-        new Response(JSON.stringify({ success: false, error: 'Internal Server Error' }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' },
-        }),
-        request,
-        env.ALLOWED_ORIGINS_OVERRIDE
+      return addTraceToResponse(
+        withCors(
+          new Response(JSON.stringify({ success: false, error: 'Internal Server Error' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+          request,
+          env.ALLOWED_ORIGINS_OVERRIDE
+        ),
+        reqId
       );
     }
   },

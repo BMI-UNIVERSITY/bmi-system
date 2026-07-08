@@ -153,21 +153,46 @@ export class WriteQueue {
   }
 }
 
-// ─── Helper for API routes ───────────────────────────────────────────────────
+// ─── Sharded enqueue helper for API routes ──────────────────────────────────
 
 /**
- * Enqueue a single D1 write through the globally-serialized WriteQueue DO.
+ * Number of WriteQueue shards. Increasing this distributes write load across
+ * more DO instances at the cost of less ordering guarantee across shards.
+ * Changing N requires a careful migration — all existing DO instances must
+ * drain before renaming. Start with 8 and scale when DO alarm lag > 500ms.
+ */
+const WRITE_QUEUE_SHARDS = 8;
+
+/**
+ * Deterministic shard selection: converts a string key into a shard index
+ * using a simple djb2-style hash. This ensures the same entity (e.g., same
+ * student_id) always routes to the same shard, preserving per-entity ordering.
+ */
+function shardIndex(key: string): number {
+  let hash = 5381;
+  for (let i = 0; i < key.length; i++) {
+    hash = ((hash << 5) + hash) ^ key.charCodeAt(i);
+    hash = hash >>> 0; // keep unsigned 32-bit
+  }
+  return hash % WRITE_QUEUE_SHARDS;
+}
+
+/**
+ * Enqueue a single D1 write through a sharded WriteQueue DO.
+ *
+ * @param env       - Worker environment (must have WRITE_QUEUE binding)
+ * @param sql       - Parameterised SQL statement
+ * @param params    - Bound parameter values
+ * @param shardKey  - Key used to select the shard (e.g., student_id, application_id).
+ *                    Defaults to 'global' (shard 0) for unkeyed writes like admin ops.
  *
  * Usage:
- *   await enqueueWrite(env, 'INSERT INTO users (id, email) VALUES (?, ?)', [id, email]);
- *
- * The caller can safely return a success response after this resolves.
- * The write is durably persisted in DO storage before this function returns.
+ *   await enqueueWrite(env, 'INSERT INTO grades ...', [grade, studentId], studentId);
+ *   await enqueueWrite(env, 'UPDATE settings ...', [value], 'global');
  */
-export async function enqueueWrite(env: Env, sql: string, params: unknown[]): Promise<void> {
-  // Use a single named DO instance ("global") to ensure ALL writes globally
-  // go through one serialized queue. This is the key to preventing concurrency issues.
-  const id = env.WRITE_QUEUE.idFromName('global');
+export async function enqueueWrite(env: Env, sql: string, params: unknown[], shardKey = 'global'): Promise<void> {
+  const shard = shardIndex(shardKey);
+  const id = env.WRITE_QUEUE.idFromName(`shard-${shard}`);
   const stub = env.WRITE_QUEUE.get(id);
   const res = await stub.fetch('https://internal/enqueue', {
     method: 'POST',
@@ -176,6 +201,6 @@ export async function enqueueWrite(env: Env, sql: string, params: unknown[]): Pr
   });
   if (!res.ok) {
     const body = await res.text();
-    throw new Error(`WriteQueue DO rejected write: ${res.status} — ${body}`);
+    throw new Error(`WriteQueue shard-${shard} rejected write: ${res.status} — ${body}`);
   }
 }

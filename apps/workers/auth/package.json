@@ -5,15 +5,20 @@
   "scripts": {
     "dev": "wrangler dev",
     "deploy": "wrangler deploy",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "vitest run --passWithNoTests",
+    "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@bmi/shared": "*",
-    "@bmi/api-middleware": "*"
+    "@bmi/api-middleware": "*",
+    "@bmi/rate-limiter": "*",
+    "@bmi/shared": "*"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "4.20250620.0",
+    "@vitest/coverage-v8": "^3.0.0",
     "typescript": "5.7.3",
+    "vitest": "^3.0.0",
     "wrangler": "3.111.0"
   }
 }

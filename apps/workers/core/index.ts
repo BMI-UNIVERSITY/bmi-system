@@ -1,7 +1,7 @@
-import { requireAuth, rateLimit, withCors, getCorsHeaders, createLogger, requestLogger } from '@bmi/api-middleware';
+import { requireAuth, rateLimit, withCors, getCorsHeaders, createLogger, requestLogger, withRequestId, addTraceToResponse } from '@bmi/api-middleware';
 import type { Env } from './lib/types';
 
-import { handleSubmitApplication, handleGetMyApplication, handleListApplications, handleGetApplication, handleUpdateStatus, handleGetStatusLogs, handleGetLifecycle, handleSaveDraft } from './routes/apply';
+import { handleSubmitApplication, handleGetMyApplication, handleListApplications, handleGetApplication, handleUpdateStatus, handleGetStatusLogs, handleGetLifecycle } from './routes/apply';
 import { handleUploadDocument, handleDownloadDocument, handleDeleteDocument } from './routes/documents';
 import { handleRequestRecommendation, handleGetRecommendationInfo, handleUploadRecommendation, handleListRecommendations } from './routes/recommendations';
 import { handleAdminSetup, handleListUsers, handleUpdateUserRole, handleDeleteUser, handleAdminResetPassword, handleGetAuditLogs, handleUnlockUser } from './routes/admin';
@@ -26,8 +26,7 @@ type Route = {
 
 const ROUTES: Route[] = [
   // Applications
-  { method: 'PATCH', path: /^\/api\/applications\/draft$/, roles: ['applicant', 'student'], handler: async (req, env, p, auth, ctx) => handleSaveDraft(req, env, auth!.user.sub) },
-  { method: 'POST', path: /^\/api\/applications$/, roles: ['applicant', 'student', 'staff', 'admin'], handler: async (req, env, p, auth, ctx) => handleSubmitApplication(req, env, auth!.user.sub, ctx) },
+  { method: 'POST', path: /^\/api\/applications$/, roles: ['applicant', 'student', 'staff', 'admin'], handler: async (req, env, p, auth, ctx) => handleSubmitApplication(req, env, auth!.user.sub) },
   { method: 'GET', path: /^\/api\/applications\/me$/, roles: [], handler: async (req, env, p, auth, ctx) => handleGetMyApplication(req, env, auth!.user.sub) },
   { method: 'GET', path: /^\/api\/admin\/applications$/, roles: ['staff', 'admin'], handler: async (req, env, p, auth, ctx) => handleListApplications(req, env) },
   { method: 'GET', path: /^\/api\/admin\/applications\/([^/]+)$/, roles: ['staff', 'admin'], handler: async (req, env, p, auth, ctx) => handleGetApplication(req, env) },
@@ -67,9 +66,12 @@ const ROUTES: Route[] = [
 
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    const { reqId, tracedRequest } = withRequestId(request);
+    request = tracedRequest;
     const url = new URL(request.url);
     const path = url.pathname;
     const method = request.method;
+    const rlog = requestLogger(log, request).child({ reqId });
 
     if (method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: getCorsHeaders(request, env.ALLOWED_ORIGINS_OVERRIDE) });
@@ -98,24 +100,27 @@ export default {
             }
 
             const response = await route.handler(request, env, match, authData, ctx);
-            return withCors(response, request, env.ALLOWED_ORIGINS_OVERRIDE);
+            return addTraceToResponse(withCors(response, request, env.ALLOWED_ORIGINS_OVERRIDE), reqId);
           }
         }
       }
 
-      return withCors(new Response('Method not allowed or endpoint not found', { status: 404 }), request, env.ALLOWED_ORIGINS_OVERRIDE);
+      return addTraceToResponse(withCors(new Response('Method not allowed or endpoint not found', { status: 404 }), request, env.ALLOWED_ORIGINS_OVERRIDE), reqId);
     } catch (err: any) {
-      requestLogger(log, request).error('Unhandled worker error', {
+      rlog.error('Unhandled worker error', {
         err: err?.message ?? String(err),
         stack: err?.stack?.split('\n')[1]?.trim(),
       });
-      return withCors(
-        new Response(JSON.stringify({ success: false, error: 'Internal Server Error' }), {
-          status: 500,
-          headers: { 'Content-Type': 'application/json' },
-        }),
-        request,
-        env.ALLOWED_ORIGINS_OVERRIDE
+      return addTraceToResponse(
+        withCors(
+          new Response(JSON.stringify({ success: false, error: 'Internal Server Error' }), {
+            status: 500,
+            headers: { 'Content-Type': 'application/json' },
+          }),
+          request,
+          env.ALLOWED_ORIGINS_OVERRIDE
+        ),
+        reqId
       );
     }
   },

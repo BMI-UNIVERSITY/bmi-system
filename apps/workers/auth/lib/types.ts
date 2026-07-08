@@ -32,6 +32,8 @@ export interface Env {
   OPS_ALERT_EMAIL?: string;
   /** WriteQueue Durable Object — serializes D1 writes to prevent concurrency exhaustion */
   WRITE_QUEUE: DurableObjectNamespace;
+  /** RateLimiter Durable Object — per-user/IP request throttling */
+  RATE_LIMITER: DurableObjectNamespace;
   // ── Phase 2 migration Service Bindings ──
   // Add each domain Worker here as it is deployed. Remove once DNS Routes take over.
   /** bmi-public Worker — serves /api/public/* (read-only, KV cached) */

@@ -7,8 +7,7 @@
     "outDir": "./dist",
     "strict": true,
     "types": ["@cloudflare/workers-types"],
-    "lib": ["ESNext"],
-    "skipLibCheck": true
+    "lib": ["ESNext"]
   },
   "include": ["src/**/*"]
 }

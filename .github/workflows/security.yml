@@ -1,0 +1,72 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run every Monday at 08:00 UTC as a proactive full-scan
+    - cron: '0 8 * * 1'
+
+jobs:
+  # ─── npm Audit (built-in, zero config) ─────────────────────────────────────
+  npm-audit:
+    name: npm Audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit (high severity and above)
+        run: npm audit --audit-level=high
+        continue-on-error: false # Hard fail on HIGH or CRITICAL CVEs
+
+  # ─── Trivy Vulnerability Scanner ────────────────────────────────────────────
+  trivy:
+    name: Trivy Vulnerability Scan
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write # Required to upload SARIF results
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Trivy (filesystem scan — checks npm packages and secrets)
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1' # Fail the job on any HIGH or CRITICAL finding
+
+      - name: Upload Trivy SARIF to GitHub Security tab
+        if: always() # Upload even if the scan found issues
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # ─── Secret Scanning (Gitleaks) ─────────────────────────────────────────────
+  gitleaks:
+    name: Secret Detection (Gitleaks)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Full history needed for leak detection
+
+      - name: Run Gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

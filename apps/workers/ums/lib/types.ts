@@ -43,6 +43,8 @@ export interface Env {
   /** Canary percentage for bmi-auth Worker extraction (0–100). Default: 0 */
   AUTH_CANARY_PERCENT?: string;
   SENTRY_DSN?: string;
+  /** Cloudflare Queue for async transcript generation jobs */
+  TRANSCRIPT_QUEUE: Queue<import('../queue-consumer').TranscriptJob>;
 }
 
 export type Role = 'applicant' | 'student' | 'staff' | 'admin' | 'verifier';

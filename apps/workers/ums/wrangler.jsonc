@@ -30,6 +30,21 @@
     ]
   },
 
+  "queues": {
+    "producers": [
+      { "queue": "bmi-transcript-jobs", "binding": "TRANSCRIPT_QUEUE" }
+    ],
+    "consumers": [
+      {
+        "queue": "bmi-transcript-jobs",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 3,
+        "dead_letter_queue": "bmi-transcript-jobs-dlq"
+      }
+    ]
+  },
+
   // ─── Cloudflare DNS Routes ────────────────────────────────────────────────
   // bmi-ums owns student portal and all UMS management API paths.
   // Note: /api/v1/auth/* is explicitly NOT included — bmi-auth owns that.

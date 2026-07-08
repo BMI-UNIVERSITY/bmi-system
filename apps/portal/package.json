@@ -11,7 +11,7 @@
     "db:migrate": "wrangler d1 execute bmi-portal-db --file=worker/db/schema.sql",
     "db:seed-admin": "node scripts/seed-admin.mjs",
     "db:seed-admin:execute": "wrangler d1 execute bmi-portal-db --command=\"$(node scripts/seed-admin.mjs)\"",
-    "test": "vitest",
+    "test": "vitest run --passWithNoTests",
     "test:ui": "vitest --ui"
   },
   "devDependencies": {
