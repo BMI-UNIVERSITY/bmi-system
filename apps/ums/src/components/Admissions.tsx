@@ -291,12 +291,31 @@ export default function Admissions() {
                       <span className="dark:text-gray-300 font-medium">{appDetails.date_of_birth ? new Date(appDetails.date_of_birth).toLocaleDateString() : "—"}</span>
                     </div>
                     <div>
+                      <span className="text-gray-500 block text-xs">Gender</span>
+                      <span className="dark:text-gray-300 font-medium">{appDetails.gender || "—"}</span>
+                    </div>
+                    <div>
                       <span className="text-gray-500 block text-xs">Nationality</span>
                       <span className="dark:text-gray-300 font-medium">{appDetails.nationality || "—"}</span>
                     </div>
                     <div className="col-span-2">
                       <span className="text-gray-500 block text-xs">Address</span>
                       <span className="dark:text-gray-300 font-medium">{appDetails.address || "—"}</span>
+                    </div>
+                    <div className="col-span-2 border-t border-gray-200 dark:border-gray-800 pt-3 mt-1">
+                      <span className="text-gray-900 dark:text-white font-bold text-xs uppercase tracking-wider mb-2 block">Academic History</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block text-xs">High School</span>
+                      <span className="dark:text-gray-300 font-medium">{appDetails.high_school || "—"}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block text-xs">Graduation Year</span>
+                      <span className="dark:text-gray-300 font-medium">{appDetails.graduation_year || "—"}</span>
+                    </div>
+                    <div>
+                      <span className="text-gray-500 block text-xs">GPA</span>
+                      <span className="dark:text-gray-300 font-medium">{appDetails.gpa || "—"}</span>
                     </div>
                   </div>
                 ) : (

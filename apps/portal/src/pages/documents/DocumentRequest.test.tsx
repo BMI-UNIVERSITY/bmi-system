@@ -91,7 +91,7 @@ describe('DocumentRequest Page', () => {
 
     const select = screen.getByRole('combobox');
     fireEvent.change(select, { target: { value: 'certificate' } });
-    expect((select as HTMLSelectElement).value).toBe('certificate');
+    expect((select as unknown as HTMLSelectElement).value).toBe('certificate');
 
     fireEvent.click(screen.getByRole('button', { name: /Request Document/i }));
 

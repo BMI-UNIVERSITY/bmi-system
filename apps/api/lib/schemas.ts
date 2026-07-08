@@ -160,6 +160,13 @@ export const SubmitApplicationSchema = z.object({
     .string()
     .max(5000, 'Prior education description must not exceed 5,000 characters')
     .optional(),
+  date_of_birth: z.string().optional(),
+  nationality: z.string().max(100).optional(),
+  address: z.string().max(500).optional(),
+  gender: z.string().max(50).optional(),
+  high_school: z.string().max(200).optional(),
+  graduation_year: z.number().int().min(1900).max(2100).optional(),
+  gpa: z.number().min(0).max(5).optional(),
 });
 
 export const ApplicationDraftSchema = z.object({

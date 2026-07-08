@@ -14,9 +14,9 @@ export default function DocumentRequest() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ amount: 15, reason: `Document Request: ${docType}` })
       });
-      const payData = await payRes.json();
+      const payData = (await payRes.json()) as any;
       
-      if (payData.clientSecret) {
+      if (payData?.clientSecret) {
         alert('Payment required. Redirecting to Stripe checkout... (Mocked)');
         // Stripe elements would be rendered here
       }

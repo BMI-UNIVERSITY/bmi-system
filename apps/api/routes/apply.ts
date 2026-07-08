@@ -25,7 +25,7 @@ export async function handleSubmitApplication(request: Request, env: Env, userId
   const parsed = await parseBody(request, SubmitApplicationSchema);
   if (parsed instanceof Response) return parsed;
 
-  const { program, degree_level, personal_statement, prior_education } = parsed;
+  const { program, degree_level, personal_statement, prior_education, date_of_birth, nationality, address, gender, high_school, graduation_year, gpa } = parsed;
 
   if (!VALID_PROGRAMS.includes(program)) {
     return error('Invalid program selected', 400);
@@ -73,7 +73,14 @@ export async function handleSubmitApplication(request: Request, env: Env, userId
       program,
       degreeLevel: degree_level,
       personalStatement: sanitizedStatement ?? undefined,
-      priorEducation: sanitizedEducation ? JSON.stringify(sanitizedEducation) : undefined
+      priorEducation: sanitizedEducation ? JSON.stringify(sanitizedEducation) : undefined,
+      dateOfBirth: date_of_birth,
+      nationality,
+      address,
+      gender,
+      highSchool: high_school,
+      graduationYear: graduation_year,
+      gpa
     });
   } catch (e) {
     console.error('Application creation failed:', e);
@@ -187,16 +194,28 @@ async function createApplicationWithDependenciesOptimized(
     degreeLevel: string;
     personalStatement?: string;
     priorEducation?: string;
+    dateOfBirth?: string;
+    nationality?: string;
+    address?: string;
+    gender?: string;
+    highSchool?: string;
+    graduationYear?: number;
+    gpa?: number;
   }
 ): Promise<string> {
-  const { appId, userId, program, degreeLevel, personalStatement, priorEducation } = applicationData;
+  const { appId, userId, program, degreeLevel, personalStatement, priorEducation, dateOfBirth, nationality, address, gender, highSchool, graduationYear, gpa } = applicationData;
   
   const operations = [
+    // Update user's personal info
+    db.prepare(
+      `UPDATE users SET date_of_birth = ?, nationality = ?, address = ?, gender = ?, updated_at = datetime('now') WHERE id = ?`
+    ).bind(dateOfBirth ?? null, nationality ?? null, address ?? null, gender ?? null, userId),
+
     // Main application record with optimized fields
     db.prepare(
-      `INSERT INTO applications (id, user_id, program, degree_level, status, personal_statement, prior_education, submitted_at, created_at, updated_at)
-       VALUES (?, ?, ?, ?, 'submitted', ?, ?, datetime('now'), datetime('now'), datetime('now'))`
-    ).bind(appId, userId, program, degreeLevel, personalStatement, priorEducation),
+      `INSERT INTO applications (id, user_id, program, degree_level, status, personal_statement, prior_education, high_school, graduation_year, gpa, submitted_at, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 'submitted', ?, ?, ?, ?, ?, datetime('now'), datetime('now'), datetime('now'))`
+    ).bind(appId, userId, program, degreeLevel, personalStatement, priorEducation, highSchool ?? null, graduationYear ?? null, gpa ?? null),
     
     // Initial status log with timestamp
     db.prepare(
@@ -333,7 +352,7 @@ export async function handleGetApplication(request: Request, env: Env): Promise<
   const appId = url.pathname.split('/')[4];
 
   const app = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT a.*, u.first_name, u.last_name, u.email, u.phone,
+    `SELECT a.*, u.first_name, u.last_name, u.email, u.phone, u.date_of_birth, u.nationality, u.address, u.gender,
        (SELECT json_group_array(json_object('id', d.id, 'doc_type', d.doc_type, 'file_name', d.file_name, 'uploaded_at', d.uploaded_at))
         FROM documents d WHERE d.application_id = a.id) as documents
      FROM applications a JOIN users u ON a.user_id = u.id WHERE a.id = ?`

@@ -20,8 +20,8 @@ export default function ClaimAccount() {
         alert('Account claimed successfully! Please login.');
         navigate('/login');
       } else {
-        const data = await res.json();
-        alert(data.error || 'Failed to claim account');
+        const data = (await res.json()) as any;
+        alert(data?.error || 'Failed to claim account');
       }
     } catch (err) {
       alert('An error occurred.');

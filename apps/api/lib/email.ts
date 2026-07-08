@@ -77,7 +77,6 @@ export function applicationSubmittedEmail(firstName: string, program: string, ap
           <ol style="color: #475569; line-height: 1.8; margin: 0; padding-left: 20px;">
             <li>Upload your transcripts and ID documents in the portal</li>
             <li>Request letters of recommendation from your referees</li>
-            <li>Pay the application fee to finalize your submission</li>
           </ol>
         </div>
         <a href="${PORTAL_URL}/status" 

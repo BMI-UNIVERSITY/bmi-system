@@ -40,6 +40,13 @@ export default function Apply() {
       degree_level: '',
       prior_education: '',
       personal_statement: '',
+      date_of_birth: '',
+      nationality: '',
+      address: '',
+      gender: '',
+      high_school: '',
+      graduation_year: '',
+      gpa: ''
     };
   });
 
@@ -124,7 +131,7 @@ export default function Apply() {
     };
   }, [form, step]);
 
-  const update = useCallback((field: string, value: string) => setForm((f: any) => ({ ...f, [field]: value })), []);
+  const update = useCallback((field: string, value: string | number) => setForm((f: any) => ({ ...f, [field]: value })), []);
 
   const selectProgram = (p: { label: string; level: string }) => {
     update('program', p.label);
@@ -135,7 +142,7 @@ export default function Apply() {
   const prev = () => setStep(s => Math.max(s - 1, 0));
 
   const canProceedStep0 = SubmitApplicationSchema.pick({ program: true, degree_level: true }).safeParse(form).success;
-  const canProceedStep1 = true;
+  const canProceedStep1 = true; // Optional fields
   const canProceedStep2 = SubmitApplicationSchema.pick({ prior_education: true }).safeParse(form).success;
   const canProceedStep3 = SubmitApplicationSchema.pick({ personal_statement: true }).safeParse(form).success;
 
@@ -259,14 +266,42 @@ export default function Apply() {
           )}
 
           {step === 1 && (
-            <div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <h2 style={{ marginBottom: '0.5rem' }}>Personal Information</h2>
-              <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem', fontSize: '0.9rem' }}>
-                Your contact information on file. To update, please contact admissions.
+              <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                Please provide your personal details.
               </p>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', background: 'var(--bg)', padding: '1.25rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', background: 'var(--bg)', padding: '1.25rem', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)', marginBottom: '0.5rem' }}>
                 <div><strong>Name:</strong> {user?.first_name} {user?.last_name}</div>
                 <div><strong>Email:</strong> {user?.email}</div>
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                <div className="form-group">
+                  <label className="form-label" htmlFor="date_of_birth">Date of Birth</label>
+                  <input type="date" id="date_of_birth" className="form-input" value={form.date_of_birth || ''} onChange={e => update('date_of_birth', e.target.value)} />
+                </div>
+                
+                <div className="form-group">
+                  <label className="form-label" htmlFor="gender">Gender</label>
+                  <select id="gender" className="form-input" value={form.gender || ''} onChange={e => update('gender', e.target.value)}>
+                    <option value="">Select Gender</option>
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" htmlFor="nationality">Nationality</label>
+                <input type="text" id="nationality" className="form-input" value={form.nationality || ''} onChange={e => update('nationality', e.target.value)} placeholder="e.g. American, Canadian, etc." />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label" htmlFor="address">Mailing Address</label>
+                <textarea id="address" className="form-textarea" rows={3} value={form.address || ''} onChange={e => update('address', e.target.value)} placeholder="Full mailing address" />
               </div>
             </div>
           )}
@@ -275,6 +310,23 @@ export default function Apply() {
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
               <h2 style={{ marginBottom: '0.25rem' }}>Educational Background</h2>
               <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Tell us about your prior education and academic history.</p>
+              
+              <div className="form-group">
+                <label className="form-label" htmlFor="high_school">High School</label>
+                <input type="text" id="high_school" className="form-input" value={form.high_school || ''} onChange={e => update('high_school', e.target.value)} placeholder="Name of High School" />
+              </div>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.25rem' }}>
+                <div className="form-group">
+                  <label className="form-label" htmlFor="graduation_year">Graduation Year</label>
+                  <input type="number" id="graduation_year" className="form-input" value={form.graduation_year || ''} onChange={e => update('graduation_year', e.target.value ? parseInt(e.target.value, 10) : '')} placeholder="YYYY" min="1900" max="2100" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label" htmlFor="gpa">GPA</label>
+                  <input type="number" id="gpa" className="form-input" value={form.gpa || ''} onChange={e => update('gpa', e.target.value ? parseFloat(e.target.value) : '')} placeholder="e.g. 3.5" min="0" max="5" step="0.01" />
+                </div>
+              </div>
+
               <div className="form-group">
                 <label className="form-label" htmlFor="prior_education">Prior Education & Academic History *</label>
                 <textarea
