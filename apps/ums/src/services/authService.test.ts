@@ -319,7 +319,6 @@ describe('Auth Service', () => {
         expect.stringContaining('/auth/reset-password'),
         expect.objectContaining({
           method: 'POST',
-          method: 'POST',
           body: JSON.stringify({ token: 'token123', new_password: 'newpassword' }),
         })
       );
