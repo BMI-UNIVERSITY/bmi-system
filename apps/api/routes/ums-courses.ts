@@ -217,7 +217,7 @@ export async function handleCreateEnrollment(request: Request, env: Env): Promis
 
   // ── Generate Registration Number if student has a programme and no reg_no yet ─
   let regNo: string | null = studentInfo.reg_no;
-  const batchOps: { sql: string; params: any[] }[] = [
+  const batchOps: { sql: string; params: unknown[] }[] = [
     {
       sql: `INSERT INTO enrollments (id, student_id, course_id, term_id) VALUES (?, ?, ?, ?)`,
       params: [enrollmentId, student_id, course_id, term_id || null]

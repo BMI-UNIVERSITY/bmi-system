@@ -38,13 +38,13 @@ export async function runArchivalJob(env: Env) {
         throw new Error(`Upload verification failed for ${filename} - aborting delete`);
       }
 
-      if ((env as any).DRY_RUN === 'true') {
+      if ((env as unknown as { DRY_RUN?: string }).DRY_RUN === 'true') {
         console.log(`[DRY_RUN] Exported ${results.length} rows to ${filename}. Skipping D1 delete.`);
         continue;
       }
 
       // 3. Purge from D1 using fetched IDs
-      const ids = results.map((r: any) => r.id);
+      const ids = (results as Array<Record<string, unknown>>).map(r => r.id as string);
       
       // Use transaction for atomic deletes
       await env.PLATFORM_CONTEXT!.db.transaction(async (tx) => {
@@ -74,7 +74,7 @@ async function rotateOldBackups(env: Env) {
       .map(obj => obj.key);
       
     if (oldKeys.length > 0) {
-      if ((env as any).DRY_RUN === 'true') {
+      if ((env as unknown as { DRY_RUN?: string }).DRY_RUN === 'true') {
         console.log(`[DRY_RUN] Would delete ${oldKeys.length} old backups`);
       } else {
         await Promise.all(oldKeys.map(key => env.BACKUP_BUCKET.delete(key)));

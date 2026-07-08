@@ -50,11 +50,16 @@ import { handleTransitionToAlumni } from './routes/alumni';
 
 const log = createLogger('bmi-api');
 
+interface AuthResult {
+  user: { sub: string; email: string; role: string; sv: number };
+  token: string;
+}
+
 type RouteHandler = (
   req: Request,
   env: Env,
   p: string[],
-  auth: any,
+  auth: AuthResult | undefined,
   ctx: ExecutionContext
 ) => Promise<Response> | Response;
 
@@ -280,7 +285,7 @@ export default withSentry(
         const match = path.match(route.path);
         if (!match) continue;
 
-        let auth: any = undefined;
+        let auth: AuthResult | undefined;
         if (route.roles !== undefined) {
           const authResult = await requireAuth(request, request.context.db, env.JWT_SECRET, route.roles.length > 0 ? route.roles : undefined);
           if (authResult instanceof Response) {
@@ -309,13 +314,14 @@ export default withSentry(
       const notFoundResponse = error('Route not found', 404);
       trackResponseTime(path, method, duration, 404, request);
       return withCors(notFoundResponse, request, env.ALLOWED_ORIGINS_OVERRIDE);
-    } catch (e: any) {
+    } catch (e: unknown) {
       const duration = performance.now() - startTime;
       trackResponseTime(path, method, duration, 500, request);
       
+      const err = e as { message?: string; stack?: string } | null;
       requestLogger(log, request).error('Worker error', {
-        err: e?.message ?? String(e),
-        stack: e?.stack?.split('\n')[1]?.trim(),
+        err: err?.message ?? String(e),
+        stack: err?.stack?.split('\n')[1]?.trim(),
       });
       return withCors(error('Internal server error', 500), request, env.ALLOWED_ORIGINS_OVERRIDE);
     }
@@ -331,7 +337,8 @@ export default withSentry(
     env.PLATFORM_CONTEXT = context;
     const { processEmailDelivery } = await import('./lib/email');
     for (const msg of batch.messages) {
-      const payload = msg.body as any;
+      type EmailPayload = { to: string; subject: string; html: string; logId?: string; [key: string]: unknown };
+      const payload = msg.body as EmailPayload;
       let status = 'failed';
       let errorMessage = '';
       try {
@@ -343,8 +350,8 @@ export default withSentry(
           errorMessage = 'Email provider returned failure';
           msg.retry();
         }
-      } catch (err: any) {
-        errorMessage = err.message || 'Unknown error';
+      } catch (err: unknown) {
+        errorMessage = err instanceof Error ? err.message : 'Unknown error';
         msg.retry();
       }
       if (payload.logId) {

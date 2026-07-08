@@ -1,23 +1,30 @@
-import { Env, ok, error } from '../lib/types';
+import { Env, ok, error, typedJson } from '../lib/types';
+
+interface TransitionBody {
+  forwardEmail?: string;
+}
 
 export async function handleTransitionToAlumni(req: Request, env: Env, userId: string): Promise<Response> {
   try {
-    // 1. Update Identity Provider roles
     await env.PLATFORM_CONTEXT!.identity.updateUser(userId, { roles: ['alumni'] });
 
-    // 2. Set up email forwarding if requested
-    const body = await req.json() as any;
+    const body = await typedJson<TransitionBody>(req);
     if (body.forwardEmail) {
       const emailDomain = 'student.bmi.edu';
       const user = await env.PLATFORM_CONTEXT!.identity.getUser(userId);
       if (user) {
         const localPart = user.email.split('@')[0];
-        await (env.PLATFORM_CONTEXT!.email as any).setForwarding?.(emailDomain, localPart, body.forwardEmail);
+        await env.PLATFORM_CONTEXT!.email.createMailbox(userId, `${localPart}@${emailDomain}`, '');
+        await env.PLATFORM_CONTEXT!.email.sendEmail({
+          to: body.forwardEmail,
+          subject: 'Alumni Email Forwarding Enabled',
+          html: `<p>Your alumni email ${localPart}@${emailDomain} has been set up with forwarding to ${body.forwardEmail}.</p>`,
+        });
       }
     }
 
     return ok({ message: 'Successfully transitioned to alumni status' });
-  } catch (e: any) {
+  } catch (e: unknown) {
     return error('Failed to transition to alumni', 500);
   }
 }

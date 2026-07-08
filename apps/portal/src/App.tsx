@@ -21,6 +21,11 @@ import Finances from './pages/student/Finances';
 import Support from './pages/student/Support';
 import StudentSettings from './pages/student/Settings';
 
+import ClaimAccount from './pages/claim/ClaimAccount';
+import RegistrationWizard from './pages/registration/RegistrationWizard';
+import DocumentRequest from './pages/documents/DocumentRequest';
+import AlumniDashboard from './pages/alumni/AlumniDashboard';
+
 import { SessionWarning } from './components/SessionWarning';
 
 export default function App() {
@@ -113,6 +118,34 @@ export default function App() {
           element={
             <ProtectedRoute roles={['admin', 'staff']}>
               <Admin />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/claim"
+          element={<ClaimAccount />}
+        />
+        <Route
+          path="/registration"
+          element={
+            <ProtectedRoute roles={['student']}>
+              <RegistrationWizard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/documents"
+          element={
+            <ProtectedRoute roles={['student', 'alumni']}>
+              <DocumentRequest />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/alumni"
+          element={
+            <ProtectedRoute roles={['alumni']}>
+              <AlumniDashboard />
             </ProtectedRoute>
           }
         />

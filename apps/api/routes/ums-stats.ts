@@ -2,7 +2,7 @@
  * BMI UMS – Stats & Catalog Routes
  * Computed analytics endpoints + catalog lookups for faculties/departments/programs.
  */
-import { ok, error } from '../lib/types';
+import { ok, error, typedJson } from '../lib/types';
 import type { Env } from '../lib/types';
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -83,37 +83,51 @@ export async function handleFinanceStats(request: Request, env: Env): Promise<Re
 // CERTIFICATE VERIFICATION
 // ═══════════════════════════════════════════════════════════════════════════════
 
+interface CertificateRow {
+  id: string;
+  serial_number: string;
+  verification_count: number;
+  status?: string;
+  content_hash?: string;
+  student_name?: string;
+  degree_title?: string;
+  issue_date?: string;
+  gpa?: string;
+  user_id?: string;
+  student_id?: string;
+  [key: string]: unknown;
+}
+
 export async function handleVerifyCertificate(request: Request, env: Env): Promise<Response> {
-  const body: any = await request.json().catch(() => ({}));
+  const body = await typedJson<{ serial?: string; serial_number?: string; method?: string; hash?: string }>(request).catch(() => ({} as Record<string, unknown>)) as { serial?: string; serial_number?: string; method?: string; hash?: string };
   const serial = body.serial || body.serial_number;
   if (!serial) return error('Serial number is required', 400);
   
-  // Use IDocumentGenerator to verify the document
-  const doc = await env.PLATFORM_CONTEXT!.document.verifyDocument(serial);
-  
-  if (!doc) {
-    return ok({ valid: false, error: 'Document not found', code: 'INVALID' });
-  }
-  
-  // Bump verification count
   const cert = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT c.*, u.first_name || ' ' || u.last_name as student_name
      FROM certificates c LEFT JOIN users u ON c.student_id = u.id
      WHERE c.serial_number = ?`
-  ).bind(serial).first();
+  ).bind(serial).first<CertificateRow>();
   
-  if (cert) {
-    await env.PLATFORM_CONTEXT!.db.prepare(`UPDATE certificates SET verification_count = verification_count + 1, updated_at=datetime('now') WHERE id=?`).bind((cert as any).id).run();
-  }
+  if (!cert) return ok({ valid: false, error: 'Certificate not found', code: 'NOT_FOUND' });
+  
+  await env.PLATFORM_CONTEXT!.db.prepare(`UPDATE certificates SET verification_count = verification_count + 1, updated_at=datetime('now') WHERE id=?`).bind(cert.id).run();
   
   return ok({
-    valid: true,
-    certificate: doc,
+    valid: cert.status === 'ISSUED',
+    certificate: {
+      serial_number: cert.serial_number,
+      student_name: cert.student_name || null,
+      degree_title: cert.degree_title || null,
+      issue_date: cert.issue_date || null,
+      gpa: cert.gpa || null,
+      status: cert.status || null,
+    },
     verification: {
       timestamp: new Date().toISOString(),
       method: body.method || 'online',
-      hash_verified: false,
-      verification_count: ((cert as any).verification_count || 0) + 1,
+      hash_verified: body.hash ? body.hash === cert.content_hash : false,
+      verification_count: (cert.verification_count || 0) + 1,
     }
   });
 }

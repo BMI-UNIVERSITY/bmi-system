@@ -7,6 +7,12 @@ import { ok, error } from '../lib/types';
 import { getPerformanceMetrics, getPerformanceAlerts, analyzePerformance, cleanupExpiredData } from '../lib/performance';
 import type { Env } from '../lib/types';
 
+interface MemoryInfo {
+  jsHeapSizeLimit: number;
+  totalJSHeapSize: number;
+  usedJSHeapSize: number;
+}
+
 /**
  * Get current performance metrics (admin only)
  */
@@ -48,10 +54,10 @@ export async function handleGetPerformanceMetrics(request: Request, env: Env): P
     },
     system: {
       worker_uptime_ms: performance.now(),
-      memory_usage: (performance as any).memory ? {
-        used: (performance as any).memory.usedJSHeapSize,
-        total: (performance as any).memory.totalJSHeapSize,
-        limit: (performance as any).memory.jsHeapSizeLimit
+      memory_usage: (performance as unknown as { memory?: MemoryInfo }).memory ? {
+        used: (performance as unknown as { memory: MemoryInfo }).memory.usedJSHeapSize,
+        total: (performance as unknown as { memory: MemoryInfo }).memory.totalJSHeapSize,
+        limit: (performance as unknown as { memory: MemoryInfo }).memory.jsHeapSizeLimit
       } : 'unavailable'
     }
   });
@@ -104,12 +110,14 @@ export async function handleRunMaintenance(request: Request, env: Env): Promise<
       env.PLATFORM_CONTEXT!.db.prepare(`PRAGMA optimize`).run()
     ]);
     
-    const indexes = (dbAnalysis[0].results as any[]).map(idx => ({
+    type IndexRow = { name: string; sql: string };
+    type TableRow = { name: string };
+    const indexes = (dbAnalysis[0].results as IndexRow[]).map(idx => ({
       name: idx.name,
       definition: idx.sql
     }));
     
-    const tables = (dbAnalysis[1].results as any[]).map(table => table.name);
+    const tables = (dbAnalysis[1].results as TableRow[]).map(table => table.name);
     
     const duration = Date.now() - startTime;
     
@@ -165,11 +173,11 @@ export async function handleGetSystemHealth(request: Request, env: Env): Promise
       database: {
         connection_status: 'connected',
         response_time_ms: dbResponseTime,
-        current_db_time: (dbTestResult as any)?.current_time,
+        current_db_time: (dbTestResult as { current_time?: string } | null)?.current_time ?? null,
         counts: {
-          users: (healthChecks[0] as any)?.count || 0,
-          applications: (healthChecks[1] as any)?.count || 0,
-          active_sessions: (healthChecks[2] as any)?.count || 0
+          users: (healthChecks[0] as { count?: number } | null)?.count ?? 0,
+          applications: (healthChecks[1] as { count?: number } | null)?.count ?? 0,
+          active_sessions: (healthChecks[2] as { count?: number } | null)?.count ?? 0
         }
       },
       performance: {

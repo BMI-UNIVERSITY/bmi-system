@@ -232,7 +232,7 @@ export interface User {
   email: string;
   first_name: string;
   last_name: string;
-  role: 'applicant' | 'student' | 'staff' | 'admin';
+  role: 'applicant' | 'student' | 'staff' | 'admin' | 'alumni' | 'verifier';
   is_verified?: number;
 }
 

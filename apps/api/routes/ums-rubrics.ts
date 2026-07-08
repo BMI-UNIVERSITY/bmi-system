@@ -1,5 +1,13 @@
-import { Env } from '../lib/types';
-import { ok, error } from '../lib/types';
+import type { Env } from '../lib/types';
+import { ok, error, typedJson } from '../lib/types';
+
+interface CreateRubricBody {
+  title: string;
+  description?: string;
+  course_id?: string;
+  criteria?: unknown[];
+  total_points?: number;
+}
 
 export async function handleListRubrics(request: Request, env: Env): Promise<Response> {
   try {
@@ -31,7 +39,7 @@ export async function handleListRubrics(request: Request, env: Env): Promise<Res
 
 export async function handleCreateRubric(request: Request, env: Env): Promise<Response> {
   try {
-    const body = await request.json() as any;
+    const body = await typedJson<CreateRubricBody>(request);
     const id = crypto.randomUUID().replace(/-/g, '');
     
     await env.PLATFORM_CONTEXT!.db.prepare(

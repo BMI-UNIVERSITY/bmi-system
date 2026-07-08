@@ -55,7 +55,7 @@ export function getOAuthConfig(provider: OAuthProvider, env: Env): OAuthConfig {
     }
   };
 
-  return configs[provider] as OAuthConfig;
+      return configs[provider] as OAuthConfig;
 }
 
 export async function exchangeCodeForToken(
@@ -90,11 +90,11 @@ export async function exchangeCodeForToken(
     body,
   });
 
-  const data: Record<string, any> = await response.json();
+  const data: Record<string, unknown> = await response.json();
   if (!response.ok) {
-    throw new Error(data.error || 'Failed to exchange code');
+    throw new Error((data.error as string) || 'Failed to exchange code');
   }
-  return data.access_token;
+  return data.access_token as string;
 }
 
 export async function getUserInfo(
@@ -106,7 +106,7 @@ export async function getUserInfo(
     headers: { 'Authorization': `Bearer ${accessToken}` },
   });
 
-  const data: Record<string, any> = await response.json();
+  const data: Record<string, unknown> = await response.json();
   if (!response.ok) {
     throw new Error('Failed to fetch user info');
   }
@@ -125,7 +125,9 @@ export async function getUserInfo(
         headers: { 'Authorization': `Bearer ${accessToken}`, 'Accept': 'application/json' },
       });
       const emails = await emailRes.json();
-      const primaryEmail = (emails as any[]).find((e: any) => e.primary)?.email || data.email;
+      type GitHubEmail = { primary: boolean; email: string; verified: boolean };
+      const emailsArr = emails as GitHubEmail[];
+      const primaryEmail = emailsArr.find(e => e.primary)?.email ?? data.email;
       return {
         id: data.id.toString(),
         email: primaryEmail,

@@ -162,10 +162,11 @@ export async function handleUpdateStudent(request: Request, env: Env, studentId:
   const allowed = ['gender','date_of_birth','nationality','admission_date','programme',
     'status','avatar_color','study_center_id','gpa','year_of_study','degree_level','graduation_date'];
 
+  const bodyRecord = body as unknown as Record<string, unknown>;
   const updates: string[] = [];
   const vals: unknown[] = [];
   for (const key of allowed) {
-    if ((body as any)[key] !== undefined) { updates.push(`${key} = ?`); vals.push((body as any)[key]); }
+    if (bodyRecord[key] !== undefined) { updates.push(`${key} = ?`); vals.push(bodyRecord[key]); }
   }
 
   // Also update users table fields
@@ -173,7 +174,7 @@ export async function handleUpdateStudent(request: Request, env: Env, studentId:
   const userUpdates: string[] = [];
   const userVals: unknown[] = [];
   for (const f of userFields) {
-    if ((body as any)[f] !== undefined) { userUpdates.push(`${f} = ?`); userVals.push((body as any)[f]); }
+    if (bodyRecord[f] !== undefined) { userUpdates.push(`${f} = ?`); userVals.push(bodyRecord[f]); }
   }
 
   if (updates.length) {

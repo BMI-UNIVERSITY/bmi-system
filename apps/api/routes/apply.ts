@@ -247,7 +247,8 @@ async function sendApplicationNotificationsOptimized(
     'get_user_for_notification_email'
   );
   
-  const user = userResult.result as any;
+  type UserRow = { email: string; first_name: string };
+  const user = userResult.result as unknown as UserRow | null;
   if (!user) return;
 
   // Prepare email promises for parallel execution
@@ -382,7 +383,8 @@ export async function handleUpdateStatus(
     'get_application_for_status_update'
   );
   
-  const app = appResult.result as any;
+  type AppRow = { id: string; status: string; program: string; user_id: string; email: string; first_name: string };
+  const app = appResult.result as unknown as AppRow | null;
   if (!app) return error('Application not found', 404);
 
   const oldStatus = app.status;

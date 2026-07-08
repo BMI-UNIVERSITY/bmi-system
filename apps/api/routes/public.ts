@@ -44,8 +44,9 @@ export async function handlePublicPrograms(request: Request, env: Env, ctx?: Exe
     if (!level) return cachedRes;
     
     // Filter the cached response manually
-    const body = await cachedRes.clone().json<{ success: boolean; data: any[] }>();
-    const filtered = body.data.filter((p: any) => p.level === level);
+    type ProgramItem = { level: string; [key: string]: unknown };
+    const body = await cachedRes.clone().json<{ success: boolean; data: ProgramItem[] }>();
+    const filtered = body.data.filter(p => p.level === level);
     return new Response(JSON.stringify({ success: true, data: filtered }), {
       status: 200,
       headers: cachedRes.headers,

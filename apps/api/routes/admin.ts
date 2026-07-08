@@ -1,4 +1,4 @@
-import { ok, error, logAdminAction } from '../lib/types';
+import { ok, error, logAdminAction, typedJson } from '../lib/types';
 import { sendEmail } from '../lib/email';
 import { getPortalUrl } from '../lib/config';
 import type { Env } from '../lib/types';
@@ -238,7 +238,7 @@ export async function handleGetAuditLogs(request: Request, env: Env): Promise<Re
 }
 
 export async function handleBulkEmails(request: Request, env: Env): Promise<Response> {
-  const body = await request.json() as any;
+  const body = await typedJson<{ recipients?: string[]; subject?: string; html?: string }>(request);
   if (!Array.isArray(body.recipients) || !body.subject || !body.html) {
     return error('Invalid payload. Expected { recipients: string[], subject: string, html: string }', 400);
   }

@@ -40,13 +40,15 @@ export interface Env {
   WEBHOOK_SECRET?: string;
   /** Email address for critical ops alerts via Resend. */
   OPS_ALERT_EMAIL?: string;
+  /** Email domain for provisioned student emails (e.g., student.bmi.edu) */
+  STUDENT_EMAIL_DOMAIN?: string;
   /** WriteQueue Durable Object — serializes D1 writes to prevent concurrency exhaustion */
   WRITE_QUEUE: DurableObjectNamespace;
   SENTRY_DSN?: string;
   EMAIL_QUEUE: Queue;
 }
 
-export type Role = 'applicant' | 'student' | 'staff' | 'admin' | 'verifier';
+export type Role = 'applicant' | 'student' | 'staff' | 'admin' | 'verifier' | 'alumni';
 
 export interface User {
   id: string;
@@ -97,6 +99,10 @@ export interface ApiResponse<T = unknown> {
   success: boolean;
   data?: T;
   error?: string;
+}
+
+export async function typedJson<T>(req: Request): Promise<T> {
+  return req.json() as Promise<T>;
 }
 
 export function json<T>(data: T, status = 200): Response {
@@ -152,7 +158,7 @@ export async function logAdminAction(
   action: string,
   targetType?: string,
   targetId?: string,
-  details?: Record<string, any>,
+  details?: Record<string, unknown>,
   request?: Request
 ): Promise<void> {
   const ip = request?.headers.get('CF-Connecting-IP') || null;

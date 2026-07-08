@@ -36,6 +36,7 @@ export default function Navbar() {
         {!user ? (
           <>
             <Link to="/login" className={`navbar-link${location.pathname === '/login' ? ' active' : ''}`}>Login</Link>
+            <Link to="/claim" className={`navbar-link${location.pathname === '/claim' ? ' active' : ''}`}>Claim Account</Link>
             <Link to="/register" className="btn btn-gold btn-sm">Apply Now</Link>
           </>
         ) : (
@@ -47,7 +48,14 @@ export default function Navbar() {
                 <Link to="/student/dashboard" className={`navbar-link${location.pathname === '/student/dashboard' ? ' active' : ''}`}>Dashboard</Link>
                 <Link to="/student/academics" className={`navbar-link${location.pathname === '/student/academics' ? ' active' : ''}`}>Academics</Link>
                 <Link to="/student/finances" className={`navbar-link${location.pathname === '/student/finances' ? ' active' : ''}`}>Finances</Link>
+                <Link to="/registration" className={`navbar-link${location.pathname === '/registration' ? ' active' : ''}`}>Registration</Link>
+                <Link to="/documents" className={`navbar-link${location.pathname === '/documents' ? ' active' : ''}`}>Documents</Link>
                 <Link to="/status" className={`navbar-link${location.pathname === '/status' ? ' active' : ''}`}>My Application</Link>
+              </>
+            ) : user.role === 'alumni' ? (
+              <>
+                <Link to="/alumni" className={`navbar-link${location.pathname === '/alumni' ? ' active' : ''}`}>Alumni</Link>
+                <Link to="/documents" className={`navbar-link${location.pathname === '/documents' ? ' active' : ''}`}>Documents</Link>
               </>
             ) : (
               <Link to="/status" className={`navbar-link${location.pathname === '/status' ? ' active' : ''}`}>My Application</Link>

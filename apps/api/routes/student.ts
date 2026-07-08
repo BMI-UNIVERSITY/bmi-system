@@ -1,7 +1,7 @@
 // worker/routes/student.ts
 // Student Portal API Routes
 
-import { error, ok } from '../lib/types';
+import { error, ok, typedJson } from '../lib/types';
 import type { Env } from '../lib/types';
 import { percentageToGrade } from '@bmi/shared';
 
@@ -20,7 +20,7 @@ export async function handleGetDashboard(request: Request, env: Env, userId: str
   ).bind(userId).all();
 
   // Compute total balance
-  const balance = invoices.reduce((sum: number, inv: any) => sum + inv.amount, 0);
+  const balance = invoices.reduce((sum: number, inv: Record<string, unknown>) => sum + (inv.amount as number), 0);
 
   return ok({
     balance,
@@ -69,8 +69,9 @@ export async function handleEnroll(request: Request, env: Env, userId: string): 
     ).bind(invoiceId, userId, 1000, 'unpaid', '2026-09-15').run();
 
     return ok({ success: true, message: 'Enrolled successfully' });
-  } catch (e: any) {
-    if (e.message?.includes('UNIQUE constraint failed')) {
+  } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : '';
+    if (msg.includes('UNIQUE constraint failed')) {
       return error('Already enrolled in this course', 400);
     }
     return error('Enrollment failed', 500);
@@ -82,7 +83,7 @@ export async function handleGetFinances(request: Request, env: Env, userId: stri
     'SELECT id, amount, due_date, status, created_at FROM invoices WHERE student_id = ? ORDER BY due_date DESC'
   ).bind(userId).all();
   
-  const balance = invoices.filter((i: any) => i.status === 'unpaid').reduce((sum: number, inv: any) => sum + inv.amount, 0);
+  const balance = invoices.filter((i: Record<string, unknown>) => i.status === 'unpaid').reduce((sum: number, inv: Record<string, unknown>) => sum + (inv.amount as number), 0);
 
   return ok({
     balance,
@@ -140,7 +141,7 @@ export async function handleGetTranscript(request: Request, env: Env, userId: st
   let totalPoints = 0;
   let totalCredits = 0;
   
-  const withGrades = (classes as any[]).map((c) => {
+  const withGrades = (classes as Array<Record<string, unknown>>).map((c) => {
     let letter_grade = 'N/A';
     if (c.avg_pct !== null) {
       const gradeInfo = percentageToGrade(c.avg_pct);
@@ -170,9 +171,9 @@ export async function handleGetSettings(request: Request, env: Env, userId: stri
 }
 
 export async function handleUpdateSettings(request: Request, env: Env, userId: string): Promise<Response> {
-  let body: any;
+  let body: Record<string, unknown>;
   try {
-    body = await request.json();
+    body = await typedJson<Record<string, unknown>>(request);
   } catch {
     return error('Invalid JSON');
   }

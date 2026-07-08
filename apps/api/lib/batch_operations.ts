@@ -54,7 +54,8 @@ export async function processBulkAdmissions(
       'bulk_admission_get_applications'
     );
 
-    const applications = (appsResult.result as any)?.results || [];
+    type AppRow = { id: string; user_id: string; program: string; first_name: string; last_name: string };
+    const applications = (appsResult.result as unknown as { results?: AppRow[] })?.results ?? [];
 
     // Process each application in the chunk
     for (const app of applications) {
@@ -145,7 +146,7 @@ async function executeSimplifiedAdmissionPipeline(
     'bulk_admission_check_uid'
   );
   
-  let uid = (existingPersonResult.result as any)?.uid;
+  let uid = (existingPersonResult.result as unknown as { uid?: string })?.uid;
 
   // Generate UID if needed
   if (!uid) {
@@ -174,7 +175,7 @@ async function executeSimplifiedAdmissionPipeline(
     'bulk_admission_check_student'
   );
 
-  if (!(existingStudentResult.result as any)) {
+  if (!existingStudentResult.result) {
     const now = new Date().toISOString();
     const placeholderRegNo = `PENDING-${userId.slice(0, 8).toUpperCase()}`;
     
@@ -195,7 +196,7 @@ async function executeSimplifiedAdmissionPipeline(
       'bulk_admission_find_program'
     );
     
-    const progInfo = progResult.result as any;
+    const progInfo = progResult.result as unknown as { id: string; code: string; level: string } | null;
     if (progInfo) {
       const { generateRegNo } = await import('./reg_number');
       const year = new Date().getUTCFullYear();
@@ -281,7 +282,7 @@ export async function bulkCleanupExpiredRecords(db: IDatabase): Promise<{
         `bulk_cleanup_${cleanup.table}`
       );
       
-      const changes = (result.result as any)?.changes || 0;
+      const changes = (result.result as unknown as { changes?: number })?.changes ?? 0;
       totalDeleted += changes;
       tablesProcessed.push(`${cleanup.table}(${changes})`);
     }
@@ -322,7 +323,9 @@ export async function optimizeDatabaseIndexes(db: IDatabase): Promise<{
       'analyze_database_indexes'
     );
     
-    const indexes = (indexesResult.result as any)?.results || [];
+    type IndexRow = { name: string; tbl_name: string };
+    type TableRow = { name: string };
+    const indexes = (indexesResult.result as unknown as { results?: IndexRow[] })?.results ?? [];
 
     // Run SQLite's built-in optimization
     await executeWithMonitoring(
@@ -336,14 +339,14 @@ export async function optimizeDatabaseIndexes(db: IDatabase): Promise<{
       'get_table_names'
     );
     
-    const tables = (tablesResult.result as any)?.results || [];
+    const tables = (tablesResult.result as unknown as { results?: TableRow[] })?.results ?? [];
 
     // Check for tables that might need indexes
     const largeTableChecks = await Promise.all(
-      tables.slice(0, 10).map(async (table: any) => {
+      tables.slice(0, 10).map(async (table: TableRow) => {
         try {
-          const countResult = await db.prepare(`SELECT COUNT(*) as count FROM ${table.name}`).first();
-          return { table: table.name, count: (countResult as any)?.count || 0 };
+          const countResult = await db.prepare(`SELECT COUNT(*) as count FROM ${table.name}`).first<{ count: number }>();
+          return { table: table.name, count: countResult?.count ?? 0 };
         } catch {
           return { table: table.name, count: 0 };
         }
@@ -353,7 +356,7 @@ export async function optimizeDatabaseIndexes(db: IDatabase): Promise<{
     // Generate recommendations
     for (const tableInfo of largeTableChecks) {
       if (tableInfo.count > 10000) {
-        const tableIndexes = indexes.filter((idx: any) => idx.tbl_name === tableInfo.table);
+        const tableIndexes = indexes.filter((idx: IndexRow) => idx.tbl_name === tableInfo.table);
         if (tableIndexes.length < 3) {
           recommendations.push(`Consider adding more indexes to ${tableInfo.table} (${tableInfo.count} rows, ${tableIndexes.length} indexes)`);
         }

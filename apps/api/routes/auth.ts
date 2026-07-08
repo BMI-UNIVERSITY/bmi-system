@@ -212,7 +212,7 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
   // Use optimized user lookup
   const user = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT id, email, password_hash, first_name, last_name, role, is_verified, mfa_secret, mfa_enabled, session_version FROM users WHERE email = ? LIMIT 1'
-  ).bind(email.toLowerCase()).first<any>();
+  ).bind(email.toLowerCase()).first<Record<string, unknown>>();
 
   if (!user) {
     return error('Invalid email or password', 401);

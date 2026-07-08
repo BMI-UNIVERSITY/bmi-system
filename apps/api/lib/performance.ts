@@ -38,7 +38,7 @@ export interface PerformanceAlert {
   severity: 'low' | 'medium' | 'high' | 'critical';
   message: string;
   timestamp: string;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 }
 
 // In-memory performance metrics storage (for this Worker instance)
@@ -60,7 +60,7 @@ const RESPONSE_TIME_THRESHOLDS = {
 /**
  * Wraps a D1 query with performance monitoring
  */
-export async function executeWithMonitoring<T = any>(
+export async function executeWithMonitoring<T = unknown>(
   query: IPreparedStatement,
   operation: string = 'unknown'
 ): Promise<{ result: T; metrics: QueryMetrics }> {
@@ -72,9 +72,10 @@ export async function executeWithMonitoring<T = any>(
   let rowsAffected: number | undefined;
 
   try {
-    const queryResult = await query.run() as any;
-    result = queryResult;
-    rowsAffected = queryResult?.changes || queryResult?.meta?.changes;
+    type RunResult = { success: boolean; meta?: { changes?: number }; changes?: number };
+    const queryResult = await query.run() as unknown as RunResult;
+    result = queryResult as unknown as T;
+    rowsAffected = queryResult?.changes ?? queryResult?.meta?.changes;
   } catch (e) {
     success = false;
     error = e instanceof Error ? e.message : String(e);
@@ -249,7 +250,7 @@ export async function executeBatch(
 /**
  * Optimized user lookup with caching-friendly query patterns
  */
-export async function findUserByEmail(db: IDatabase, email: string): Promise<any> {
+export async function findUserByEmail(db: IDatabase, email: string): Promise<Record<string, unknown> | null> {
   const { result } = await executeWithMonitoring(
     db.prepare('SELECT id, email, password_hash, first_name, last_name, role, is_verified, mfa_secret, mfa_enabled, session_version FROM users WHERE email = ? LIMIT 1')
       .bind(email.toLowerCase()),
@@ -312,12 +313,14 @@ export async function executeAdmissionPipelineOptimized(
   const { applicationId, userId, actorId, program } = context;
 
   // Step 1: Parallel data gathering (no dependencies)
+  type UserRow = { first_name: string; last_name: string; person_id: string | null };
+  type PersonRow = { uid: string };
   const [user, existingPerson] = await Promise.all([
-    db.prepare('SELECT first_name, last_name, person_id FROM users WHERE id = ?').bind(userId).first(),
-    db.prepare('SELECT p.uid FROM users u LEFT JOIN persons p ON u.person_id = p.id WHERE u.id = ?').bind(userId).first()
+    db.prepare('SELECT first_name, last_name, person_id FROM users WHERE id = ?').bind(userId).first<UserRow>(),
+    db.prepare('SELECT p.uid FROM users u LEFT JOIN persons p ON u.person_id = p.id WHERE u.id = ?').bind(userId).first<PersonRow>()
   ]);
 
-  let uid = (existingPerson as any)?.uid;
+  let uid = existingPerson?.uid;
 
   // Step 2: UID generation (only if needed)
   if (!uid) {
@@ -331,7 +334,7 @@ export async function executeAdmissionPipelineOptimized(
       db.prepare(
         `INSERT INTO persons (id, uid, first_name, last_name, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?)`
-      ).bind(personId, uid, (user as any)?.first_name || '', (user as any)?.last_name || '', now, now),
+      ).bind(personId, uid, user?.first_name ?? '', user?.last_name ?? '', now, now),
       
       db.prepare(
         `UPDATE users SET person_id = ?, updated_at = ? WHERE id = ?`
@@ -385,7 +388,7 @@ export async function executeAdmissionPipelineOptimized(
     // Try to match programme for RegNo generation
     const progInfo = await db.prepare(
       `SELECT id, code, level FROM programs WHERE lower(trim(name)) = lower(trim(?)) OR lower(trim(code)) = lower(trim(?)) LIMIT 1`
-    ).bind(program, program).first() as any;
+    ).bind(program, program).first<{ id: string; code: string; level: string }>();
 
     if (progInfo) {
       const year = new Date().getUTCFullYear();

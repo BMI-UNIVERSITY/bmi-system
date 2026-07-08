@@ -49,7 +49,7 @@ export async function handleListTransactions(request: Request, env: Env): Promis
   
   const { results } = await env.PLATFORM_CONTEXT!.db.prepare(dataQuery).bind(...bindings, perPage, offset).all();
 
-  const items = results.map((inv: any) => ({
+  const items = results.map((inv: Record<string, unknown>) => ({
     id: inv.id,
     studentId: inv.student_id,
     studentName: `${inv.first_name || ''} ${inv.last_name || ''}`.trim() || 'Unknown Student',
