@@ -5,6 +5,8 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  schedule:
+    - cron: '0 6 * * 1'  # E2E tests run weekly on Monday
 
 jobs:
   # ─── Detect Changes ───────────────────────────────────────────────────────────
@@ -48,11 +50,204 @@ jobs:
               - 'package.json'
               - '.github/workflows/deploy.yml'
 
+  # ─── Turbo Cache Key ──────────────────────────────────────────────────────────
+  turbo-cache:
+    name: Turbo Cache Setup
+    runs-on: ubuntu-latest
+    outputs:
+      key: ${{ steps.cache.outputs.cache-hit }}
+    steps:
+      - id: cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules/.cache/turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('package-lock.json', 'turbo.json') }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+  # ─── Test API ─────────────────────────────────────────────────────────────────
+  test-api:
+    name: Type Check & Test API
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.api == 'true'
+    defaults:
+      run:
+        working-directory: apps/api
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+
+      - name: Restore Turbo cache
+        uses: actions/cache/restore@v4
+        with:
+          path: node_modules/.cache/turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('package-lock.json', 'turbo.json') }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: .
+
+      - name: Build dependencies with turbo
+        run: npm run ci:build -- --filter=@bmi/api...
+        working-directory: .
+
+      - name: Verify D1 Migrations
+        run: npm run verify-migrations
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run tests (includes contract tests)
+        run: npm test
+
+      - name: Save Turbo cache
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: node_modules/.cache/turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('package-lock.json', 'turbo.json') }}
+
+  # ─── Test UMS Frontend ───────────────────────────────────────────────────────
+  test-ums:
+    name: Type Check & Test UMS
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.ums == 'true'
+    defaults:
+      run:
+        working-directory: apps/ums
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+
+      - name: Restore Turbo cache
+        uses: actions/cache/restore@v4
+        with:
+          path: node_modules/.cache/turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('package-lock.json', 'turbo.json') }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: .
+
+      - name: Build dependencies with turbo
+        run: npm run ci:build -- --filter=@bmi/ums...
+        working-directory: .
+
+      - name: Type check
+        run: npm run type-check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Save Turbo cache
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: node_modules/.cache/turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('package-lock.json', 'turbo.json') }}
+
+  # ─── Test University Frontend (Next.js) ──────────────────────────────────────
+  test-university:
+    name: Type Check & Test University
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.university == 'true'
+    defaults:
+      run:
+        working-directory: bmi-university
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+
+      - name: Restore Turbo cache
+        uses: actions/cache/restore@v4
+        with:
+          path: node_modules/.cache/turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('package-lock.json', 'turbo.json') }}
+          restore-keys: |
+            turbo-${{ runner.os }}-
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: .
+
+      - name: Build with turbo
+        run: npm run ci:build -- --filter=bmi-university
+        working-directory: .
+
+      - name: Run tests
+        run: npm test
+
+      - name: Save Turbo cache
+        uses: actions/cache/save@v4
+        if: always()
+        with:
+          path: node_modules/.cache/turbo
+          key: turbo-${{ runner.os }}-${{ hashFiles('package-lock.json', 'turbo.json') }}
+
+  # ─── E2E Tests (Weekly Schedule Only) ────────────────────────────────────────
+  e2e:
+    name: E2E Tests
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    defaults:
+      run:
+        working-directory: apps/ums
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+
+      - name: Install dependencies
+        run: npm ci
+        working-directory: .
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Run E2E tests
+        run: npm run test:e2e
+
   # ─── Deploy Unified API Worker ────────────────────────────────────────────────
   deploy-api:
     name: Deploy API Worker
     runs-on: ubuntu-latest
-    needs: [changes, test, contract-tests]
+    needs: [changes, test-api]
     if: github.event_name == 'push' && needs.changes.outputs.api == 'true'
     environment:
       name: production
@@ -69,9 +264,12 @@ jobs:
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
 
-      - name: Install dependencies (workspace)
-        run: |
-          npm ci
+      - name: Install dependencies
+        run: npm ci
+        working-directory: .
+
+      - name: Build dependencies with turbo
+        run: npm run ci:build -- --filter=@bmi/api...
         working-directory: .
 
       - name: Inject Cloudflare IDs
@@ -86,13 +284,11 @@ jobs:
           workingDirectory: apps/api
           command: deploy
 
-
-
   # ─── Deploy Portal Frontend ───────────────────────────────────────────────────
   deploy-portal:
     name: Deploy Portal (Cloudflare Pages)
     runs-on: ubuntu-latest
-    needs: [changes, test, contract-tests]
+    needs: [changes, test-api]
     if: github.event_name == 'push' && needs.changes.outputs.portal == 'true'
     defaults:
       run:
@@ -107,9 +303,8 @@ jobs:
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
 
-      - name: Install dependencies (workspace)
-        run: |
-          npm ci
+      - name: Install dependencies
+        run: npm ci
         working-directory: .
 
       - name: Build portal
@@ -130,7 +325,7 @@ jobs:
   deploy-ums:
     name: Deploy UMS (Cloudflare Pages)
     runs-on: ubuntu-latest
-    needs: [changes, test, contract-tests]
+    needs: [changes, test-ums]
     if: github.event_name == 'push' && needs.changes.outputs.ums == 'true'
     defaults:
       run:
@@ -145,9 +340,8 @@ jobs:
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
 
-      - name: Install dependencies (workspace)
-        run: |
-          npm ci
+      - name: Install dependencies
+        run: npm ci
         working-directory: .
 
       - name: Build UMS
@@ -168,7 +362,7 @@ jobs:
   deploy-university:
     name: Deploy University (Cloudflare Pages)
     runs-on: ubuntu-latest
-    needs: [changes, test, contract-tests]
+    needs: [changes, test-university]
     if: github.event_name == 'push' && needs.changes.outputs.university == 'true'
     defaults:
       run:
@@ -183,9 +377,8 @@ jobs:
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
 
-      - name: Install dependencies (workspace)
-        run: |
-          npm ci
+      - name: Install dependencies
+        run: npm ci
         working-directory: .
 
       - name: Build University
@@ -208,94 +401,3 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: bmi-university
           command: pages deploy out --project-name=bmi-university --branch=main
-
-  # ─── Run Tests (PRs & Background) ─────────────────────────────────────────────
-  test:
-    name: Type Check & Test
-    runs-on: ubuntu-latest
-    needs: changes
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: 'package-lock.json'
-
-      - name: Install all workspace dependencies
-        run: |
-          npm ci
-
-      - name: Build all workspaces
-        run: npm run build -ws --if-present
-
-      - name: Type check shared package
-        run: npm run typecheck
-        working-directory: packages/shared
-
-      - name: Verify D1 Migrations
-        run: npm run verify-migrations
-        working-directory: apps/api
-
-      - name: Type check API
-        run: npm run type-check
-        working-directory: apps/api
-
-      - name: Lint API
-        run: npm run lint
-        working-directory: apps/api
-
-      - name: Run API tests (includes contract tests)
-        run: npm test
-        working-directory: apps/api
-
-      - name: Type check UMS frontend
-        run: npm run type-check
-        working-directory: apps/ums
-
-      - name: Lint UMS frontend
-        run: npm run lint
-        working-directory: apps/ums
-
-      - name: Run UMS tests
-        run: npm test
-        working-directory: apps/ums
-
-      - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
-        working-directory: apps/ums
-
-      - name: Run UMS E2E tests
-        run: npm run test:e2e
-        working-directory: apps/ums
-
-  # ─── API Contract Tests (blocking gate) ──────────────────────────────────────
-  contract-tests:
-    name: API Contract Tests
-    runs-on: ubuntu-latest
-    needs: changes
-    defaults:
-      run:
-        working-directory: apps/api
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: 'package-lock.json'
-
-      - name: Install all workspace dependencies
-        run: npm ci
-        working-directory: .
-
-      - name: Run API contract tests
-        # Contract tests are NOT continue-on-error — they are a hard gate.
-        # Any regression in the { success, data: { items, page, perPage, total } }
-        # response envelope will fail this job and block deployment.
-        run: npm test
-

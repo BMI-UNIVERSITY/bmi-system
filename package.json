@@ -1,13 +1,18 @@
 {
   "name": "bmi-system",
   "private": true,
+  "packageManager": "npm@11.13.0",
   "workspaces": [
     "apps/*",
     "packages/*",
     "bmi-university"
   ],
   "scripts": {
-    "prepare": "npm run build --workspace=@bmi/ports && npm run build --workspace=@bmi/adapters && npm run build --workspace=@bmi/bootstrap && npm run build --workspace=@bmi/shared && npm run build --workspace=@bmi/rate-limiter && npm run build --workspace=@bmi/api-middleware"
+    "prepare": "npm run build --workspace=@bmi/ports && npm run build --workspace=@bmi/adapters && npm run build --workspace=@bmi/bootstrap && npm run build --workspace=@bmi/shared && npm run build --workspace=@bmi/rate-limiter && npm run build --workspace=@bmi/api-middleware",
+    "ci:build": "turbo run build --filter=./packages/*",
+    "ci:typecheck": "turbo run type-check typecheck",
+    "ci:test": "turbo run test",
+    "ci:lint": "turbo run lint"
   },
   "overrides": {
     "cookie": "^0.7.0",
@@ -24,8 +29,11 @@
     }
   },
   "optionalDependencies": {
-    "lightningcss-linux-x64-gnu": "1.32.0",
+    "@next/swc-linux-x64-gnu": "^15.1.7",
     "@tailwindcss/oxide-linux-x64-gnu": "^4.3.2",
-    "@next/swc-linux-x64-gnu": "^15.1.7"
+    "lightningcss-linux-x64-gnu": "1.32.0"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.4"
   }
 }
