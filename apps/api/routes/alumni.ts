@@ -1,4 +1,4 @@
-import { Env, success, error } from '../lib/types';
+import { Env, ok, error } from '../lib/types';
 
 export async function handleTransitionToAlumni(req: Request, env: Env, userId: string): Promise<Response> {
   try {
@@ -16,7 +16,7 @@ export async function handleTransitionToAlumni(req: Request, env: Env, userId: s
       }
     }
 
-    return success({ message: 'Successfully transitioned to alumni status' });
+    return ok({ message: 'Successfully transitioned to alumni status' });
   } catch (e: any) {
     return error('Failed to transition to alumni', 500);
   }

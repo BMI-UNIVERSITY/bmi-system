@@ -1,4 +1,4 @@
-import { Env, success, error } from '../lib/types';
+import { Env, ok, error } from '../lib/types';
 
 export async function handleLmsCourses(req: Request, env: Env, studentId: string): Promise<Response> {
   try {
@@ -7,7 +7,7 @@ export async function handleLmsCourses(req: Request, env: Env, studentId: string
     // Real implementation uses env.PLATFORM_CONTEXT!.lms.getCourse()
     
     // As a shortcut, return some dummy LMS data
-    return success({
+    return ok({
       courses: [
         { id: '1', name: 'Intro to Computer Science' },
         { id: '2', name: 'Data Structures' },
@@ -25,7 +25,7 @@ export async function handleLmsGrades(req: Request, env: Env, studentId: string)
     if (!courseId) return error('courseId is required', 400);
 
     const grades = await env.PLATFORM_CONTEXT!.lms.getGrades(courseId, studentId);
-    return success({ grades });
+    return ok({ grades });
   } catch (e: any) {
     return error('Failed to fetch LMS grades', 500);
   }

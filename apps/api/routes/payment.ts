@@ -1,4 +1,4 @@
-import { Env, success, error } from '../lib/types';
+import { Env, ok, error } from '../lib/types';
 
 export async function handleCreatePaymentIntent(req: Request, env: Env, userId: string): Promise<Response> {
   try {
@@ -13,7 +13,7 @@ export async function handleCreatePaymentIntent(req: Request, env: Env, userId: 
       description: reason,
       metadata: { userId }
     });
-    return success({ clientSecret: intent.clientSecret, intentId: intent.id });
+    return ok({ clientSecret: intent.clientSecret, intentId: intent.id });
   } catch (e: any) {
     return error('Failed to create payment intent', 500);
   }
@@ -21,5 +21,5 @@ export async function handleCreatePaymentIntent(req: Request, env: Env, userId: 
 
 export async function handlePaymentWebhook(req: Request, env: Env): Promise<Response> {
   // Logic to handle Stripe webhooks and update database payment statuses
-  return success({ message: 'Webhook received' });
+  return ok({ message: 'Webhook received' });
 }

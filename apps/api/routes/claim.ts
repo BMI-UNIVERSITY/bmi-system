@@ -1,4 +1,4 @@
-import { Env, success, error } from '../lib/types';
+import { Env, ok, error } from '../lib/types';
 import { ExecutionContext } from '@cloudflare/workers-types';
 
 export async function handleClaimAccount(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -33,7 +33,7 @@ export async function handleClaimAccount(req: Request, env: Env, ctx: ExecutionC
     // 4. Update application status
     await env.PLATFORM_CONTEXT!.db.prepare('UPDATE applications SET status = ? WHERE id = ?').bind('enrolled', admissionCode).run();
 
-    return success({ message: 'Account claimed successfully', user });
+    return ok({ message: 'Account claimed successfully', user });
   } catch (e: any) {
     console.error(e);
     return error(e.message || 'Failed to claim account', 500);

@@ -89,14 +89,10 @@ export async function handleVerifyCertificate(request: Request, env: Env): Promi
   if (!serial) return error('Serial number is required', 400);
   
   // Use IDocumentGenerator to verify the document
-  const verification = await env.PLATFORM_CONTEXT!.document.verifyDocument({
-    documentId: serial,
-    type: 'certificate',
-    hash: body.hash
-  });
+  const doc = await env.PLATFORM_CONTEXT!.document.verifyDocument(serial);
   
-  if (!verification.valid) {
-    return ok({ valid: false, error: verification.error, code: verification.code || 'INVALID' });
+  if (!doc) {
+    return ok({ valid: false, error: 'Document not found', code: 'INVALID' });
   }
   
   // Bump verification count
@@ -112,11 +108,11 @@ export async function handleVerifyCertificate(request: Request, env: Env): Promi
   
   return ok({
     valid: true,
-    certificate: verification.document,
+    certificate: doc,
     verification: {
       timestamp: new Date().toISOString(),
       method: body.method || 'online',
-      hash_verified: verification.hashVerified,
+      hash_verified: false,
       verification_count: ((cert as any).verification_count || 0) + 1,
     }
   });

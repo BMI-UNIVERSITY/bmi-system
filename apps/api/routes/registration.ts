@@ -1,4 +1,4 @@
-import { Env, success, error } from '../lib/types';
+import { Env, ok, error } from '../lib/types';
 
 export async function handleRegistrationStep(req: Request, env: Env, userId: string, step: string): Promise<Response> {
   if (req.method !== 'POST') return error('Method not allowed', 405);
@@ -9,7 +9,7 @@ export async function handleRegistrationStep(req: Request, env: Env, userId: str
       .bind(userId, `reg_step_${step}`, JSON.stringify(body))
       .run();
     
-    return success({ message: `Step ${step} saved successfully` });
+    return ok({ message: `Step ${step} saved successfully` });
   } catch (e: any) {
     return error('Failed to save registration step', 500);
   }
