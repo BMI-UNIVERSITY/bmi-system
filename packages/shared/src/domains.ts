@@ -9,7 +9,7 @@
 export const PORTAL_URL = 'https://bmi-portal.hkmministries.org' as const;
 
 /** The public URL of the University Management System (internal staff & students). */
-export const UMS_URL = 'https://bmi-ums.hkmministries.org' as const;
+export const UMS_URL = 'https://main.bmi-university.pages.dev' as const;
 
 /** The public URL of the marketing / university website. */
 export const MARKETING_URL = 'https://hkmministries.org' as const;
@@ -46,6 +46,10 @@ export const ALLOWED_ORIGINS: string[] = [
   PORTAL_PAGES_URL,
   UMS_URL,
   UMS_PAGES_URL,
+  // Cloudflare Pages deployment branches
+  'https://main.bmi-university.pages.dev',
+  'https://portal.bmi-university.pages.dev',
+  'https://ums.bmi-university.pages.dev',
   ...DEV_ORIGINS,
 ];
 

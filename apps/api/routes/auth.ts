@@ -1,7 +1,7 @@
 import { hashPassword, verifyPassword, signJWT, validatePasswordStrength, isCommonPassword } from '../lib/jwt';
 import { ok, error, generateCsrfToken } from '../lib/types';
 import { sendEmail } from '../lib/email';
-import { getPortalUrl } from '../lib/config';
+import { getPortalUrl, getUmsUrl } from '../lib/config';
 import { generateTOTPSecret, verifyTOTP, getTOTPAuthUrl } from '../lib/totp';
 import { getOAuthConfig, exchangeCodeForToken, getUserInfo, type OAuthProvider } from '../lib/sso';
 import { parseBody, RegisterSchema, LoginSchema } from '../lib/schemas';
@@ -367,9 +367,12 @@ export async function handleForgotPassword(request: Request, env: Env): Promise<
 
   if (!body.email) return error('Email is required');
 
+  // Fetch role alongside name so we can route the reset link correctly:
+  // admin / staff / registrar → UMS reset page
+  // student / applicant / alumni → Student Portal reset page
   const user = await env.PLATFORM_CONTEXT!.db.prepare(
-    'SELECT id, first_name FROM users WHERE email = ?'
-  ).bind(body.email.toLowerCase()).first<{ id: string; first_name: string }>();
+    'SELECT id, first_name, role FROM users WHERE email = ?'
+  ).bind(body.email.toLowerCase()).first<{ id: string; first_name: string; role: string }>();
 
   // Always return 200 to prevent email enumeration
   if (!user) return ok({ message: 'If the account exists, a password reset email has been sent.' });
@@ -381,18 +384,31 @@ export async function handleForgotPassword(request: Request, env: Env): Promise<
   ).bind(crypto.randomUUID(), user.id, resetToken).run();
 
   if (env.RESEND_API_KEY) {
-    const resetUrl = `${getPortalUrl(env)}/reset-password?token=${resetToken}`;
+    // Route staff/admin to UMS; students stay on the portal
+    const isStaffRole = ['admin', 'staff', 'registrar', 'faculty'].includes(user.role);
+    const baseUrl = isStaffRole ? getUmsUrl(env) : getPortalUrl(env);
+    const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
+    const systemLabel = isStaffRole ? 'University Management System (UMS)' : 'Student Portal';
+
     await sendEmail(env, {
       to: body.email.toLowerCase(),
       subject: 'BMI University — Password Reset Request',
       html: `
-        <h2>Password Reset Request</h2>
-        <p>Hi ${user.first_name},</p>
-        <p>We received a request to reset your password. Click the link below to proceed:</p>
-        <p><a href="${resetUrl}" style="display:inline-block;padding:12px 24px;background:#d4af37;color:#0f172a;text-decoration:none;border-radius:6px;font-weight:bold;">Reset Password</a></p>
-        <p>Or copy this link: ${resetUrl}</p>
-        <p>This link expires in 1 hour.</p>
-        <p>If you didn't request this, you can ignore this email.</p>
+        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#f8fafc;padding:40px 20px;">
+          <div style="background:#0f172a;padding:24px;border-radius:8px 8px 0 0;text-align:center;">
+            <h1 style="color:#d4af37;margin:0;font-size:24px;">BMI University</h1>
+            <p style="color:rgba(255,255,255,0.7);margin:4px 0 0;">Password Reset — ${systemLabel}</p>
+          </div>
+          <div style="background:#fff;padding:32px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0;">
+            <h2 style="color:#0f172a;">Hi ${user.first_name},</h2>
+            <p style="color:#475569;line-height:1.6;">We received a request to reset your BMI University password for the <strong>${systemLabel}</strong>. Click the button below to set a new password:</p>
+            <div style="margin:32px 0;text-align:center;">
+              <a href="${resetUrl}" style="display:inline-block;padding:14px 32px;background:#d4af37;color:#0f172a;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px;">Reset Password</a>
+            </div>
+            <p style="color:#94a3b8;font-size:13px;">Or copy this link into your browser:<br><a href="${resetUrl}" style="color:#d4af37;word-break:break-all;">${resetUrl}</a></p>
+            <p style="color:#94a3b8;font-size:13px;">This link expires in <strong>1 hour</strong>. If you didn't request this, you can safely ignore this email.</p>
+          </div>
+        </div>
       `
     });
   }
