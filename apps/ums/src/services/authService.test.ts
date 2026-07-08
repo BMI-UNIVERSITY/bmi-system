@@ -319,23 +319,11 @@ describe('Auth Service', () => {
         expect.stringContaining('/auth/reset-password'),
         expect.objectContaining({
           method: 'POST',
-          body: JSON.stringify({
-            token: 'token123',
-            password: 'newpassword',
-            passwordConfirm: 'newpassword',
-          }),
+          method: 'POST',
+          body: JSON.stringify({ token: 'token123', new_password: 'newpassword' }),
         })
       );
       expect(result.success).toBe(true);
     });
   });
 });
-
-
-
-
-
-
-
-
-
