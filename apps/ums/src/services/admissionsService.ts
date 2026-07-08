@@ -57,7 +57,8 @@ export const admissionsService = {
     if (!response.ok) {
       throw new Error('Failed to load applications');
     }
-    return response.json() as Promise<Application[]>;
+    const result = await response.json() as { success: boolean; data: Application[] };
+    return result.data || [];
   },
 
   /**
@@ -68,7 +69,8 @@ export const admissionsService = {
     if (!response.ok) {
       throw new Error('Failed to load application details');
     }
-    return response.json() as Promise<Application>;
+    const result = await response.json() as { success: boolean; data: Application };
+    return result.data;
   },
 
   /**
@@ -98,6 +100,7 @@ export const admissionsService = {
     if (!response.ok) {
       throw new Error('Failed to load application audit logs');
     }
-    return response.json() as Promise<StatusLogEntry[]>;
+    const result = await response.json() as { success: boolean; data: StatusLogEntry[] };
+    return result.data || [];
   }
 };
