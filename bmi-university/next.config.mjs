@@ -1,4 +1,5 @@
 /** @type {import('next').NextConfig} */
+// Last build: 2026-07-08
 const nextConfig = {
   output: 'export',
   trailingSlash: true,
