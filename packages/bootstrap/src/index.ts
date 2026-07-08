@@ -108,12 +108,20 @@ function buildCloudflare(env: any): PlatformContext {
     ? new CloudflareR2StorageAdapter(env.R2_BUCKET, env.R2_PUBLIC_URL)
     : new MemoryStorageAdapter();
 
+  const rateLimiter = env.RATE_LIMITER
+    ? new CloudflareRateLimiterAdapter(env.RATE_LIMITER)
+    : new MemoryRateLimiterAdapter();
+
+  const writeQueue = env.WRITE_QUEUE
+    ? new CloudflareWriteQueueAdapter(env.WRITE_QUEUE)
+    : new MemoryWriteQueueAdapter();
+
   return {
     db: new D1DatabaseAdapter(env.DB),
     kv: new CloudflareKVAdapter(env.KV),
     queue: new CloudflareQueueAdapter(env.EMAIL_QUEUE || env.QUEUE),
-    rateLimiter: new CloudflareRateLimiterAdapter(env.RATE_LIMITER),
-    writeQueue: new CloudflareWriteQueueAdapter(env.WRITE_QUEUE),
+    rateLimiter,
+    writeQueue,
     secrets: new EnvironmentSecretsAdapter(env),
     logger: new CloudflareLoggerAdapter(tracer.getRequestId()),
     tracer,
