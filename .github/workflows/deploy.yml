@@ -97,7 +97,7 @@ jobs:
         working-directory: .
 
       - name: Build dependencies with turbo
-        run: npm run ci:build -- --filter=@bmi/api...
+        run: npm run ci:build
         working-directory: .
 
       - name: Verify D1 Migrations
@@ -151,7 +151,7 @@ jobs:
         working-directory: .
 
       - name: Build dependencies with turbo
-        run: npm run ci:build -- --filter=@bmi/ums...
+        run: npm run ci:build
         working-directory: .
 
       - name: Type check
@@ -201,8 +201,8 @@ jobs:
         run: npm ci
         working-directory: .
 
-      - name: Build with turbo
-        run: npm run ci:build -- --filter=bmi-university
+      - name: Build dependencies with turbo
+        run: npm run ci:build
         working-directory: .
 
       - name: Run tests
@@ -269,7 +269,7 @@ jobs:
         working-directory: .
 
       - name: Build dependencies with turbo
-        run: npm run ci:build -- --filter=@bmi/api...
+        run: npm run ci:build
         working-directory: .
 
       - name: Inject Cloudflare IDs
