@@ -84,7 +84,7 @@ const ROUTES: Route[] = [
   { method: 'POST', path: /^\/api\/auth\/mfa\/setup$/, roles: [], handler: async (req, env, p, auth, ctx) => handleMfaSetup(req, env, auth!.user.sub) },
   { method: 'POST', path: /^\/api\/auth\/mfa\/enable$/, roles: [], handler: async (req, env, p, auth, ctx) => handleMfaEnable(req, env, auth!.user.sub) },
   { method: 'POST', path: /^\/api\/auth\/mfa\/disable$/, roles: [], handler: async (req, env, p, auth, ctx) => handleMfaDisable(req, env, auth!.user.sub) },
-  { method: 'PATCH', path: /^\/api\/applications\/draft$/, roles: ['applicant', 'student'], handler: async (req, env, p, auth, ctx) => handleSaveDraft(req, env, auth!.user.sub) },
+  { method: 'POST', path: /^\/api\/applications\/draft$/, roles: ['applicant', 'student'], handler: async (req, env, p, auth, ctx) => handleSaveDraft(req, env, auth!.user.sub) },
   { method: 'POST', path: /^\/api\/applications$/, roles: ['applicant', 'student', 'staff', 'admin'], handler: async (req, env, p, auth, ctx) => handleSubmitApplication(req, env, auth!.user.sub, ctx) },
   { method: 'GET', path: /^\/api\/applications\/me$/, roles: [], handler: async (req, env, p, auth, ctx) => handleGetMyApplication(req, env, auth!.user.sub) },
   { method: 'GET', path: /^\/api\/applications\/([^/]+)\/logs$/, roles: [], handler: async (req, env, p, auth, ctx) => handleGetStatusLogs(req, env, p[1], auth!.user.sub, auth!.user.role) },
@@ -272,6 +272,8 @@ export default withSentry(
         '/api/auth/reset-password',
         '/api/auth/resend-verification',
         '/api/admin/setup',
+        '/api/applications/draft',
+        '/api/applications',
       ];
       const isCsrfExempt = csrfExemptPaths.some(p => path.startsWith(p)) || path.startsWith('/api/recommendations/');
       if (stateChangingMethods.includes(method) && !isCsrfExempt) {
