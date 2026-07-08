@@ -1,3 +1,4 @@
+import { makeEnv } from './test-helpers';
 import { describe, it, expect, vi } from 'vitest';
 import {
   handleGetStudentProgrammes,
@@ -28,13 +29,13 @@ describe('programmes routes', () => {
   describe('handleGetStudentProgrammes', () => {
     it('returns 404 if student not found', async () => {
       const db = makeDB([null]);
-      const res = await handleGetStudentProgrammes(new Request('http://localhost'), { DB: db as any } as any, 'u-none');
+      const res = await handleGetStudentProgrammes(new Request('http://localhost'), makeEnv(db), 'u-none');
       expect(res.status).toBe(404);
     });
 
     it('returns 422 if student has no UID', async () => {
       const db = makeDB([{ user_id: 'u1', person_id: 'p1', uid: null }]);
-      const res = await handleGetStudentProgrammes(new Request('http://localhost'), { DB: db as any } as any, 'u1');
+      const res = await handleGetStudentProgrammes(new Request('http://localhost'), makeEnv(db), 'u1');
       expect(res.status).toBe(422);
     });
 
@@ -54,7 +55,7 @@ describe('programmes routes', () => {
             }),
           }),
       };
-      const res = await handleGetStudentProgrammes(new Request('http://localhost'), { DB: db as any } as any, 'u1');
+      const res = await handleGetStudentProgrammes(new Request('http://localhost'), makeEnv(db), 'u1');
       const body = await res.json() as any;
       expect(res.status).toBe(200);
       expect(body.data[0].programme_name).toBe('CS');
@@ -69,7 +70,7 @@ describe('programmes routes', () => {
         body: 'not-json',
         headers: { 'Content-Type': 'text/plain' },
       });
-      const res = await handleProgrammeTransfer(req, { DB: db as any } as any, 'u1', 'admin1');
+      const res = await handleProgrammeTransfer(req, makeEnv(db), 'u1', 'admin1');
       expect(res.status).toBe(400);
     });
 
@@ -79,7 +80,7 @@ describe('programmes routes', () => {
         method: 'POST',
         body: JSON.stringify({ notes: 'transfer' }),
       });
-      const res = await handleProgrammeTransfer(req, { DB: db as any } as any, 'u1', 'admin1');
+      const res = await handleProgrammeTransfer(req, makeEnv(db), 'u1', 'admin1');
       expect(res.status).toBe(400);
     });
 
@@ -89,7 +90,7 @@ describe('programmes routes', () => {
         method: 'POST',
         body: JSON.stringify({ new_programme_id: 'prog-x' }),
       });
-      const res = await handleProgrammeTransfer(req, { DB: db as any } as any, 'u1', 'admin1');
+      const res = await handleProgrammeTransfer(req, makeEnv(db), 'u1', 'admin1');
       expect(res.status).toBe(404);
     });
 
@@ -102,7 +103,7 @@ describe('programmes routes', () => {
         method: 'POST',
         body: JSON.stringify({ new_programme_id: 'prog1' }),
       });
-      const res = await handleProgrammeTransfer(req, { DB: db as any } as any, 'u-none', 'admin1');
+      const res = await handleProgrammeTransfer(req, makeEnv(db), 'u-none', 'admin1');
       expect(res.status).toBe(404);
     });
 
@@ -115,7 +116,7 @@ describe('programmes routes', () => {
         method: 'POST',
         body: JSON.stringify({ new_programme_id: 'prog1' }),
       });
-      const res = await handleProgrammeTransfer(req, { DB: db as any } as any, 'u1', 'admin1');
+      const res = await handleProgrammeTransfer(req, makeEnv(db), 'u1', 'admin1');
       expect(res.status).toBe(422);
     });
 
@@ -128,7 +129,7 @@ describe('programmes routes', () => {
         method: 'POST',
         body: JSON.stringify({ new_programme_id: 'prog1' }),
       });
-      const res = await handleProgrammeTransfer(req, { DB: db as any } as any, 'u1', 'admin1');
+      const res = await handleProgrammeTransfer(req, makeEnv(db), 'u1', 'admin1');
       expect(res.status).toBe(409);
     });
 
@@ -142,7 +143,7 @@ describe('programmes routes', () => {
         method: 'POST',
         body: JSON.stringify({ new_programme_id: 'prog2', notes: 'Transfer approved' }),
       });
-      const res = await handleProgrammeTransfer(req, { DB: db as any } as any, 'u1', 'admin1');
+      const res = await handleProgrammeTransfer(req, makeEnv(db), 'u1', 'admin1');
       const body = await res.json() as any;
       expect(res.status).toBe(200);
       expect(body.data.new_programme_code).toBe('MBA');

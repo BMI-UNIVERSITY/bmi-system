@@ -45,9 +45,11 @@ describe('webhooks routes', () => {
       prepare: vi.fn().mockReturnValue({
         bind: vi.fn().mockReturnValue({ run: vi.fn().mockResolvedValue({}) }),
       }),
+      transaction: vi.fn().mockImplementation(async (cb: any) => cb(db)),
+      getPlatform: vi.fn().mockReturnValue('test'),
     };
     const req = await makeSignedRequest(body, secret);
-    const res = await handleInboundWebhook(req, { WEBHOOK_SECRET: secret, DB: db } as any);
+    const res = await handleInboundWebhook(req, { WEBHOOK_SECRET: secret, PLATFORM_CONTEXT: { db, logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }, tracer: { getRequestId: vi.fn(), setTag: vi.fn() } } } as any);
     expect(res.status).toBe(200);
   });
 
@@ -59,7 +61,7 @@ describe('webhooks routes', () => {
       headers: { 'X-BMI-Signature': 'any-sig' },
     });
     // No WEBHOOK_SECRET in env → no validation possible
-    const res = await handleInboundWebhook(req, {} as any);
+    const res = await handleInboundWebhook(req, { PLATFORM_CONTEXT: { logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() }, tracer: { getRequestId: vi.fn(), setTag: vi.fn() } } } as any);
     // Could be 200 or 503 depending on implementation; just ensure it doesn't throw
     expect([200, 401, 503]).toContain(res.status);
   });

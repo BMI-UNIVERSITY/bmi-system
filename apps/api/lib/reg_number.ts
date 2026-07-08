@@ -1,4 +1,5 @@
-import type { D1Database } from '@cloudflare/workers-types';
+import type { IDatabase } from '@bmi/ports';
+
 
 /**
  * BMI UMS — Registration Number Generator
@@ -19,7 +20,7 @@ import type { D1Database } from '@cloudflare/workers-types';
  */
 
 export async function generateRegNo(
-  db: D1Database,
+  db: IDatabase,
   programmeId: string,
   programmeCode: string,
   admissionYear: number,

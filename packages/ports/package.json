@@ -1,0 +1,23 @@
+{
+  "name": "@bmi/ports",
+  "version": "1.0.0",
+  "description": "Platform-agnostic interfaces for the BMI System Hexagonal Architecture",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "prepare": "npm run build"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}

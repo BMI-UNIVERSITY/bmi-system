@@ -1,3 +1,4 @@
+import { makeEnv } from './test-helpers';
 import { describe, it, expect, vi } from 'vitest';
 import {
   handleListGrades,
@@ -36,7 +37,7 @@ describe('ums-grades routes', () => {
         }),
       };
       const req = new Request('http://localhost/api/grades');
-      const res = await handleListGrades(req, { DB: db as any } as any, 'staff1', 'staff');
+      const res = await handleListGrades(req, makeEnv(db), 'staff1', 'staff');
       const body = await res.json() as any;
 
       expect(res.status).toBe(200);
@@ -53,7 +54,7 @@ describe('ums-grades routes', () => {
       const db = { prepare: vi.fn().mockReturnValue({ bind: bindMock }) };
       // studentId in URL is 'other-student', but caller is 'student-self'
       const req = new Request('http://localhost/api/grades?studentId=other-student');
-      await handleListGrades(req, { DB: db as any } as any, 'student-self', 'student');
+      await handleListGrades(req, makeEnv(db), 'student-self', 'student');
       // The callerId 'student-self' should override the URL param
       const firstBindArgs = bindMock.mock.calls[0];
       expect(firstBindArgs).toContain('student-self');
@@ -67,7 +68,7 @@ describe('ums-grades routes', () => {
       });
       const db = { prepare: vi.fn().mockReturnValue({ bind: bindMock }) };
       const req = new Request('http://localhost/api/grades?courseId=c1&termId=t1');
-      await handleListGrades(req, { DB: db as any } as any, 'staff1', 'staff');
+      await handleListGrades(req, makeEnv(db), 'staff1', 'staff');
       expect(bindMock.mock.calls.some((args: any[]) => args.includes('c1'))).toBe(true);
       expect(bindMock.mock.calls.some((args: any[]) => args.includes('t1'))).toBe(true);
     });
@@ -80,7 +81,7 @@ describe('ums-grades routes', () => {
         method: 'POST',
         body: JSON.stringify({ assessment_type: 'exam' }), // missing enrollment_id, score, max_score
       });
-      const res = await handleCreateGrade(req, { DB: db as any } as any, 'staff1');
+      const res = await handleCreateGrade(req, makeEnv(db), 'staff1');
       expect(res.status).toBe(400);
     });
 
@@ -90,7 +91,7 @@ describe('ums-grades routes', () => {
         method: 'POST',
         body: JSON.stringify({ enrollment_id: 'e-none', assessment_type: 'exam', score: 80, max_score: 100 }),
       });
-      const res = await handleCreateGrade(req, { DB: db as any } as any, 'staff1');
+      const res = await handleCreateGrade(req, makeEnv(db), 'staff1');
       expect(res.status).toBe(404);
     });
 
@@ -113,7 +114,7 @@ describe('ums-grades routes', () => {
         method: 'POST',
         body: JSON.stringify({ enrollment_id: 'e1', assessment_type: 'exam', score: 90, max_score: 100 }),
       });
-      const res = await handleCreateGrade(req, { DB: db as any } as any, 'staff1');
+      const res = await handleCreateGrade(req, makeEnv(db), 'staff1');
       expect(res.status).toBe(201);
       const body = await res.json() as any;
       expect(body.data.score).toBe(90);
@@ -127,7 +128,7 @@ describe('ums-grades routes', () => {
         method: 'PUT',
         body: JSON.stringify({ unknown_field: 'x' }),
       });
-      const res = await handleUpdateGrade(req, { DB: db as any } as any, 'g1');
+      const res = await handleUpdateGrade(req, makeEnv(db), 'g1');
       expect(res.status).toBe(400);
     });
 
@@ -143,7 +144,7 @@ describe('ums-grades routes', () => {
         method: 'PUT',
         body: JSON.stringify({ score: 75 }),
       });
-      const res = await handleUpdateGrade(req, { DB: db as any } as any, 'g-none');
+      const res = await handleUpdateGrade(req, makeEnv(db), 'g-none');
       expect(res.status).toBe(404);
     });
 
@@ -162,7 +163,7 @@ describe('ums-grades routes', () => {
         method: 'PUT',
         body: JSON.stringify({ score: 75, max_score: 100, assessment_type: 'quiz' }),
       });
-      const res = await handleUpdateGrade(req, { DB: db as any } as any, 'g1');
+      const res = await handleUpdateGrade(req, makeEnv(db), 'g1');
       const body = await res.json() as any;
       expect(res.status).toBe(200);
       expect(body.data.score).toBe(75);

@@ -1,0 +1,28 @@
+{
+  "name": "@bmi/adapters",
+  "version": "1.0.0",
+  "description": "Platform-specific adapters for the BMI System Hexagonal Architecture",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist",
+    "prepare": "npm run build"
+  },
+  "dependencies": {
+    "@bmi/ports": "*"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20260701.1",
+    "@types/pg": "^8.20.0",
+    "typescript": "^5.8.2"
+  }
+}

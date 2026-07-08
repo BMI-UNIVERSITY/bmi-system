@@ -1,10 +1,11 @@
-import type { D1Database } from '@cloudflare/workers-types';
+import type { IDatabase } from '@bmi/ports';
+
 
 /**
  * Atomically generates a new UID using the singleton `uid_counters` table.
  * The UID format is `BMI` followed by a 9-digit padded serial number (e.g., `BMI000000001`).
  */
-export async function generateUID(db: D1Database): Promise<string> {
+export async function generateUID(db: IDatabase): Promise<string> {
   // Use UPDATE ... RETURNING to ensure atomic increments on D1
   const result = await db.prepare(
     `UPDATE uid_counters 

@@ -1,3 +1,4 @@
+import { makeEnv } from './test-helpers';
 import { describe, it, expect, vi } from 'vitest';
 import {
   handlePublicStats,
@@ -22,7 +23,7 @@ describe('public routes', () => {
         first: vi.fn().mockResolvedValue({ n: 42 }),
       })
     };
-    const res = await handlePublicStats(new Request('http://localhost'), { DB: db as any } as any);
+    const res = await handlePublicStats(new Request('http://localhost'), makeEnv(db));
     const body = await res.json() as any;
     expect(res.status).toBe(200);
     expect(body.data).toHaveProperty('total_programs');
@@ -43,7 +44,7 @@ describe('public routes', () => {
       })
     };
     const req = new Request('http://localhost/api/public/cms/posts?page=1');
-    const res = await handlePublicListPosts(req, { DB: db as any } as any);
+    const res = await handlePublicListPosts(req, makeEnv(db));
     const body = await res.json() as any;
     expect(body.data.results[0].author.first_name).toBe('A');
     expect(body.data.total).toBe(1);
@@ -62,7 +63,7 @@ describe('public routes', () => {
       })
     };
     const req = new Request('http://localhost/api/public/cms/posts');
-    const res = await handlePublicListPosts(req, { DB: db as any } as any);
+    const res = await handlePublicListPosts(req, makeEnv(db));
     const body = await res.json() as any;
     expect(body.data.results[0].tags).toEqual(['tech', 'news']);
   });
@@ -73,7 +74,7 @@ describe('public routes', () => {
         bind: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) })
       })
     };
-    const res = await handlePublicGetPost(new Request('http://localhost'), { DB: db as any } as any, 'unknown-slug');
+    const res = await handlePublicGetPost(new Request('http://localhost'), makeEnv(db), 'unknown-slug');
     expect(res.status).toBe(404);
   });
 
@@ -84,7 +85,7 @@ describe('public routes', () => {
         bind: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(post) })
       })
     };
-    const res = await handlePublicGetPost(new Request('http://localhost'), { DB: db as any } as any, 'hello');
+    const res = await handlePublicGetPost(new Request('http://localhost'), makeEnv(db), 'hello');
     const body = await res.json() as any;
     expect(body.data.author.first_name).toBe('Alice');
     expect(body.data.content).toBe('Body');
@@ -96,7 +97,7 @@ describe('public routes', () => {
         bind: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) })
       })
     };
-    const res = await handlePublicGetPage(new Request('http://localhost'), { DB: db as any } as any, 'about');
+    const res = await handlePublicGetPage(new Request('http://localhost'), makeEnv(db), 'about');
     expect(res.status).toBe(404);
   });
 
@@ -107,7 +108,7 @@ describe('public routes', () => {
         bind: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(page) })
       })
     };
-    const res = await handlePublicGetPage(new Request('http://localhost'), { DB: db as any } as any, 'about');
+    const res = await handlePublicGetPage(new Request('http://localhost'), makeEnv(db), 'about');
     const body = await res.json() as any;
     expect(body.data.title).toBe('About');
   });

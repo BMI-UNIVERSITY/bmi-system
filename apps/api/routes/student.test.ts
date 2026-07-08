@@ -1,3 +1,4 @@
+import { makeEnv } from './test-helpers';
 import { describe, it, expect, vi } from 'vitest';
 import {
   handleGetDashboard,
@@ -35,7 +36,7 @@ describe('student routes', () => {
         }),
       };
       const req = new Request('http://localhost/api/student/dashboard');
-      const res = await handleGetDashboard(req, { DB: db as any } as any, 'u1');
+      const res = await handleGetDashboard(req, makeEnv(db), 'u1');
       const body = await res.json() as any;
 
       expect(res.status).toBe(200);
@@ -49,7 +50,7 @@ describe('student routes', () => {
       const courses = [{ id: 'c1', code: 'CS101', title: 'Intro', term: 'Fall 2026' }];
       const db = makeDB(null, courses);
       const req = new Request('http://localhost/api/student/courses?term=Fall+2026');
-      const res = await handleGetCourses(req, { DB: db as any } as any);
+      const res = await handleGetCourses(req, makeEnv(db));
       const body = await res.json() as any;
       expect(body.data[0].code).toBe('CS101');
     });
@@ -58,7 +59,7 @@ describe('student routes', () => {
       const bindMock = vi.fn().mockReturnValue({ all: vi.fn().mockResolvedValue({ results: [] }) });
       const db = { prepare: vi.fn().mockReturnValue({ bind: bindMock }) };
       const req = new Request('http://localhost/api/student/courses');
-      await handleGetCourses(req, { DB: db as any } as any);
+      await handleGetCourses(req, makeEnv(db));
       expect(bindMock.mock.calls[0][0]).toBe('Fall 2026');
     });
   });
@@ -85,7 +86,7 @@ describe('student routes', () => {
         method: 'POST',
         body: JSON.stringify({ course_id: 'c1' }),
       });
-      const res = await handleEnroll(req, { DB: db as any } as any, 'u1');
+      const res = await handleEnroll(req, makeEnv(db), 'u1');
       const body = await res.json() as any;
       expect(res.status).toBe(200);
       expect(body.data.success).toBe(true);
@@ -103,7 +104,7 @@ describe('student routes', () => {
         method: 'POST',
         body: JSON.stringify({ course_id: 'c1' }),
       });
-      const res = await handleEnroll(req, { DB: db as any } as any, 'u1');
+      const res = await handleEnroll(req, makeEnv(db), 'u1');
       expect(res.status).toBe(400);
     });
   });
@@ -115,7 +116,7 @@ describe('student routes', () => {
         { id: 'i2', amount: 300, status: 'paid',   due_date: '2026-09-01', created_at: '2026-07-01' },
       ];
       const db = makeDB(null, invoices);
-      const res = await handleGetFinances(new Request('http://localhost'), { DB: db as any } as any, 'u1');
+      const res = await handleGetFinances(new Request('http://localhost'), makeEnv(db), 'u1');
       const body = await res.json() as any;
       expect(body.data.balance).toBe(500); // only unpaid
       expect(body.data.invoices).toHaveLength(2);
@@ -125,13 +126,13 @@ describe('student routes', () => {
   describe('handlePayInvoice', () => {
     it('returns 404 if invoice not found', async () => {
       const db = makeDB(null);
-      const res = await handlePayInvoice(new Request('http://localhost'), { DB: db as any } as any, 'u1', 'inv-none');
+      const res = await handlePayInvoice(new Request('http://localhost'), makeEnv(db), 'u1', 'inv-none');
       expect(res.status).toBe(404);
     });
 
     it('returns 400 if invoice already paid', async () => {
       const db = makeDB({ status: 'paid' });
-      const res = await handlePayInvoice(new Request('http://localhost'), { DB: db as any } as any, 'u1', 'inv1');
+      const res = await handlePayInvoice(new Request('http://localhost'), makeEnv(db), 'u1', 'inv1');
       expect(res.status).toBe(400);
     });
 
@@ -145,7 +146,7 @@ describe('student routes', () => {
           }),
         }),
       };
-      const res = await handlePayInvoice(new Request('http://localhost'), { DB: db as any } as any, 'u1', 'inv1');
+      const res = await handlePayInvoice(new Request('http://localhost'), makeEnv(db), 'u1', 'inv1');
       const body = await res.json() as any;
       expect(body.data.sandbox).toBe(true);
     });
@@ -158,7 +159,7 @@ describe('student routes', () => {
           bind: vi.fn().mockReturnValue({ run: vi.fn().mockResolvedValue({ meta: { changes: 0 } }) }),
         }),
       };
-      const res = await handleDropCourse(new Request('http://localhost'), { DB: db as any } as any, 'u1', 'c-none');
+      const res = await handleDropCourse(new Request('http://localhost'), makeEnv(db), 'u1', 'c-none');
       expect(res.status).toBe(400);
     });
 
@@ -168,7 +169,7 @@ describe('student routes', () => {
           bind: vi.fn().mockReturnValue({ run: vi.fn().mockResolvedValue({ meta: { changes: 1 } }) }),
         }),
       };
-      const res = await handleDropCourse(new Request('http://localhost'), { DB: db as any } as any, 'u1', 'c1');
+      const res = await handleDropCourse(new Request('http://localhost'), makeEnv(db), 'u1', 'c1');
       expect(res.status).toBe(200);
     });
   });
@@ -180,7 +181,7 @@ describe('student routes', () => {
         { code: 'CS102', title: 'Data', credits: 4, term: 'Fall', enrollment_id: 'e2', status: 'enrolled', avg_pct: null, letter_grade: 'N/A', grade_point: 0 },
       ];
       const db = makeDB(null, classes);
-      const res = await handleGetTranscript(new Request('http://localhost'), { DB: db as any } as any, 'u1');
+      const res = await handleGetTranscript(new Request('http://localhost'), makeEnv(db), 'u1');
       const body = await res.json() as any;
       expect(body.data.classes).toHaveLength(2);
       expect(body.data.gpa).not.toBeNull();
@@ -191,7 +192,7 @@ describe('student routes', () => {
         { code: 'CS101', title: 'Intro', credits: 3, term: 'Fall', enrollment_id: 'e1', status: 'enrolled', avg_pct: null },
       ];
       const db = makeDB(null, classes);
-      const res = await handleGetTranscript(new Request('http://localhost'), { DB: db as any } as any, 'u1');
+      const res = await handleGetTranscript(new Request('http://localhost'), makeEnv(db), 'u1');
       const body = await res.json() as any;
       expect(body.data.gpa).toBeNull();
     });
@@ -200,14 +201,14 @@ describe('student routes', () => {
   describe('handleGetSettings', () => {
     it('returns existing settings', async () => {
       const db = makeDB({ directory_release: 1, communications_opt_in: 0 });
-      const res = await handleGetSettings(new Request('http://localhost'), { DB: db as any } as any, 'u1');
+      const res = await handleGetSettings(new Request('http://localhost'), makeEnv(db), 'u1');
       const body = await res.json() as any;
       expect(body.data.directory_release).toBe(1);
     });
 
     it('returns default settings if none exist', async () => {
       const db = makeDB(null);
-      const res = await handleGetSettings(new Request('http://localhost'), { DB: db as any } as any, 'u1');
+      const res = await handleGetSettings(new Request('http://localhost'), makeEnv(db), 'u1');
       const body = await res.json() as any;
       expect(body.data.directory_release).toBe(1);
       expect(body.data.communications_opt_in).toBe(1);
@@ -227,7 +228,7 @@ describe('student routes', () => {
         method: 'PUT',
         body: JSON.stringify({ directory_release: false, communications_opt_in: true }),
       });
-      const res = await handleUpdateSettings(req, { DB: db as any } as any, 'u1');
+      const res = await handleUpdateSettings(req, makeEnv(db), 'u1');
       expect(res.status).toBe(200);
     });
   });
@@ -236,7 +237,7 @@ describe('student routes', () => {
     it('returns support tickets list', async () => {
       const tickets = [{ id: 't1', subject: 'Help', status: 'open', created_at: '2026-01-01' }];
       const db = makeDB(null, tickets);
-      const res = await handleGetTickets(new Request('http://localhost'), { DB: db as any } as any, 'u1');
+      const res = await handleGetTickets(new Request('http://localhost'), makeEnv(db), 'u1');
       const body = await res.json() as any;
       expect(body.data[0].subject).toBe('Help');
     });
@@ -256,7 +257,7 @@ describe('student routes', () => {
         method: 'POST',
         body: JSON.stringify({ subject: 'Login issue', description: 'Cannot log in' }),
       });
-      const res = await handleCreateTicket(req, { DB: db as any } as any, 'u1');
+      const res = await handleCreateTicket(req, makeEnv(db), 'u1');
       const body = await res.json() as any;
       expect(body.data.success).toBe(true);
       expect(body.data).toHaveProperty('ticket_id');

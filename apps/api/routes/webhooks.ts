@@ -40,7 +40,7 @@ export async function handleInboundWebhook(request: Request, env: Env): Promise<
   const payload = schemaResult.data as { type: string; data: Record<string, unknown>; id?: string };
 
   // Log the inbound event for audit/debugging
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `INSERT INTO sync_event_log (id, event_type, payload, target_url, status, attempts)
      VALUES (?, ?, ?, 'inbound', 'success', 1)`,
   )
@@ -62,7 +62,7 @@ export async function handleListEvents(request: Request, env: Env): Promise<Resp
   const binds: unknown[] = status ? [status, limit, offset] : [limit, offset];
 
   const [rows, total] = await Promise.all([
-    env.DB.prepare(
+    env.PLATFORM_CONTEXT!.db.prepare(
       `SELECT id, event_type, target_url, status, attempts, last_error, created_at, resolved_at
        FROM sync_event_log ${where} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
     )
@@ -72,7 +72,7 @@ export async function handleListEvents(request: Request, env: Env): Promise<Resp
         status: string; attempts: number; last_error: string | null;
         created_at: string; resolved_at: string | null;
       }>(),
-    env.DB.prepare(
+    env.PLATFORM_CONTEXT!.db.prepare(
       `SELECT COUNT(*) AS n FROM sync_event_log ${where}`,
     )
       .bind(...(status ? [status] : []))
@@ -84,7 +84,7 @@ export async function handleListEvents(request: Request, env: Env): Promise<Resp
 
 /** GET /api/webhooks/dead-letters — admin: view dead-letter queue */
 export async function handleListDeadLetters(_request: Request, env: Env): Promise<Response> {
-  const rows = await env.DB.prepare(
+  const rows = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT dl.id, dl.event_log_id, dl.last_error, dl.created_at,
             el.event_type, el.target_url, el.attempts
      FROM webhook_dead_letters dl
@@ -106,7 +106,7 @@ export async function handleRetryDeadLetter(
   deadLetterId: string,
   ctx: ExecutionContext,
 ): Promise<Response> {
-  const dl = await env.DB.prepare(
+  const dl = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT dl.payload, el.event_type
      FROM webhook_dead_letters dl
      JOIN sync_event_log el ON el.id = dl.event_log_id
@@ -126,7 +126,7 @@ export async function handleRetryDeadLetter(
   }
 
   // Remove from dead-letter queue before retry
-  await env.DB.prepare('DELETE FROM webhook_dead_letters WHERE id = ?').bind(deadLetterId).run();
+  await env.PLATFORM_CONTEXT!.db.prepare('DELETE FROM webhook_dead_letters WHERE id = ?').bind(deadLetterId).run();
 
   // Dispatch without awaiting (fire-and-forget retry)
   ctx.waitUntil(dispatchWebhook(env, dl.event_type as WebhookEventType, data).catch(() => {}));

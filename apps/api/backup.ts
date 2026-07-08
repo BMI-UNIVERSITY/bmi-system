@@ -1,8 +1,4 @@
-export interface Env {
-  DB: D1Database;
-  BACKUP_BUCKET: R2Bucket;
-  BACKUP_ENCRYPTION_KEY?: string;
-}
+import type { Env } from './lib/types';
 
 async function encryptBackup(plaintext: string, keyHex: string): Promise<ArrayBuffer> {
   const keyBytes = new Uint8Array(keyHex.match(/.{2}/g)!.map(h => parseInt(h, 16)));
@@ -37,9 +33,9 @@ export default {
     // Housekeeping: delete expired sessions and rate limits
     ctx.waitUntil((async () => {
       try {
-        await env.DB.prepare('DELETE FROM sessions WHERE expires_at < datetime("now")').run();
+        await env.PLATFORM_CONTEXT!.db.prepare('DELETE FROM sessions WHERE expires_at < datetime("now")').run();
         const oldWindow = (Math.floor(Date.now() / 60000) - 2).toString();
-        await env.DB.prepare('DELETE FROM rate_limits WHERE window_start < ?').bind(oldWindow).run();
+        await env.PLATFORM_CONTEXT!.db.prepare('DELETE FROM rate_limits WHERE window_start < ?').bind(oldWindow).run();
       } catch (e) {
         console.error('Housekeeping error:', e);
       }
@@ -47,7 +43,7 @@ export default {
 
     for (const table of tables) {
       try {
-        const { results } = await env.DB.prepare(`SELECT * FROM ${table}`).all();
+        const { results } = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT * FROM ${table}`).all();
         if (results.length === 0) continue;
 
         let body: ArrayBuffer | string = JSON.stringify(results);

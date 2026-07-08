@@ -205,6 +205,8 @@ const ROUTES: Route[] = [
   { method: 'GET', path: /^\/api\/v1\/certificates\/verification\/stats$/, roles: ['admin', 'staff'], handler: async (req, env, p, auth, ctx) => handleCertificateVerificationStats(req, env) },
 ];
 
+import { bootstrap } from '@bmi/bootstrap';
+
 export default withSentry(
   (env: Env) => ({
     dsn: env.SENTRY_DSN || '',
@@ -221,12 +223,17 @@ export default withSentry(
       return new Response(null, { status: 204, headers: getCorsHeaders(request, env.ALLOWED_ORIGINS_OVERRIDE) });
     }
 
+    // Initialize context and attach to request and env
+    const context = bootstrap(env);
+    request.context = context;
+    env.PLATFORM_CONTEXT = context;
+
     if (!path.startsWith('/api/')) {
       return new Response('Not found', { status: 404 });
     }
 
     try {
-      const rateLimitResult = await rateLimit(request, env.DB);
+      const rateLimitResult = await rateLimit(request, request.context.rateLimiter);
       if (rateLimitResult) {
         const duration = performance.now() - startTime;
         trackResponseTime(path, method, duration, rateLimitResult.status, request);
@@ -262,7 +269,7 @@ export default withSentry(
 
         let auth: any = undefined;
         if (route.roles !== undefined) {
-          const authResult = await requireAuth(request, env.DB, env.JWT_SECRET, route.roles.length > 0 ? route.roles : undefined);
+          const authResult = await requireAuth(request, request.context.db, env.JWT_SECRET, route.roles.length > 0 ? route.roles : undefined);
           if (authResult instanceof Response) {
             const duration = performance.now() - startTime;
             trackResponseTime(path, method, duration, authResult.status, request);
@@ -301,10 +308,14 @@ export default withSentry(
     }
   },
   async scheduled(controller, env, ctx) {
+    const context = bootstrap(env);
+    env.PLATFORM_CONTEXT = context;
     await backupWorker.scheduled(controller, env, ctx);
     await runArchivalJob(env);
   },
   async queue(batch, env, ctx) {
+    const context = bootstrap(env);
+    env.PLATFORM_CONTEXT = context;
     const { processEmailDelivery } = await import('./lib/email');
     for (const msg of batch.messages) {
       const payload = msg.body as any;
@@ -325,7 +336,7 @@ export default withSentry(
       }
       if (payload.logId) {
         try {
-          await env.DB.prepare(
+          await env.PLATFORM_CONTEXT!.db.prepare(
             `UPDATE email_logs SET status = ?, error_message = ?, attempts = attempts + 1, updated_at = datetime('now') WHERE id = ?`
           ).bind(status, errorMessage || null, payload.logId).run();
         } catch (e) {

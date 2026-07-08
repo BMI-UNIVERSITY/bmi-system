@@ -1,11 +1,21 @@
+import type { IDatabase } from '@bmi/ports';
 import { ALLOWED_ORIGINS as BASE_ALLOWED_ORIGINS } from '@bmi/shared';
 import type { PaginatedData } from '@bmi/shared';
 
 // Re-export PaginatedData so route files can import it from one place
 export type { PaginatedData };
 
+import type { PlatformContext } from '@bmi/bootstrap';
+
+declare global {
+  interface Request {
+    context: PlatformContext;
+  }
+}
+
 export interface Env {
-  DB: D1Database;
+  PLATFORM_CONTEXT?: PlatformContext;
+  DB: IDatabase;
   DOCUMENTS: R2Bucket;
   BACKUP_BUCKET: R2Bucket;
   JWT_SECRET: string;
@@ -149,7 +159,7 @@ export async function logAdminAction(
   const userAgent = request?.headers.get('User-Agent') || null;
   const detailsStr = details ? JSON.stringify(details) : null;
 
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `INSERT INTO admin_audit_logs (id, user_id, action, target_type, target_id, details, ip_address, user_agent)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(

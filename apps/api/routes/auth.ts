@@ -31,7 +31,7 @@ export async function handleRegister(request: Request, env: Env, ctx?: Execution
   }
 
   // Use optimized user lookup with early exit
-  const existingUser = await env.DB.prepare('SELECT 1 FROM users WHERE email = ? LIMIT 1').bind(email.toLowerCase()).first();
+  const existingUser = await env.PLATFORM_CONTEXT!.db.prepare('SELECT 1 FROM users WHERE email = ? LIMIT 1').bind(email.toLowerCase()).first();
   
   if (existingUser) {
     return error('An account with this email already exists', 409);
@@ -47,18 +47,18 @@ export async function handleRegister(request: Request, env: Env, ctx?: Execution
   
   // Use optimized batch operation for registration
   const registrationOps = [
-    env.DB.prepare(
+    env.PLATFORM_CONTEXT!.db.prepare(
       `INSERT INTO users (id, email, password_hash, first_name, last_name, phone, role, is_verified, created_at, updated_at)
        VALUES (?, ?, ?, ?, ?, ?, 'applicant', 0, datetime('now'), datetime('now'))`
     ).bind(userId, email.toLowerCase(), passwordHash, cleanFirstName, cleanLastName, phone || null),
     
-    env.DB.prepare(
+    env.PLATFORM_CONTEXT!.db.prepare(
       `INSERT INTO email_verifications (id, user_id, token, expires_at, created_at)
        VALUES (?, ?, ?, datetime('now', '+24 hours'), datetime('now'))`
     ).bind(verificationId, userId, verificationToken)
   ];
 
-  const batchResult = await executeBatch(env.DB, registrationOps, 50);
+  const batchResult = await executeBatch(env.PLATFORM_CONTEXT!.db, registrationOps, 50);
   
   if (!batchResult.success) {
     console.error('Registration batch failed:', batchResult.failures);
@@ -145,7 +145,7 @@ export async function handleVerifyEmail(request: Request, env: Env): Promise<Res
 
   if (!token) return error('Verification token is required');
 
-  const verification = await env.DB.prepare(
+  const verification = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT id, user_id, expires_at, verified_at
      FROM email_verifications WHERE token = ? AND verified_at IS NULL`
   ).bind(token).first<{ id: string; user_id: string; expires_at: string; verified_at: string | null }>();
@@ -156,11 +156,11 @@ export async function handleVerifyEmail(request: Request, env: Env): Promise<Res
     return error('Verification token has expired. Please register again.', 410);
   }
 
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `UPDATE email_verifications SET verified_at = datetime('now') WHERE id = ?`
   ).bind(verification.id).run();
 
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `UPDATE users SET is_verified = 1, verification_token = NULL, updated_at = datetime('now') WHERE id = ?`
   ).bind(verification.user_id).run();
 
@@ -174,7 +174,7 @@ export async function handleResendVerification(request: Request, env: Env): Prom
 
   if (!body.email) return error('Email is required');
 
-  const user = await env.DB.prepare(
+  const user = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT id, first_name, is_verified FROM users WHERE email = ?'
   ).bind(body.email.toLowerCase()).first<{ id: string; first_name: string; is_verified: number }>();
 
@@ -182,12 +182,12 @@ export async function handleResendVerification(request: Request, env: Env): Prom
   if (user.is_verified) return ok({ message: 'Email is already verified.' });
 
   const verificationToken = crypto.randomUUID();
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `INSERT INTO email_verifications (id, user_id, token, expires_at)
      VALUES (?, ?, ?, datetime('now', '+24 hours'))`
   ).bind(crypto.randomUUID(), user.id, verificationToken).run();
 
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `UPDATE users SET verification_token = ? WHERE id = ?`
   ).bind(verificationToken, user.id).run();
 
@@ -210,7 +210,7 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
   const { email, password, mfa_token } = parsed;
 
   // Use optimized user lookup
-  const user = await env.DB.prepare(
+  const user = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT id, email, password_hash, first_name, last_name, role, is_verified, mfa_secret, mfa_enabled, session_version FROM users WHERE email = ? LIMIT 1'
   ).bind(email.toLowerCase()).first<any>();
 
@@ -246,7 +246,7 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
   
   // Use monitored session creation
   await executeWithMonitoring(
-    env.DB.prepare(
+    env.PLATFORM_CONTEXT!.db.prepare(
       `INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)
        ON CONFLICT(id) DO UPDATE SET expires_at = excluded.expires_at`
     ).bind(`session:${user.id}`, user.id, expiresAt),
@@ -294,7 +294,7 @@ export async function handleRefresh(request: Request, env: Env): Promise<Respons
   const expiresAt = new Date(Date.now() + 60 * 60 * 24 * 7 * 1000).toISOString();
 
   // Update session expiry in DB
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `UPDATE sessions SET expires_at = ? WHERE id = ?`
   ).bind(expiresAt, `session:${payload.sub}`).run();
 
@@ -332,11 +332,11 @@ export async function handleLogout(request: Request, env: Env): Promise<Response
       // Increment session_version — this atomically invalidates all existing JWTs
       // for this user. No KV lag, no sessions table scan: every prior token's sv
       // will mismatch the DB value and be rejected immediately.
-      await env.DB.prepare(
+      await env.PLATFORM_CONTEXT!.db.prepare(
         `UPDATE users SET session_version = session_version + 1, updated_at = datetime('now') WHERE id = ?`
       ).bind(payload.sub).run();
       // Also clean up the sessions table row for this user
-      await env.DB.prepare('DELETE FROM sessions WHERE id = ?').bind(`session:${payload.sub}`).run();
+      await env.PLATFORM_CONTEXT!.db.prepare('DELETE FROM sessions WHERE id = ?').bind(`session:${payload.sub}`).run();
     }
   }
 
@@ -351,7 +351,7 @@ export async function handleLogout(request: Request, env: Env): Promise<Response
 }
 
 export async function handleMe(request: Request, env: Env, userId: string): Promise<Response> {
-  const user = await env.DB.prepare(
+  const user = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT id, email, first_name, last_name, role, created_at, is_verified FROM users WHERE id = ?'
   ).bind(userId).first();
 
@@ -366,7 +366,7 @@ export async function handleForgotPassword(request: Request, env: Env): Promise<
 
   if (!body.email) return error('Email is required');
 
-  const user = await env.DB.prepare(
+  const user = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT id, first_name FROM users WHERE email = ?'
   ).bind(body.email.toLowerCase()).first<{ id: string; first_name: string }>();
 
@@ -374,7 +374,7 @@ export async function handleForgotPassword(request: Request, env: Env): Promise<
   if (!user) return ok({ message: 'If the account exists, a password reset email has been sent.' });
 
   const resetToken = crypto.randomUUID();
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `INSERT INTO password_reset_tokens (id, user_id, token, expires_at)
      VALUES (?, ?, ?, datetime('now', '+1 hour'))`
   ).bind(crypto.randomUUID(), user.id, resetToken).run();
@@ -411,7 +411,7 @@ export async function handleResetPassword(request: Request, env: Env): Promise<R
   if (!strength.valid) return error(strength.errors.join('; '));
   if (isCommonPassword(body.new_password)) return error('This password is too common. Please choose a stronger password.');
 
-  const resetToken = await env.DB.prepare(
+  const resetToken = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT id, user_id, expires_at, used_at
      FROM password_reset_tokens WHERE token = ? AND used_at IS NULL`
   ).bind(body.token).first<{ id: string; user_id: string; expires_at: string; used_at: string | null }>();
@@ -421,29 +421,29 @@ export async function handleResetPassword(request: Request, env: Env): Promise<R
 
   // Update password
   const passwordHash = await hashPassword(body.new_password, env.PASSWORD_PEPPER);
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?`
   ).bind(passwordHash, resetToken.user_id).run();
 
   // Mark token as used
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `UPDATE password_reset_tokens SET used_at = datetime('now') WHERE id = ?`
   ).bind(resetToken.id).run();
 
   // Increment session_version to instantly invalidate all active JWTs for this user
   // (eliminates need to enumerate and delete individual session records)
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `UPDATE users SET session_version = session_version + 1, updated_at = datetime('now') WHERE id = ?`
   ).bind(resetToken.user_id).run();
 
   // Also clean up the session row
-  await env.DB.prepare('DELETE FROM sessions WHERE user_id = ?').bind(resetToken.user_id).run();
+  await env.PLATFORM_CONTEXT!.db.prepare('DELETE FROM sessions WHERE user_id = ?').bind(resetToken.user_id).run();
 
   return ok({ message: 'Password reset successfully. You can now log in with your new password.' });
 }
 
 export async function handleMfaSetup(request: Request, env: Env, userId: string): Promise<Response> {
-  const user = await env.DB.prepare('SELECT email, first_name, mfa_secret, mfa_enabled FROM users WHERE id = ?').bind(userId).first<{ email: string; first_name: string; mfa_secret: string | null; mfa_enabled: number }>();
+  const user = await env.PLATFORM_CONTEXT!.db.prepare('SELECT email, first_name, mfa_secret, mfa_enabled FROM users WHERE id = ?').bind(userId).first<{ email: string; first_name: string; mfa_secret: string | null; mfa_enabled: number }>();
   if (!user) return error('User not found', 404);
 
   if (user.mfa_enabled) return error('MFA is already enabled', 400);
@@ -452,7 +452,7 @@ export async function handleMfaSetup(request: Request, env: Env, userId: string)
   let secret = user.mfa_secret;
   if (!secret) {
     secret = await generateTOTPSecret();
-    await env.DB.prepare('UPDATE users SET mfa_secret = ?, updated_at = datetime("now") WHERE id = ?').bind(secret, userId).run();
+    await env.PLATFORM_CONTEXT!.db.prepare('UPDATE users SET mfa_secret = ?, updated_at = datetime("now") WHERE id = ?').bind(secret, userId).run();
   }
 
   const otpAuthUrl = getTOTPAuthUrl(secret, user.email);
@@ -466,7 +466,7 @@ export async function handleMfaEnable(request: Request, env: Env, userId: string
 
   if (!body.token) return error('Token is required');
 
-  const user = await env.DB.prepare('SELECT mfa_secret, mfa_enabled FROM users WHERE id = ?').bind(userId).first<{ mfa_secret: string | null; mfa_enabled: number }>();
+  const user = await env.PLATFORM_CONTEXT!.db.prepare('SELECT mfa_secret, mfa_enabled FROM users WHERE id = ?').bind(userId).first<{ mfa_secret: string | null; mfa_enabled: number }>();
   if (!user) return error('User not found', 404);
   if (!user.mfa_secret) return error('MFA not set up. Please call /api/auth/mfa/setup first.', 400);
   if (user.mfa_enabled) return error('MFA is already enabled', 400);
@@ -474,7 +474,7 @@ export async function handleMfaEnable(request: Request, env: Env, userId: string
   const valid = await verifyTOTP(user.mfa_secret, body.token);
   if (!valid) return error('Invalid token', 400);
 
-  await env.DB.prepare('UPDATE users SET mfa_enabled = 1, updated_at = datetime("now") WHERE id = ?').bind(userId).run();
+  await env.PLATFORM_CONTEXT!.db.prepare('UPDATE users SET mfa_enabled = 1, updated_at = datetime("now") WHERE id = ?').bind(userId).run();
   return ok({ message: 'MFA enabled successfully' });
 }
 
@@ -485,13 +485,13 @@ export async function handleMfaDisable(request: Request, env: Env, userId: strin
 
   if (!body.password) return error('Password is required');
 
-  const user = await env.DB.prepare('SELECT password_hash FROM users WHERE id = ?').bind(userId).first<{ password_hash: string }>();
+  const user = await env.PLATFORM_CONTEXT!.db.prepare('SELECT password_hash FROM users WHERE id = ?').bind(userId).first<{ password_hash: string }>();
   if (!user) return error('User not found', 404);
 
   const valid = await verifyPassword(body.password, user.password_hash, env.PASSWORD_PEPPER);
   if (!valid) return error('Invalid password', 401);
 
-  await env.DB.prepare('UPDATE users SET mfa_enabled = 0, mfa_secret = NULL, updated_at = datetime("now") WHERE id = ?').bind(userId).run();
+  await env.PLATFORM_CONTEXT!.db.prepare('UPDATE users SET mfa_enabled = 0, mfa_secret = NULL, updated_at = datetime("now") WHERE id = ?').bind(userId).run();
   return ok({ message: 'MFA disabled successfully' });
 }
 
@@ -532,14 +532,14 @@ export async function handleOAuthCallback(request: Request, env: Env, provider: 
   const userInfo = await getUserInfo(provider, accessToken, config);
 
   let userId;
-  const existingOAuth = await env.DB.prepare(
+  const existingOAuth = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT user_id FROM oauth_accounts WHERE provider = ? AND provider_id = ?'
   ).bind(provider, userInfo.id).first<{ user_id: string }>();
 
   if (existingOAuth) {
     userId = existingOAuth.user_id;
   } else {
-    const existingUser = await env.DB.prepare(
+    const existingUser = await env.PLATFORM_CONTEXT!.db.prepare(
       'SELECT id FROM users WHERE email = ?'
     ).bind(userInfo.email).first<{ id: string }>();
 
@@ -550,19 +550,19 @@ export async function handleOAuthCallback(request: Request, env: Env, provider: 
       const tempPassword = crypto.randomUUID();
       const passwordHash = await hashPassword(tempPassword, env.PASSWORD_PEPPER);
       
-      await env.DB.prepare(
+      await env.PLATFORM_CONTEXT!.db.prepare(
         `INSERT INTO users (id, email, password_hash, first_name, last_name, role, is_verified)
          VALUES (?, ?, ?, ?, ?, ?, ?)`
       ).bind(userId, userInfo.email, passwordHash, userInfo.firstName, userInfo.lastName, 'applicant', userInfo.emailVerified ? 1 : 0).run();
     }
 
-    await env.DB.prepare(
+    await env.PLATFORM_CONTEXT!.db.prepare(
       `INSERT INTO oauth_accounts (user_id, provider, provider_id, access_token)
        VALUES (?, ?, ?, ?)`
     ).bind(userId, provider, userInfo.id, accessToken).run();
   }
 
-  const user = await env.DB.prepare(
+  const user = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT id, email, first_name, last_name, role, mfa_enabled, is_verified FROM users WHERE id = ?'
   ).bind(userId).first<{ id: string; email: string; first_name: string; last_name: string; role: string; mfa_enabled: number; is_verified: number }>();
 
@@ -581,7 +581,7 @@ export async function handleOAuthCallback(request: Request, env: Env, provider: 
   const token = await signJWT({ sub: user.id, email: user.email, role: user.role }, env.JWT_SECRET);
   const csrfToken = generateCsrfToken();
   const expiresAt = new Date(Date.now() + 60 * 60 * 24 * 7 * 1000).toISOString();
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET expires_at = excluded.expires_at`
   ).bind(`session:${user.id}`, user.id, expiresAt).run();

@@ -18,13 +18,13 @@ export async function sendEmail(env: Env, payload: EmailPayload): Promise<boolea
   try {
     // 1. Insert into email_logs as 'pending'
     const logId = crypto.randomUUID();
-    await env.DB.prepare(
+    await env.PLATFORM_CONTEXT!.db.prepare(
       `INSERT INTO email_logs (id, to_address, subject, status) VALUES (?, ?, ?, 'pending')`
     ).bind(logId, payload.to, payload.subject).run();
 
     // 2. Enqueue the message for background processing
     const queuedPayload = { ...payload, logId };
-    await env.EMAIL_QUEUE.send(queuedPayload);
+    await env.PLATFORM_CONTEXT!.queue.send(queuedPayload);
 
     return true;
   } catch (err) {

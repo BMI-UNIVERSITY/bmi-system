@@ -46,11 +46,11 @@ export async function handleListStudents(request: Request, env: Env): Promise<Re
 
   const where = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
 
-  const countRow = await env.DB.prepare(
+  const countRow = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT COUNT(*) as total FROM students s INNER JOIN users u ON s.user_id = u.id ${where}`
   ).bind(...bindings).first<{ total: number }>();
 
-  const rows = await env.DB.prepare(
+  const rows = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT s.user_id as id, s.*, u.email, u.first_name, u.last_name, u.phone, u.role
      FROM students s
      INNER JOIN users u ON s.user_id = u.id
@@ -78,7 +78,7 @@ export async function handleGetStudent(
 ): Promise<Response> {
   // SECURITY: students may only read their own profile.
   if (callerRole === 'student') {
-    const owner = await env.DB.prepare(
+    const owner = await env.PLATFORM_CONTEXT!.db.prepare(
       `SELECT user_id FROM students WHERE user_id = ? OR reg_no = ? LIMIT 1`
     ).bind(studentId, studentId).first<{ user_id: string }>();
     if (!owner || owner.user_id !== callerId) {
@@ -86,7 +86,7 @@ export async function handleGetStudent(
     }
   }
 
-  const row = await env.DB.prepare(
+  const row = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT s.user_id as id, s.*, u.email, u.first_name, u.last_name, u.phone, u.role
      FROM students s
      INNER JOIN users u ON s.user_id = u.id
@@ -112,21 +112,21 @@ export async function handleCreateStudent(request: Request, env: Env): Promise<R
   } = parsed;
 
   // Check if user exists already
-  const existingUser = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first<{ id: string }>();
+  const existingUser = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id FROM users WHERE email = ?').bind(email).first<{ id: string }>();
 
   let userId: string;
   if (existingUser) {
     userId = existingUser.id;
   } else {
     userId = buildId();
-    await env.DB.prepare(
+    await env.PLATFORM_CONTEXT!.db.prepare(
       `INSERT INTO users (id, email, password_hash, first_name, last_name, phone, role)
        VALUES (?, ?, ?, ?, ?, ?, 'student')`
     ).bind(userId, email, password_hash, first_name, last_name, phone || null).run();
   }
 
   // Upsert student profile
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `INSERT INTO students (user_id, reg_no, gender, date_of_birth, nationality, admission_date,
        programme, status, avatar_color, study_center_id, gpa, year_of_study, degree_level)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -138,7 +138,7 @@ export async function handleCreateStudent(request: Request, env: Env): Promise<R
     gpa || null, year_of_study || null, degree_level || null
   ).run();
 
-  const created = await env.DB.prepare(
+  const created = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT s.user_id as id, s.*, u.email, u.first_name, u.last_name, u.phone FROM students s
      INNER JOIN users u ON s.user_id = u.id WHERE s.user_id = ?`
   ).bind(userId).first();
@@ -153,7 +153,7 @@ export async function handleUpdateStudent(request: Request, env: Env, studentId:
   if (body instanceof Response) return body;
 
   // Find student
-  const student = await env.DB.prepare(
+  const student = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT user_id FROM students WHERE user_id = ? OR reg_no = ?`
   ).bind(studentId, studentId).first<{ user_id: string }>();
   if (!student) return error('Student not found', 404);
@@ -178,17 +178,17 @@ export async function handleUpdateStudent(request: Request, env: Env, studentId:
 
   if (updates.length) {
     updates.push(`updated_at = datetime('now')`);
-    await env.DB.prepare(
+    await env.PLATFORM_CONTEXT!.db.prepare(
       `UPDATE students SET ${updates.join(', ')} WHERE user_id = ?`
     ).bind(...vals, uid).run();
   }
   if (userUpdates.length) {
-    await env.DB.prepare(
+    await env.PLATFORM_CONTEXT!.db.prepare(
       `UPDATE users SET ${userUpdates.join(', ')}, updated_at = datetime('now') WHERE id = ?`
     ).bind(...userVals, uid).run();
   }
 
-  const updated = await env.DB.prepare(
+  const updated = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT s.user_id as id, s.*, u.email, u.first_name, u.last_name, u.phone FROM students s
      INNER JOIN users u ON s.user_id = u.id WHERE s.user_id = ?`
   ).bind(uid).first();
@@ -199,12 +199,12 @@ export async function handleUpdateStudent(request: Request, env: Env, studentId:
 // ─── delete student ──────────────────────────────────────────────────────────
 
 export async function handleDeleteStudent(request: Request, env: Env, studentId: string): Promise<Response> {
-  const student = await env.DB.prepare(
+  const student = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT user_id FROM students WHERE user_id = ? OR reg_no = ?`
   ).bind(studentId, studentId).first<{ user_id: string }>();
   if (!student) return error('Student not found', 404);
 
   // Cascades to students table automatically (ON DELETE CASCADE)
-  await env.DB.prepare(`DELETE FROM users WHERE id = ?`).bind(student.user_id).run();
+  await env.PLATFORM_CONTEXT!.db.prepare(`DELETE FROM users WHERE id = ?`).bind(student.user_id).run();
   return ok({ deleted: true });
 }

@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^8.5.0",
+    "@bmi/ports": "file:../ports",
     "@bmi/shared": "*",
     "zod": "^4.4.3"
   },

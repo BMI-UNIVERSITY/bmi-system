@@ -1,3 +1,4 @@
+import { makeEnv } from './test-helpers';
 import { describe, it, expect, vi } from 'vitest';
 import {
   handleCatalogFaculties,
@@ -26,7 +27,7 @@ describe('ums-stats catalog routes', () => {
       })
     };
     const req = new Request('http://localhost/api/catalog/faculties');
-    const res = await handleCatalogFaculties(req, { DB: db as any } as any);
+    const res = await handleCatalogFaculties(req, makeEnv(db));
     const body = await res.json() as any;
     expect(body.data[0].name).toBe('Science');
   });
@@ -37,7 +38,7 @@ describe('ums-stats catalog routes', () => {
     });
     const db = { prepare: vi.fn().mockReturnValue({ bind: bindMock, all: vi.fn().mockResolvedValue(makeAllMock([])) }) };
     const req = new Request('http://localhost/api/catalog/departments?facultyId=f1');
-    await handleCatalogDepartments(req, { DB: db as any } as any);
+    await handleCatalogDepartments(req, makeEnv(db));
     expect(bindMock).toHaveBeenCalledWith('f1');
   });
 
@@ -47,7 +48,7 @@ describe('ums-stats catalog routes', () => {
     });
     const db = { prepare: vi.fn().mockReturnValue({ bind: bindMock, all: vi.fn().mockResolvedValue(makeAllMock([])) }) };
     const req = new Request('http://localhost/api/catalog/programs?deptId=d1');
-    await handleCatalogPrograms(req, { DB: db as any } as any);
+    await handleCatalogPrograms(req, makeEnv(db));
     expect(bindMock).toHaveBeenCalledWith('d1');
   });
 
@@ -57,7 +58,7 @@ describe('ums-stats catalog routes', () => {
         all: vi.fn().mockResolvedValue(makeAllMock([{ id: 't1', name: 'Fall 2026' }]))
       })
     };
-    const res = await handleCatalogTerms(new Request('http://localhost'), { DB: db as any } as any);
+    const res = await handleCatalogTerms(new Request('http://localhost'), makeEnv(db));
     const body = await res.json() as any;
     expect(body.data[0].name).toBe('Fall 2026');
   });
@@ -80,7 +81,7 @@ describe('ums-stats overview routes', () => {
       first: vi.fn().mockResolvedValue({ c: 42 }),
       all: vi.fn().mockResolvedValue(makeAllMock([])),
     });
-    const res = await handleStudentStatsOverview(new Request('http://localhost'), { DB: db as any } as any);
+    const res = await handleStudentStatsOverview(new Request('http://localhost'), makeEnv(db));
     const body = await res.json() as any;
     expect(res.status).toBe(200);
     expect(body.data).toHaveProperty('total');
@@ -94,7 +95,7 @@ describe('ums-stats overview routes', () => {
         all: vi.fn().mockResolvedValue(makeAllMock([{ department: 'CS', count: 5 }])),
       })
     };
-    const res = await handleStaffStatsOverview(new Request('http://localhost'), { DB: db as any } as any);
+    const res = await handleStaffStatsOverview(new Request('http://localhost'), makeEnv(db));
     const body = await res.json() as any;
     expect(body.data.total).toBe(15);
     expect(body.data.byDepartment[0].department).toBe('CS');
@@ -107,7 +108,7 @@ describe('ums-stats overview routes', () => {
         all: vi.fn().mockResolvedValue(makeAllMock([])),
       })
     };
-    const res = await handleCourseStatsOverview(new Request('http://localhost'), { DB: db as any } as any);
+    const res = await handleCourseStatsOverview(new Request('http://localhost'), makeEnv(db));
     const body = await res.json() as any;
     expect(body.data).toHaveProperty('total');
     expect(body.data).toHaveProperty('enrollments');
@@ -119,7 +120,7 @@ describe('ums-stats overview routes', () => {
         first: vi.fn().mockResolvedValue({ c: 20, s: 5000 }),
       })
     };
-    const res = await handleFinanceStats(new Request('http://localhost'), { DB: db as any } as any);
+    const res = await handleFinanceStats(new Request('http://localhost'), makeEnv(db));
     const body = await res.json() as any;
     expect(body.data).toHaveProperty('totalRevenue');
     expect(body.data).toHaveProperty('outstanding');
@@ -133,7 +134,7 @@ describe('ums-stats certificate verification', () => {
       method: 'POST',
       body: JSON.stringify({}),
     });
-    const res = await handleVerifyCertificate(req, { DB: db as any } as any);
+    const res = await handleVerifyCertificate(req, makeEnv(db));
     expect(res.status).toBe(400);
   });
 
@@ -147,7 +148,7 @@ describe('ums-stats certificate verification', () => {
       method: 'POST',
       body: JSON.stringify({ serial: 'UNKNOWN-123' }),
     });
-    const res = await handleVerifyCertificate(req, { DB: db as any } as any);
+    const res = await handleVerifyCertificate(req, makeEnv(db));
     const body = await res.json() as any;
     expect(body.data.valid).toBe(false);
   });
@@ -171,7 +172,7 @@ describe('ums-stats certificate verification', () => {
       method: 'POST',
       body: JSON.stringify({ serial: 'BMI-001', hash: 'abc123' }),
     });
-    const res = await handleVerifyCertificate(req, { DB: db as any } as any);
+    const res = await handleVerifyCertificate(req, makeEnv(db));
     const body = await res.json() as any;
     expect(body.data.valid).toBe(true);
     expect(body.data.verification.hash_verified).toBe(true);
@@ -183,7 +184,7 @@ describe('ums-stats certificate verification', () => {
         first: vi.fn().mockResolvedValue({ c: 5, s: 100 }),
       })
     };
-    const res = await handleCertificateVerificationStats(new Request('http://localhost'), { DB: db as any } as any);
+    const res = await handleCertificateVerificationStats(new Request('http://localhost'), makeEnv(db));
     const body = await res.json() as any;
     expect(body.data).toHaveProperty('issued');
     expect(body.data).toHaveProperty('totalVerifications');

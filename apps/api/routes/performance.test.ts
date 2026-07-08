@@ -1,3 +1,4 @@
+import { makeEnv } from './test-helpers';
 import { describe, it, expect, vi } from 'vitest';
 import {
   handleGetPerformanceMetrics,
@@ -54,7 +55,7 @@ describe('performance routes', () => {
       })
     };
     const req = new Request('http://localhost/api/performance');
-    const res = await handleGetPerformanceMetrics(req, { DB: db as any } as any);
+    const res = await handleGetPerformanceMetrics(req, makeEnv(db));
     const body = await res.json() as any;
 
     expect(res.status).toBe(200);
@@ -83,7 +84,7 @@ describe('performance routes', () => {
       })
     };
     const req = new Request('http://localhost/api/performance/health');
-    const res = await handleGetSystemHealth(req, { DB: db as any } as any);
+    const res = await handleGetSystemHealth(req, makeEnv(db));
     const body = await res.json() as any;
 
     expect(body.data.status).toBe('healthy');
@@ -97,7 +98,7 @@ describe('performance routes', () => {
       })
     };
     const req = new Request('http://localhost/api/performance/health');
-    const res = await handleGetSystemHealth(req, { DB: db as any } as any);
+    const res = await handleGetSystemHealth(req, makeEnv(db));
     const body = await res.json() as any;
 
     expect(body.data.status).toBe('unhealthy');

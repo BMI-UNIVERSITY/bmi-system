@@ -56,7 +56,7 @@ async function logEvent(
   targetUrl: string | undefined,
 ): Promise<string> {
   const id = crypto.randomUUID();
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `INSERT INTO sync_event_log (id, event_type, payload, target_url, status, attempts)
      VALUES (?, ?, ?, ?, 'pending', 0)`,
   )
@@ -72,13 +72,13 @@ async function deadLetter(
   payload: WebhookPayload,
   lastError: string,
 ): Promise<void> {
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `UPDATE sync_event_log SET status='dead', last_error=?, resolved_at=datetime('now') WHERE id=?`,
   )
     .bind(lastError, eventLogId)
     .run();
 
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `INSERT INTO webhook_dead_letters (id, event_log_id, payload, last_error)
      VALUES (?, ?, ?, ?)`,
   )
@@ -164,7 +164,7 @@ export async function dispatchWebhook(
       if (res.ok) {
         // Success — update log
         if (eventLogId) {
-          await env.DB.prepare(
+          await env.PLATFORM_CONTEXT!.db.prepare(
             `UPDATE sync_event_log SET status='success', attempts=?, resolved_at=datetime('now') WHERE id=?`,
           )
             .bind(attempt + 1, eventLogId)
@@ -189,7 +189,7 @@ export async function dispatchWebhook(
 
     // Update attempt count
     if (eventLogId) {
-      await env.DB.prepare(
+      await env.PLATFORM_CONTEXT!.db.prepare(
         `UPDATE sync_event_log SET attempts=?, last_error=?, status='failed' WHERE id=?`,
       )
         .bind(attempt + 1, lastError, eventLogId)

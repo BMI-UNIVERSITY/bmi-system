@@ -25,11 +25,11 @@ export async function handleListStaff(request: Request, env: Env): Promise<Respo
 
   const where = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
 
-  const countRow = await env.DB.prepare(
+  const countRow = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT COUNT(*) as total FROM staff st INNER JOIN users u ON st.user_id = u.id ${where}`
   ).bind(...bindings).first<{ total: number }>();
 
-  const rows = await env.DB.prepare(
+  const rows = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT st.*, u.email, u.first_name, u.last_name, u.phone, u.role,
             d.name as department_name
      FROM staff st
@@ -44,7 +44,7 @@ export async function handleListStaff(request: Request, env: Env): Promise<Respo
 }
 
 export async function handleGetStaff(request: Request, env: Env, staffId: string): Promise<Response> {
-  const row = await env.DB.prepare(
+  const row = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT st.*, u.email, u.first_name, u.last_name, u.phone, u.role,
             d.name as department_name
      FROM staff st
@@ -68,27 +68,27 @@ export async function handleCreateStaff(request: Request, env: Env): Promise<Res
     return error('Missing required: email, first_name, last_name, staff_no');
   }
 
-  const existingUser = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(email).first<{ id: string }>();
+  const existingUser = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id FROM users WHERE email = ?').bind(email).first<{ id: string }>();
   let userId: string;
 
   if (existingUser) {
     userId = existingUser.id;
-    await env.DB.prepare(`UPDATE users SET role = ?, updated_at = datetime('now') WHERE id = ?`).bind(role, userId).run();
+    await env.PLATFORM_CONTEXT!.db.prepare(`UPDATE users SET role = ?, updated_at = datetime('now') WHERE id = ?`).bind(role, userId).run();
   } else {
     userId = crypto.randomUUID().replace(/-/g, '');
-    await env.DB.prepare(
+    await env.PLATFORM_CONTEXT!.db.prepare(
       `INSERT INTO users (id, email, password_hash, first_name, last_name, phone, role)
        VALUES (?, ?, ?, ?, ?, ?, ?)`
     ).bind(userId, email, password_hash, first_name, last_name, phone || null, role).run();
   }
 
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `INSERT INTO staff (user_id, staff_no, department_id, designation)
      VALUES (?, ?, ?, ?)
      ON CONFLICT(user_id) DO UPDATE SET staff_no = excluded.staff_no, updated_at = datetime('now')`
   ).bind(userId, staff_no, department_id || null, designation || null).run();
 
-  const created = await env.DB.prepare(
+  const created = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT st.*, u.email, u.first_name, u.last_name FROM staff st
      INNER JOIN users u ON st.user_id = u.id WHERE st.user_id = ?`
   ).bind(userId).first();
@@ -99,7 +99,7 @@ export async function handleCreateStaff(request: Request, env: Env): Promise<Res
 export async function handleUpdateStaff(request: Request, env: Env, staffId: string): Promise<Response> {
   const body = await request.json() as Record<string, unknown>;
 
-  const staff = await env.DB.prepare(
+  const staff = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT user_id FROM staff WHERE user_id = ? OR staff_no = ?`
   ).bind(staffId, staffId).first<{ user_id: string }>();
   if (!staff) return error('Staff member not found', 404);
@@ -116,13 +116,13 @@ export async function handleUpdateStaff(request: Request, env: Env, staffId: str
 
   if (sUpdates.length) {
     sUpdates.push(`updated_at = datetime('now')`);
-    await env.DB.prepare(`UPDATE staff SET ${sUpdates.join(', ')} WHERE user_id = ?`).bind(...sVals, uid).run();
+    await env.PLATFORM_CONTEXT!.db.prepare(`UPDATE staff SET ${sUpdates.join(', ')} WHERE user_id = ?`).bind(...sVals, uid).run();
   }
   if (uUpdates.length) {
-    await env.DB.prepare(`UPDATE users SET ${uUpdates.join(', ')}, updated_at = datetime('now') WHERE id = ?`).bind(...uVals, uid).run();
+    await env.PLATFORM_CONTEXT!.db.prepare(`UPDATE users SET ${uUpdates.join(', ')}, updated_at = datetime('now') WHERE id = ?`).bind(...uVals, uid).run();
   }
 
-  const updated = await env.DB.prepare(
+  const updated = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT st.*, u.email, u.first_name, u.last_name, u.phone, u.role FROM staff st
      INNER JOIN users u ON st.user_id = u.id WHERE st.user_id = ?`
   ).bind(uid).first();

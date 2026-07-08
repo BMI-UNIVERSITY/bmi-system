@@ -3,7 +3,7 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * Handles student programme history queries and programme transfers.
  * 
- * All write operations use env.DB.batch() — D1's atomic multi-statement
+ * All write operations use env.PLATFORM_CONTEXT!.db.batch() — D1's atomic multi-statement
  * execution. D1 wraps a batch in an implicit transaction: if any statement
  * fails, none of the writes are committed. This is the correct D1-native
  * substitute for PostgreSQL's explicit BEGIN/COMMIT transactions.
@@ -23,7 +23,7 @@ export async function handleGetStudentProgrammes(
   studentId: string
 ): Promise<Response> {
   // Resolve student → uid via persons link
-  const student = await env.DB.prepare(
+  const student = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT s.user_id, u.person_id, p.uid
      FROM students s
      JOIN users u ON s.user_id = u.id
@@ -34,7 +34,7 @@ export async function handleGetStudentProgrammes(
   if (!student) return error('Student not found', 404);
   if (!student.uid) return error('Student has no UID assigned yet — complete Phase 1 backfill first', 422);
 
-  const { results } = await env.DB.prepare(
+  const { results } = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT sp.*, pr.name as programme_name, pr.code as programme_code,
             pr.degree_type, pr.level
      FROM student_programmes sp
@@ -70,13 +70,13 @@ export async function handleProgrammeTransfer(
   if (!new_programme_id) return error('new_programme_id is required');
 
   // Verify programme exists
-  const programme = await env.DB.prepare(
+  const programme = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT id, code, name FROM programs WHERE id = ? AND is_active = 1`
   ).bind(new_programme_id).first<{ id: string; code: string; name: string }>();
   if (!programme) return error('Programme not found or inactive', 404);
 
   // Resolve student → uid
-  const student = await env.DB.prepare(
+  const student = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT s.user_id, s.programme_id as current_programme_id, u.person_id, p.uid
      FROM students s
      JOIN users u ON s.user_id = u.id
@@ -103,7 +103,7 @@ export async function handleProgrammeTransfer(
   const newRowId = crypto.randomUUID().replace(/-/g, '');
 
   /**
-   * Atomic transfer using env.DB.batch():
+   * Atomic transfer using env.PLATFORM_CONTEXT!.db.batch():
    * D1 executes all statements in a single HTTP request wrapped in an
    * implicit transaction — all succeed or all are rolled back.
    *
@@ -116,46 +116,53 @@ export async function handleProgrammeTransfer(
    * The partial unique index (WHERE current_flag = 1) enforces only one
    * active programme per student without needing a SELECT-then-INSERT race.
    */
-  await env.DB.batch([
-    // 1. Deactivate current programme history row
-    env.DB.prepare(
-      `UPDATE student_programmes
-       SET current_flag = 0,
-           status = 'transferred',
-           completion_date = ?,
-           updated_at = ?
-       WHERE uid = ? AND current_flag = 1`
-    ).bind(effectiveDate, now, student.uid),
+  await env.PLATFORM_CONTEXT!.db.transaction(async (tx) => {
+    const ops = [
+      // 1. Deactivate current programme history row
+      {
+        sql: `UPDATE student_programmes
+         SET current_flag = 0,
+             status = 'transferred',
+             completion_date = ?,
+             updated_at = ?
+         WHERE uid = ? AND current_flag = 1`,
+        params: [effectiveDate, now, student.uid]
+      },
+      // 2. Insert new programme history row
+      {
+        sql: `INSERT INTO student_programmes
+           (id, uid, programme_id, admission_year, enrollment_date, status, current_flag, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, 'active', 1, ?, ?)`,
+        params: [newRowId, student.uid, new_programme_id, effectiveYear, effectiveDate, now, now]
+      },
+      // 3. Update convenience pointer on students table
+      {
+        sql: `UPDATE students SET programme_id = ?, updated_at = ? WHERE user_id = ?`,
+        params: [new_programme_id, now, studentId]
+      },
+      // 4. Audit log
+      {
+        sql: `INSERT INTO admin_audit_logs (id, user_id, action, target_type, target_id, details)
+         VALUES (?, ?, 'programme_transfer', 'student', ?, ?)`,
+        params: [
+          crypto.randomUUID(),
+          actorId,
+          studentId,
+          JSON.stringify({
+            from_programme_id: student.current_programme_id,
+            to_programme_id: new_programme_id,
+            to_programme_code: programme.code,
+            notes: notes ?? null,
+            effective_date: effectiveDate,
+          })
+        ]
+      }
+    ];
 
-    // 2. Insert new programme history row
-    env.DB.prepare(
-      `INSERT INTO student_programmes
-         (id, uid, programme_id, admission_year, enrollment_date, status, current_flag, created_at, updated_at)
-       VALUES (?, ?, ?, ?, ?, 'active', 1, ?, ?)`
-    ).bind(newRowId, student.uid, new_programme_id, effectiveYear, effectiveDate, now, now),
-
-    // 3. Update convenience pointer on students table
-    env.DB.prepare(
-      `UPDATE students SET programme_id = ?, updated_at = ? WHERE user_id = ?`
-    ).bind(new_programme_id, now, studentId),
-
-    // 4. Audit log
-    env.DB.prepare(
-      `INSERT INTO admin_audit_logs (id, user_id, action, target_type, target_id, details)
-       VALUES (?, ?, 'programme_transfer', 'student', ?, ?)`
-    ).bind(
-      crypto.randomUUID(),
-      actorId,
-      studentId,
-      JSON.stringify({
-        from_programme_id: student.current_programme_id,
-        to_programme_id: new_programme_id,
-        to_programme_code: programme.code,
-        notes: notes ?? null,
-        effective_date: effectiveDate,
-      })
-    ),
-  ]);
+    for (const op of ops) {
+      await tx.prepare(op.sql).bind(...op.params).run();
+    }
+  });
 
   return ok({
     student_id: studentId,

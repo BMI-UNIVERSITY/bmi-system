@@ -3,7 +3,7 @@ import { ok, error } from '../lib/types';
 
 export async function handleListRubrics(request: Request, env: Env): Promise<Response> {
   try {
-    const rows = await env.DB.prepare(
+    const rows = await env.PLATFORM_CONTEXT!.db.prepare(
       `SELECT r.*, c.title as course_name 
        FROM rubrics r
        LEFT JOIN courses c ON r.course_id = c.id
@@ -34,7 +34,7 @@ export async function handleCreateRubric(request: Request, env: Env): Promise<Re
     const body = await request.json() as any;
     const id = crypto.randomUUID().replace(/-/g, '');
     
-    await env.DB.prepare(
+    await env.PLATFORM_CONTEXT!.db.prepare(
       `INSERT INTO rubrics (id, title, description, course_id, criteria, total_points)
        VALUES (?, ?, ?, ?, ?, ?)`
     ).bind(
@@ -54,7 +54,7 @@ export async function handleCreateRubric(request: Request, env: Env): Promise<Re
 
 export async function handleDeleteRubric(request: Request, env: Env, id: string): Promise<Response> {
   try {
-    await env.DB.prepare(`DELETE FROM rubrics WHERE id = ?`).bind(id).run();
+    await env.PLATFORM_CONTEXT!.db.prepare(`DELETE FROM rubrics WHERE id = ?`).bind(id).run();
     return ok({ id });
   } catch {
     return error('Failed to delete rubric');

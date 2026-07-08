@@ -1,3 +1,4 @@
+import { makeEnv } from './test-helpers';
 import { describe, it, expect, vi } from 'vitest';
 import {
   handleListTimetabling,
@@ -36,7 +37,7 @@ describe('ums-timetabling routes', () => {
     ];
     const db = makeDB(rows);
     const req = new Request('http://localhost/api/timetabling');
-    const res = await handleListTimetabling(req, { DB: db as any } as any);
+    const res = await handleListTimetabling(req, makeEnv(db));
     const body = await res.json() as any;
 
     expect(res.status).toBe(200);
@@ -65,7 +66,7 @@ describe('ums-timetabling routes', () => {
       },
     ];
     const db = makeDB(rows);
-    const res = await handleListTimetabling(new Request('http://localhost'), { DB: db as any } as any);
+    const res = await handleListTimetabling(new Request('http://localhost'), makeEnv(db));
     const body = await res.json() as any;
 
     expect(body.data[0].expand.instructor_id.name).toBe('');
@@ -74,7 +75,7 @@ describe('ums-timetabling routes', () => {
 
   it('handleListTimetabling returns empty array when no entries', async () => {
     const db = makeDB([]);
-    const res = await handleListTimetabling(new Request('http://localhost'), { DB: db as any } as any);
+    const res = await handleListTimetabling(new Request('http://localhost'), makeEnv(db));
     const body = await res.json() as any;
     expect(body.data).toHaveLength(0);
   });
@@ -117,7 +118,7 @@ describe('ums-timetabling routes', () => {
         end_time: '16:00',
       }),
     });
-    const res = await handleCreateTimetabling(req, { DB: db as any } as any);
+    const res = await handleCreateTimetabling(req, makeEnv(db));
     const body = await res.json() as any;
 
     expect(res.status).toBe(200);

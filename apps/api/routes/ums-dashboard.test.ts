@@ -1,3 +1,4 @@
+import { makeEnv } from './test-helpers';
 import { describe, it, expect, vi } from 'vitest';
 import {
   handleGetRevenueTrend,
@@ -15,7 +16,7 @@ describe('ums-dashboard routes', () => {
   it('handleGetRevenueTrend returns N months of revenue', async () => {
     const db = makeDB({ revenue: 1000 });
     const req = new Request('http://localhost/api/dashboard/revenue?months=3');
-    const res = await handleGetRevenueTrend(req, { DB: db as any } as any);
+    const res = await handleGetRevenueTrend(req, makeEnv(db));
     const body = await res.json() as any;
 
     expect(res.status).toBe(200);
@@ -29,7 +30,7 @@ describe('ums-dashboard routes', () => {
   it('handleGetRevenueTrend defaults to 6 months', async () => {
     const db = makeDB({ revenue: 0 });
     const req = new Request('http://localhost/api/dashboard/revenue');
-    const res = await handleGetRevenueTrend(req, { DB: db as any } as any);
+    const res = await handleGetRevenueTrend(req, makeEnv(db));
     const body = await res.json() as any;
 
     expect(body.data).toHaveLength(6);
@@ -38,7 +39,7 @@ describe('ums-dashboard routes', () => {
   it('handleGetRevenueTrend handles null revenue (no paid invoices)', async () => {
     const db = makeDB(null);
     const req = new Request('http://localhost/api/dashboard/revenue?months=2');
-    const res = await handleGetRevenueTrend(req, { DB: db as any } as any);
+    const res = await handleGetRevenueTrend(req, makeEnv(db));
     const body = await res.json() as any;
 
     expect(body.success).toBe(true);

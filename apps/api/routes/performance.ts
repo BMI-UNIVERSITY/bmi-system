@@ -95,13 +95,13 @@ export async function handleRunMaintenance(request: Request, env: Env): Promise<
   
   try {
     // Clean up expired data
-    const cleanupResult = await cleanupExpiredData(env.DB);
+    const cleanupResult = await cleanupExpiredData(env.PLATFORM_CONTEXT!.db);
     
     // Analyze database sizes and indexes (SQLite specific)
     const dbAnalysis = await Promise.all([
-      env.DB.prepare(`SELECT name, sql FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'`).all(),
-      env.DB.prepare(`SELECT name FROM sqlite_master WHERE type = 'table'`).all(),
-      env.DB.prepare(`PRAGMA optimize`).run()
+      env.PLATFORM_CONTEXT!.db.prepare(`SELECT name, sql FROM sqlite_master WHERE type = 'index' AND name LIKE 'idx_%'`).all(),
+      env.PLATFORM_CONTEXT!.db.prepare(`SELECT name FROM sqlite_master WHERE type = 'table'`).all(),
+      env.PLATFORM_CONTEXT!.db.prepare(`PRAGMA optimize`).run()
     ]);
     
     const indexes = (dbAnalysis[0].results as any[]).map(idx => ({
@@ -146,14 +146,14 @@ export async function handleGetSystemHealth(request: Request, env: Env): Promise
   
   try {
     // Test database connectivity with a simple query
-    const dbTestResult = await env.DB.prepare('SELECT datetime(\'now\') as current_time').first();
+    const dbTestResult = await env.PLATFORM_CONTEXT!.db.prepare('SELECT datetime(\'now\') as current_time').first();
     const dbResponseTime = Date.now() - startTime;
     
     // Get basic table counts for health check
     const healthChecks = await Promise.all([
-      env.DB.prepare('SELECT COUNT(*) as count FROM users').first(),
-      env.DB.prepare('SELECT COUNT(*) as count FROM applications').first(),
-      env.DB.prepare('SELECT COUNT(*) as count FROM sessions WHERE expires_at > datetime(\'now\')').first()
+      env.PLATFORM_CONTEXT!.db.prepare('SELECT COUNT(*) as count FROM users').first(),
+      env.PLATFORM_CONTEXT!.db.prepare('SELECT COUNT(*) as count FROM applications').first(),
+      env.PLATFORM_CONTEXT!.db.prepare('SELECT COUNT(*) as count FROM sessions WHERE expires_at > datetime(\'now\')').first()
     ]);
     
     const metrics = getPerformanceMetrics();

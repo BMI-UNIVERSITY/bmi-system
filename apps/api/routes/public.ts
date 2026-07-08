@@ -53,7 +53,7 @@ export async function handlePublicPrograms(request: Request, env: Env, ctx?: Exe
   }
 
   // Get course capacity vs enrollment counts from DB
-  const courseCounts = await env.DB.prepare(
+  const courseCounts = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT c.code, c.capacity,
             COUNT(CASE WHEN e.status = 'enrolled' THEN 1 END) AS enrolled
      FROM courses c
@@ -98,9 +98,9 @@ export async function handlePublicPrograms(request: Request, env: Env, ctx?: Exe
 /** GET /api/public/stats — aggregate counts, no PII */
 export async function handlePublicStats(_request: Request, env: Env): Promise<Response> {
   const [programCount, studentCount, appCount] = await Promise.all([
-    env.DB.prepare(`SELECT COUNT(*) AS n FROM courses`).first<{ n: number }>(),
-    env.DB.prepare(`SELECT COUNT(*) AS n FROM users WHERE role = 'student'`).first<{ n: number }>(),
-    env.DB.prepare(
+    env.PLATFORM_CONTEXT!.db.prepare(`SELECT COUNT(*) AS n FROM courses`).first<{ n: number }>(),
+    env.PLATFORM_CONTEXT!.db.prepare(`SELECT COUNT(*) AS n FROM users WHERE role = 'student'`).first<{ n: number }>(),
+    env.PLATFORM_CONTEXT!.db.prepare(
       `SELECT COUNT(*) AS n FROM applications WHERE submitted_at >= date('now', '-90 days')`,
     ).first<{ n: number }>(),
   ]);
@@ -120,7 +120,7 @@ export async function handlePublicListPosts(request: Request, env: Env): Promise
   const offset = (page - 1) * perPage;
 
   const [rows, total] = await Promise.all([
-    env.DB.prepare(
+    env.PLATFORM_CONTEXT!.db.prepare(
       `SELECT p.id, p.title, p.slug, p.excerpt, p.tags, p.published_at,
               u.first_name, u.last_name
        FROM cms_posts p
@@ -134,7 +134,7 @@ export async function handlePublicListPosts(request: Request, env: Env): Promise
         id: string; title: string; slug: string; excerpt: string | null;
         tags: string | null; published_at: string; first_name: string; last_name: string;
       }>(),
-    env.DB.prepare(
+    env.PLATFORM_CONTEXT!.db.prepare(
       `SELECT COUNT(*) AS n FROM cms_posts WHERE status = 'published'`,
     ).first<{ n: number }>(),
   ]);
@@ -164,7 +164,7 @@ export async function handlePublicGetPost(
   env: Env,
   slug: string,
 ): Promise<Response> {
-  const row = await env.DB.prepare(
+  const row = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT p.id, p.title, p.slug, p.excerpt, p.content, p.tags, p.published_at,
             u.first_name, u.last_name
      FROM cms_posts p
@@ -193,7 +193,7 @@ export async function handlePublicGetPage(
   env: Env,
   slug: string,
 ): Promise<Response> {
-  const row = await env.DB.prepare(
+  const row = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT id, title, slug, content, published_at
      FROM cms_pages
      WHERE slug = ? AND status = 'published'`,

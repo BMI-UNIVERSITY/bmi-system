@@ -7,12 +7,12 @@ import { percentageToGrade } from '@bmi/shared';
 
 export async function handleGetDashboard(request: Request, env: Env, userId: string): Promise<Response> {
   // Get upcoming invoices
-  const { results: invoices } = await env.DB.prepare(
+  const { results: invoices } = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT id, amount, due_date, status FROM invoices WHERE student_id = ? AND status = "unpaid" ORDER BY due_date ASC'
   ).bind(userId).all();
 
   // Get current enrollments
-  const { results: enrollments } = await env.DB.prepare(
+  const { results: enrollments } = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT e.id, c.code, c.title, c.credits, c.term, e.grade 
      FROM enrollments e 
      JOIN courses c ON e.course_id = c.id 
@@ -37,7 +37,7 @@ export async function handleGetCourses(request: Request, env: Env): Promise<Resp
   const url = new URL(request.url);
   const term = url.searchParams.get('term') || 'Fall 2026';
   
-  const { results: courses } = await env.DB.prepare(
+  const { results: courses } = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT id, code, title, description, credits, term, capacity FROM courses WHERE term = ? ORDER BY code ASC'
   ).bind(term).all();
   
@@ -59,12 +59,12 @@ export async function handleEnroll(request: Request, env: Env, userId: string): 
     const invoiceId = crypto.randomUUID();
     
     // Enroll the student
-    await env.DB.prepare(
+    await env.PLATFORM_CONTEXT!.db.prepare(
       'INSERT INTO enrollments (id, student_id, course_id, status) VALUES (?, ?, ?, ?)'
     ).bind(crypto.randomUUID(), userId, body.course_id, 'enrolled').run();
     
     // Create an invoice
-    await env.DB.prepare(
+    await env.PLATFORM_CONTEXT!.db.prepare(
       'INSERT INTO invoices (id, student_id, amount, status, due_date) VALUES (?, ?, ?, ?, ?)'
     ).bind(invoiceId, userId, 1000, 'unpaid', '2026-09-15').run();
 
@@ -78,7 +78,7 @@ export async function handleEnroll(request: Request, env: Env, userId: string): 
 }
 
 export async function handleGetFinances(request: Request, env: Env, userId: string): Promise<Response> {
-  const { results: invoices } = await env.DB.prepare(
+  const { results: invoices } = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT id, amount, due_date, status, created_at FROM invoices WHERE student_id = ? ORDER BY due_date DESC'
   ).bind(userId).all();
   
@@ -91,12 +91,12 @@ export async function handleGetFinances(request: Request, env: Env, userId: stri
 }
 
 export async function handlePayInvoice(request: Request, env: Env, userId: string, invoiceId: string): Promise<Response> {
-  const invoice = await env.DB.prepare('SELECT status FROM invoices WHERE id = ? AND student_id = ?').bind(invoiceId, userId).first();
+  const invoice = await env.PLATFORM_CONTEXT!.db.prepare('SELECT status FROM invoices WHERE id = ? AND student_id = ?').bind(invoiceId, userId).first();
   if (!invoice) return error('Invoice not found', 404);
   if (invoice.status === 'paid') return error('Invoice is already paid', 400);
 
   // Mock payment gateway: Just mark it as paid
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     'UPDATE invoices SET status = "paid" WHERE id = ? AND student_id = ?'
   ).bind(invoiceId, userId).run();
 
@@ -104,7 +104,7 @@ export async function handlePayInvoice(request: Request, env: Env, userId: strin
 }
 
 export async function handleDropCourse(request: Request, env: Env, userId: string, courseId: string): Promise<Response> {
-  const result = await env.DB.prepare(
+  const result = await env.PLATFORM_CONTEXT!.db.prepare(
     'UPDATE enrollments SET status = "dropped" WHERE course_id = ? AND student_id = ? AND status = "enrolled"'
   ).bind(courseId, userId).run();
   
@@ -115,7 +115,7 @@ export async function handleDropCourse(request: Request, env: Env, userId: strin
 }
 
 export async function handleGetTranscript(request: Request, env: Env, userId: string): Promise<Response> {
-  const { results: classes } = await env.DB.prepare(
+  const { results: classes } = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT c.code, c.title, c.credits, c.term, e.id as enrollment_id, e.status,
             (SELECT AVG(g.score * 100.0 / NULLIF(g.max_score, 0))
                FROM grades g WHERE g.enrollment_id = e.id AND g.max_score > 0) as avg_pct
@@ -145,7 +145,7 @@ export async function handleGetTranscript(request: Request, env: Env, userId: st
 }
 
 export async function handleGetSettings(request: Request, env: Env, userId: string): Promise<Response> {
-  let settings = await env.DB.prepare(
+  let settings = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT directory_release, communications_opt_in FROM student_settings WHERE student_id = ?'
   ).bind(userId).first();
   
@@ -168,7 +168,7 @@ export async function handleUpdateSettings(request: Request, env: Env, userId: s
   const dirRelease = body.directory_release ? 1 : 0;
   const commOptIn = body.communications_opt_in ? 1 : 0;
   
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `INSERT INTO student_settings (student_id, directory_release, communications_opt_in, updated_at)
      VALUES (?, ?, ?, datetime('now'))
      ON CONFLICT(student_id) DO UPDATE SET 
@@ -181,7 +181,7 @@ export async function handleUpdateSettings(request: Request, env: Env, userId: s
 }
 
 export async function handleGetTickets(request: Request, env: Env, userId: string): Promise<Response> {
-  const { results: tickets } = await env.DB.prepare(
+  const { results: tickets } = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT id, subject, status, created_at FROM support_tickets WHERE student_id = ? ORDER BY created_at DESC'
   ).bind(userId).all();
   return ok(tickets);
@@ -200,7 +200,7 @@ export async function handleCreateTicket(request: Request, env: Env, userId: str
   }
   
   const ticketId = crypto.randomUUID();
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     'INSERT INTO support_tickets (id, student_id, subject, description) VALUES (?, ?, ?, ?)'
   ).bind(ticketId, userId, body.subject, body.description).run();
   

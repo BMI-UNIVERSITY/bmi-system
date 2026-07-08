@@ -32,7 +32,7 @@ export async function handleGetRevenueTrend(request: Request, env: Env): Promise
       AND strftime('%Y-%m', created_at) = ?
     `;
     
-    const row = await env.DB.prepare(query).bind(yearMonth).first<{ revenue: number }>();
+    const row = await env.PLATFORM_CONTEXT!.db.prepare(query).bind(yearMonth).first<{ revenue: number }>();
     const revenue = row?.revenue || 0;
     
     result.push({

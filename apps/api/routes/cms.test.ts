@@ -1,3 +1,4 @@
+import { makeEnv } from './test-helpers';
 import { describe, it, expect, vi } from 'vitest';
 import {
   handleListPosts,
@@ -36,7 +37,7 @@ describe('cms posts routes', () => {
     const db = makeDB(null, [
       { id: 'p1', title: 'Post 1', slug: 'post-1', tags: '["news"]', first_name: 'Alice', last_name: 'Smith' },
     ]);
-    const res = await handleListPosts(new Request('http://localhost'), { DB: db as any } as any);
+    const res = await handleListPosts(new Request('http://localhost'), makeEnv(db));
     const body = await res.json() as any;
     expect(body.data[0].tags).toEqual(['news']);
     expect(body.data[0].author.first_name).toBe('Alice');
@@ -48,7 +49,7 @@ describe('cms posts routes', () => {
       method: 'POST',
       body: JSON.stringify({ content: 'No title here' }),
     });
-    const res = await handleCreatePost(req, { DB: db as any } as any, 'author1');
+    const res = await handleCreatePost(req, makeEnv(db), 'author1');
     expect(res.status).toBe(400);
   });
 
@@ -58,7 +59,7 @@ describe('cms posts routes', () => {
       method: 'POST',
       body: JSON.stringify({ title: 'Existing Post' }),
     });
-    const res = await handleCreatePost(req, { DB: db as any } as any, 'author1');
+    const res = await handleCreatePost(req, makeEnv(db), 'author1');
     expect(res.status).toBe(409);
   });
 
@@ -75,7 +76,7 @@ describe('cms posts routes', () => {
       method: 'POST',
       body: JSON.stringify({ title: 'New Post', tags: ['tech'], status: 'published' }),
     });
-    const res = await handleCreatePost(req, { DB: db as any } as any, 'author1');
+    const res = await handleCreatePost(req, makeEnv(db), 'author1');
     const body = await res.json() as any;
     expect(body.data.status).toBe('published');
     expect(body.data.slug).toBe('new-post');
@@ -87,7 +88,7 @@ describe('cms posts routes', () => {
       method: 'PUT',
       body: JSON.stringify({ title: 'Updated' }),
     });
-    const res = await handleUpdatePost(req, { DB: db as any } as any, 'p-none', 'editor1');
+    const res = await handleUpdatePost(req, makeEnv(db), 'p-none', 'editor1');
     expect(res.status).toBe(404);
   });
 
@@ -104,14 +105,14 @@ describe('cms posts routes', () => {
       method: 'PUT',
       body: JSON.stringify({ title: 'Updated Title', status: 'published' }),
     });
-    const res = await handleUpdatePost(req, { DB: db as any } as any, 'p1', 'editor1');
+    const res = await handleUpdatePost(req, makeEnv(db), 'p1', 'editor1');
     const body = await res.json() as any;
     expect(body.data.status).toBe('published');
   });
 
   it('handleDeletePost returns 404 if post not found', async () => {
     const db = makeDB(null);
-    const res = await handleDeletePost(new Request('http://localhost'), { DB: db as any } as any, 'p-none', 'admin1');
+    const res = await handleDeletePost(new Request('http://localhost'), makeEnv(db), 'p-none', 'admin1');
     expect(res.status).toBe(404);
   });
 
@@ -124,7 +125,7 @@ describe('cms posts routes', () => {
         }),
       }))
     };
-    const res = await handleDeletePost(new Request('http://localhost'), { DB: db as any } as any, 'p1', 'admin1');
+    const res = await handleDeletePost(new Request('http://localhost'), makeEnv(db), 'p1', 'admin1');
     const body = await res.json() as any;
     expect(body.data.deleted).toBe(true);
   });
@@ -133,7 +134,7 @@ describe('cms posts routes', () => {
 describe('cms pages routes', () => {
   it('handleListPages returns page list', async () => {
     const db = makeDB(null, [{ id: 'pg1', title: 'About', slug: 'about', status: 'published' }]);
-    const res = await handleListPages(new Request('http://localhost'), { DB: db as any } as any);
+    const res = await handleListPages(new Request('http://localhost'), makeEnv(db));
     const body = await res.json() as any;
     expect(body.data[0].slug).toBe('about');
   });
@@ -144,7 +145,7 @@ describe('cms pages routes', () => {
       method: 'POST',
       body: JSON.stringify({}),
     });
-    const res = await handleCreatePage(req, { DB: db as any } as any, 'author1');
+    const res = await handleCreatePage(req, makeEnv(db), 'author1');
     expect(res.status).toBe(400);
   });
 
@@ -154,7 +155,7 @@ describe('cms pages routes', () => {
       method: 'POST',
       body: JSON.stringify({ title: 'About' }),
     });
-    const res = await handleCreatePage(req, { DB: db as any } as any, 'author1');
+    const res = await handleCreatePage(req, makeEnv(db), 'author1');
     expect(res.status).toBe(409);
   });
 
@@ -171,14 +172,14 @@ describe('cms pages routes', () => {
       method: 'POST',
       body: JSON.stringify({ title: 'Contact Us', status: 'published' }),
     });
-    const res = await handleCreatePage(req, { DB: db as any } as any, 'author1');
+    const res = await handleCreatePage(req, makeEnv(db), 'author1');
     const body = await res.json() as any;
     expect(body.data.slug).toBe('contact-us');
   });
 
   it('handleDeletePage returns 404 if page not found', async () => {
     const db = makeDB(null);
-    const res = await handleDeletePage(new Request('http://localhost'), { DB: db as any } as any, 'pg-none', 'admin1');
+    const res = await handleDeletePage(new Request('http://localhost'), makeEnv(db), 'pg-none', 'admin1');
     expect(res.status).toBe(404);
   });
 
@@ -191,7 +192,7 @@ describe('cms pages routes', () => {
         }),
       }))
     };
-    const res = await handleDeletePage(new Request('http://localhost'), { DB: db as any } as any, 'pg1', 'admin1');
+    const res = await handleDeletePage(new Request('http://localhost'), makeEnv(db), 'pg1', 'admin1');
     const body = await res.json() as any;
     expect(body.data.deleted).toBe(true);
   });

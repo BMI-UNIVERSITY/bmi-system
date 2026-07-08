@@ -1,3 +1,4 @@
+import { makeEnv } from './test-helpers';
 /**
  * Application Handler Unit Tests
  *
@@ -45,25 +46,35 @@ function makeEnv(overrides: Record<string, unknown> = {}) {
   const db = {
     prepare: vi.fn().mockReturnThis(),
     bind: vi.fn().mockReturnThis(),
-    first: vi.fn(),
-    run: vi.fn().mockResolvedValue({}),
+    first: vi.fn().mockResolvedValue(null),
+    run: vi.fn().mockResolvedValue({ success: true }),
     all: vi.fn().mockResolvedValue({ results: [] }),
     batch: vi.fn().mockResolvedValue([]),
+    transaction: vi.fn().mockImplementation(async (cb: any) => cb(db)),
+    query: vi.fn().mockResolvedValue([]),
+    queryOne: vi.fn().mockResolvedValue(null),
+    getPlatform: vi.fn().mockReturnValue('test'),
+  };
+  const context = {
+    db,
+    kv: { get: vi.fn().mockResolvedValue(null), put: vi.fn().mockResolvedValue(undefined), delete: vi.fn().mockResolvedValue(undefined), list: vi.fn().mockResolvedValue({ keys: [] }) },
+    queue: { send: vi.fn().mockResolvedValue(undefined), sendBatch: vi.fn().mockResolvedValue(undefined) },
+    rateLimiter: { checkAndIncrement: vi.fn().mockResolvedValue({ allowed: true, remaining: 29 }), reset: vi.fn().mockResolvedValue(undefined) },
+    writeQueue: { enqueue: vi.fn().mockResolvedValue(undefined) },
+    secrets: { get: vi.fn().mockResolvedValue(null), getSecret: vi.fn().mockResolvedValue(null) },
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+    tracer: { getRequestId: vi.fn().mockReturnValue('test-id'), setTag: vi.fn() },
   };
   return {
-    DB: db,
+    PLATFORM_CONTEXT: context,
     ENVIRONMENT: 'test',
     RESEND_API_KEY: 'test-key',
     ADMIN_EMAIL: 'admin@test.com',
-    WRITE_QUEUE: {
-      get: vi.fn().mockReturnValue({
-        fetch: vi.fn().mockResolvedValue(new Response('{"success":true}')),
-      }),
-      idFromName: vi.fn().mockReturnValue('mock-do-id'),
-    },
+    WRITE_QUEUE: { get: vi.fn(), idFromName: vi.fn() },
     ...overrides,
   };
 }
+
 
 function makeRequest(body: unknown) {
   return new Request('http://localhost/api/apply', {
@@ -115,7 +126,7 @@ describe('handleSubmitApplication', () => {
   });
 
   it('returns 409 if user already has an active application', async () => {
-    env.DB.first = vi.fn().mockResolvedValue({ count: 1 }); // Mock existing application
+    env.PLATFORM_CONTEXT.db.first = vi.fn().mockResolvedValue({ count: 1 }); // Mock existing application
     const req = makeRequest({
       program: 'BA in Biblical Studies',
       degree_level: 'undergraduate',
@@ -128,7 +139,7 @@ describe('handleSubmitApplication', () => {
     // 1st call: existing = 0 (no active)
     // 2nd call: max_applications_per_user = 3
     // 3rd call: totalCount = 3
-    env.DB.first = vi.fn()
+    env.PLATFORM_CONTEXT.db.first = vi.fn()
       .mockResolvedValueOnce({ count: 0 })
       .mockResolvedValueOnce({ value: '3' })
       .mockResolvedValueOnce(null)
@@ -145,7 +156,7 @@ describe('handleSubmitApplication', () => {
   });
 
   it('returns 403 if application deadline has passed', async () => {
-    env.DB.first = vi.fn()
+    env.PLATFORM_CONTEXT.db.first = vi.fn()
       .mockResolvedValueOnce({ count: 0 }) // no active
       .mockResolvedValueOnce(null)         // no max apps limit
       .mockResolvedValueOnce({ value: '2020-01-01' }); // deadline in the past
@@ -161,13 +172,13 @@ describe('handleSubmitApplication', () => {
   });
 
   it('returns 200 and generates application number on success', async () => {
-    env.DB.first = vi.fn()
+    env.PLATFORM_CONTEXT.db.first = vi.fn()
       .mockResolvedValueOnce({ count: 0 }) // no active app
       .mockResolvedValueOnce(null)         // no max apps
       .mockResolvedValueOnce(null)         // no deadline
       .mockResolvedValueOnce({ email: 'user@test.com', first_name: 'Test' }); // user fetch for email
     
-    env.DB.run = vi.fn().mockResolvedValue({});
+    env.PLATFORM_CONTEXT.db.run = vi.fn().mockResolvedValue({});
     
     const req = makeRequest({
       program: 'BA in Biblical Studies',

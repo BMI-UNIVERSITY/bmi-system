@@ -1,3 +1,4 @@
+import { makeEnv } from './test-helpers';
 /**
  * UMS Students Handler Unit Tests
  *
@@ -17,10 +18,25 @@ function makeEnv(overrides: Record<string, unknown> = {}) {
     first: vi.fn(),
     run: vi.fn().mockResolvedValue({}),
     all: vi.fn().mockResolvedValue({ results: [] }),
+    transaction: vi.fn().mockImplementation(async (cb: any) => cb(db)),
+    query: vi.fn().mockResolvedValue([]),
+    queryOne: vi.fn().mockResolvedValue(null),
+    getPlatform: vi.fn().mockReturnValue('test'),
+  };
+
+  const context = {
+    db,
+    kv: { get: vi.fn().mockResolvedValue(null), put: vi.fn().mockResolvedValue(undefined), delete: vi.fn().mockResolvedValue(undefined), list: vi.fn().mockResolvedValue({ keys: [] }) },
+    queue: { send: vi.fn().mockResolvedValue(undefined), sendBatch: vi.fn().mockResolvedValue(undefined) },
+    rateLimiter: { checkAndIncrement: vi.fn().mockResolvedValue({ allowed: true, remaining: 29 }), reset: vi.fn().mockResolvedValue(undefined) },
+    writeQueue: { enqueue: vi.fn().mockResolvedValue(undefined) },
+    secrets: { get: vi.fn().mockResolvedValue(null), getSecret: vi.fn().mockResolvedValue(null) },
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+    tracer: { getRequestId: vi.fn().mockReturnValue('test-id'), setTag: vi.fn() },
   };
 
   return {
-    DB: db,
+    PLATFORM_CONTEXT: context,
     ENVIRONMENT: 'test',
     ...overrides,
   };
@@ -55,10 +71,10 @@ describe('handleCreateStudent', () => {
   });
 
   it('returns 201 on success (new user)', async () => {
-    env.DB.first = vi.fn()
+    env.PLATFORM_CONTEXT.db.first = vi.fn()
       .mockResolvedValueOnce(null) // existing user check -> not found
       .mockResolvedValueOnce({ id: 'new-user', first_name: 'John' }); // fetch created
-    env.DB.run = vi.fn().mockResolvedValue({});
+    env.PLATFORM_CONTEXT.db.run = vi.fn().mockResolvedValue({});
 
     const req = makeRequest('POST', {
       email: 'john@example.com',
@@ -74,7 +90,7 @@ describe('handleCreateStudent', () => {
     const body = await res.json() as any;
     expect(body.success).toBe(true);
     // 1 check, 1 insert user, 1 upsert student, 1 fetch
-    expect(env.DB.prepare).toHaveBeenCalledTimes(4); 
+    expect(env.PLATFORM_CONTEXT.db.prepare).toHaveBeenCalledTimes(4); 
   });
 });
 
@@ -98,24 +114,24 @@ describe('handleUpdateStudent', () => {
   });
 
   it('returns 404 when student not found', async () => {
-    env.DB.first = vi.fn().mockResolvedValue(null);
+    env.PLATFORM_CONTEXT.db.first = vi.fn().mockResolvedValue(null);
     const req = makeRequest('PUT', { first_name: 'Jane' });
     const res = await handleUpdateStudent(req, env as any, 'student-1');
     expect(res.status).toBe(404);
   });
 
   it('returns 200 on success and runs updates', async () => {
-    env.DB.first = vi.fn()
+    env.PLATFORM_CONTEXT.db.first = vi.fn()
       .mockResolvedValueOnce({ user_id: 'u1' }) // find student
       .mockResolvedValueOnce({ id: 'u1', first_name: 'Jane' }); // return updated
-    env.DB.run = vi.fn().mockResolvedValue({});
+    env.PLATFORM_CONTEXT.db.run = vi.fn().mockResolvedValue({});
 
     const req = makeRequest('PUT', { first_name: 'Jane', gpa: '3.9' });
     const res = await handleUpdateStudent(req, env as any, 'student-1');
     expect(res.status).toBe(200);
     
     // 1 lookup, 1 update students, 1 update users, 1 fetch
-    expect(env.DB.prepare).toHaveBeenCalledTimes(4);
+    expect(env.PLATFORM_CONTEXT.db.prepare).toHaveBeenCalledTimes(4);
   });
 });
 
@@ -128,21 +144,21 @@ describe('handleDeleteStudent', () => {
   });
 
   it('returns 404 when student not found', async () => {
-    env.DB.first = vi.fn().mockResolvedValue(null);
+    env.PLATFORM_CONTEXT.db.first = vi.fn().mockResolvedValue(null);
     const req = new Request('http://localhost/api/students/student-1', { method: 'DELETE' });
     const res = await handleDeleteStudent(req, env as any, 'student-1');
     expect(res.status).toBe(404);
   });
 
   it('returns 200 and runs delete on success', async () => {
-    env.DB.first = vi.fn().mockResolvedValue({ user_id: 'u1' });
-    env.DB.run = vi.fn().mockResolvedValue({});
+    env.PLATFORM_CONTEXT.db.first = vi.fn().mockResolvedValue({ user_id: 'u1' });
+    env.PLATFORM_CONTEXT.db.run = vi.fn().mockResolvedValue({});
     const req = new Request('http://localhost/api/students/student-1', { method: 'DELETE' });
     const res = await handleDeleteStudent(req, env as any, 'student-1');
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.data?.deleted).toBe(true);
     // Ensure the delete query was prepared
-    expect(vi.mocked(env.DB.prepare).mock.calls.some(c => c[0].includes('DELETE FROM users'))).toBe(true);
+    expect(vi.mocked(env.PLATFORM_CONTEXT.db.prepare).mock.calls.some(c => c[0].includes('DELETE FROM users'))).toBe(true);
   });
 });

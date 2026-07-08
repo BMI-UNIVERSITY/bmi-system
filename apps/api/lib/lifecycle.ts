@@ -1,3 +1,4 @@
+import type { IDatabase } from '@bmi/ports';
 /**
  * BMI UMS — Lifecycle Workflow Engine
  * ─────────────────────────────────────────────────────────────────────────────
@@ -25,7 +26,7 @@
  *   alumni
  */
 
-import type { D1Database } from '@cloudflare/workers-types';
+
 import { generateUID } from './uid';
 import { generateRegNo } from './reg_number';
 import { enqueueProvisioningJobs } from './provisioning';
@@ -56,7 +57,7 @@ export type LifecycleStatus = 'pending' | 'in_progress' | 'completed' | 'failed'
  * Check whether a stage has already been completed for this idempotency key.
  * Returns true if a completed row already exists — the caller should skip this step.
  */
-export async function isStageComplete(db: D1Database, idempotencyKey: string): Promise<boolean> {
+export async function isStageComplete(db: IDatabase, idempotencyKey: string): Promise<boolean> {
   const row = await db.prepare(
     `SELECT 1 FROM lifecycle_events WHERE idempotency_key = ? AND status = 'completed' LIMIT 1`
   ).bind(idempotencyKey).first();
@@ -69,7 +70,7 @@ export async function isStageComplete(db: D1Database, idempotencyKey: string): P
  * on the UNIQUE idempotency_key constraint.
  */
 export async function appendLifecycleEvent(
-  db: D1Database,
+  db: IDatabase,
   params: {
     idempotencyKey: string;
     stage: LifecycleStage;
@@ -101,7 +102,7 @@ export async function appendLifecycleEvent(
  * Fetch the full lifecycle history for an application or uid.
  */
 export async function getLifecycleHistory(
-  db: D1Database,
+  db: IDatabase,
   filter: { applicationId?: string; uid?: string }
 ): Promise<Record<string, unknown>[]> {
   if (filter.applicationId) {
@@ -141,7 +142,7 @@ export interface AdmissionContext {
  * the whole pipeline.
  */
 export async function runAdmissionPipeline(
-  db: D1Database,
+  db: IDatabase,
   ctx: AdmissionContext
 ): Promise<{ uid: string | null; regNo: string | null }> {
   const { applicationId, userId, actorId, program } = ctx;
@@ -187,15 +188,15 @@ export async function runAdmissionPipeline(
         const personId = crypto.randomUUID().replace(/-/g, '');
         const now = new Date().toISOString();
 
-        await db.batch([
-          db.prepare(
+        await db.transaction(async (tx) => {
+          await tx.prepare(
             `INSERT INTO persons (id, uid, first_name, last_name, created_at, updated_at)
              VALUES (?, ?, ?, ?, ?, ?)`
-          ).bind(personId, uid, user?.first_name ?? '', user?.last_name ?? '', now, now),
-          db.prepare(
+          ).bind(personId, uid, user?.first_name ?? '', user?.last_name ?? '', now, now).run();
+          await tx.prepare(
             `UPDATE users SET person_id = ?, updated_at = ? WHERE id = ?`
-          ).bind(personId, now, userId),
-        ]);
+          ).bind(personId, now, userId).run();
+        });
       }
 
       await appendLifecycleEvent(db, {
@@ -283,16 +284,16 @@ export async function runAdmissionPipeline(
         ).bind(uid).first();
 
         if (!existingEnroll) {
-          await db.batch([
-            db.prepare(
+          await db.transaction(async (tx) => {
+            await tx.prepare(
               `INSERT OR IGNORE INTO student_programmes
                  (id, uid, programme_id, admission_year, enrollment_date, status, current_flag, created_at, updated_at)
                VALUES (?, ?, ?, ?, ?, 'active', 1, ?, ?)`
-            ).bind(rowId, uid, matchedProg.id, year, now.split('T')[0], now, now),
-            db.prepare(
+            ).bind(rowId, uid, matchedProg.id, year, now.split('T')[0], now, now).run();
+            await tx.prepare(
               `UPDATE students SET programme_id = ?, updated_at = ? WHERE user_id = ?`
-            ).bind(matchedProg.id, now, userId),
-          ]);
+            ).bind(matchedProg.id, now, userId).run();
+          });
         }
 
         await appendLifecycleEvent(db, {
@@ -347,17 +348,17 @@ export async function runAdmissionPipeline(
         regNo = await generateRegNo(db, progInfo.programme_id, progInfo.code, year, progInfo.level);
         const now = new Date().toISOString();
 
-        await db.batch([
-          db.prepare(
+        await db.transaction(async (tx) => {
+          await tx.prepare(
             `UPDATE students SET reg_no = ?, updated_at = ?
              WHERE user_id = ? AND (reg_no IS NULL OR reg_no NOT LIKE 'BMI/%')`
-          ).bind(regNo, now, userId),
-          db.prepare(
+          ).bind(regNo, now, userId).run();
+          await tx.prepare(
             `UPDATE student_programmes
              SET registration_number = ?, updated_at = ?
              WHERE uid = ? AND current_flag = 1 AND registration_number IS NULL`
-          ).bind(regNo, now, uid),
-        ]);
+          ).bind(regNo, now, uid).run();
+        });
 
         await appendLifecycleEvent(db, {
           idempotencyKey: regKey,

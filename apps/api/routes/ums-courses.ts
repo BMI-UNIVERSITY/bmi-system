@@ -32,10 +32,10 @@ export async function handleListUmsCourses(request: Request, env: Env): Promise<
 
   const where = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
 
-  const countRow = await env.DB.prepare(`SELECT COUNT(*) as total FROM courses c ${where}`)
+  const countRow = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT COUNT(*) as total FROM courses c ${where}`)
     .bind(...bindings).first<{ total: number }>();
 
-  const rows = await env.DB.prepare(
+  const rows = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT c.*, d.name as department_name FROM courses c
      LEFT JOIN departments d ON c.department_id = d.id
      ${where}
@@ -56,12 +56,12 @@ export async function handleCreateCourse(request: Request, env: Env): Promise<Re
   }
 
   const id = crypto.randomUUID().replace(/-/g, '');
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `INSERT INTO courses (id, code, title, description, credits, term, capacity, department_id)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(id, code, title, description || null, parseInt(credits), term, parseInt(capacity), department_id || null).run();
 
-  const created = await env.DB.prepare(`SELECT * FROM courses WHERE id = ?`).bind(id).first();
+  const created = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT * FROM courses WHERE id = ?`).bind(id).first();
   return json({ success: true, data: created }, 201);
 }
 
@@ -78,11 +78,11 @@ export async function handleUpdateCourse(request: Request, env: Env, courseId: s
   }
   if (!updates.length) return error('No valid fields to update');
 
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `UPDATE courses SET ${updates.join(', ')} WHERE id = ?`
   ).bind(...vals, courseId).run();
 
-  const updated = await env.DB.prepare(`SELECT * FROM courses WHERE id = ?`).bind(courseId).first();
+  const updated = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT * FROM courses WHERE id = ?`).bind(courseId).first();
   if (!updated) return error('Course not found', 404);
   return ok(updated);
 }
@@ -90,7 +90,7 @@ export async function handleUpdateCourse(request: Request, env: Env, courseId: s
 // ─── delete course ────────────────────────────────────────────────────────────
 
 export async function handleDeleteCourse(request: Request, env: Env, courseId: string): Promise<Response> {
-  const result = await env.DB.prepare(`DELETE FROM courses WHERE id = ?`).bind(courseId).run();
+  const result = await env.PLATFORM_CONTEXT!.db.prepare(`DELETE FROM courses WHERE id = ?`).bind(courseId).run();
   if (!result.meta.changes) return error('Course not found', 404);
   return ok({ deleted: true });
 }
@@ -101,7 +101,7 @@ export async function handleListPrograms(request: Request, env: Env): Promise<Re
   const url = new URL(request.url);
   const { page, perPage, offset } = paginate(url);
 
-  const rows = await env.DB.prepare(
+  const rows = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT p.*, d.name as department_name, f.name as faculty_name
      FROM programs p
      LEFT JOIN departments d ON p.department_id = d.id
@@ -109,14 +109,14 @@ export async function handleListPrograms(request: Request, env: Env): Promise<Re
      ORDER BY p.name ASC LIMIT ? OFFSET ?`
   ).bind(perPage, offset).all();
 
-  const countRow = await env.DB.prepare(`SELECT COUNT(*) as total FROM programs`).first<{ total: number }>();
+  const countRow = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT COUNT(*) as total FROM programs`).first<{ total: number }>();
   return ok({ items: rows.results, page, perPage, total: countRow?.total ?? 0 });
 }
 
 // ─── list faculties ───────────────────────────────────────────────────────────
 
 export async function handleListFaculties(request: Request, env: Env): Promise<Response> {
-  const rows = await env.DB.prepare(`SELECT * FROM faculties ORDER BY name ASC`).all();
+  const rows = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT * FROM faculties ORDER BY name ASC`).all();
   return ok(rows.results);
 }
 
@@ -131,8 +131,8 @@ export async function handleListDepartments(request: Request, env: Env): Promise
     : `SELECT * FROM departments ORDER BY name ASC`;
 
   const rows = facultyId
-    ? await env.DB.prepare(query).bind(facultyId).all()
-    : await env.DB.prepare(query).all();
+    ? await env.PLATFORM_CONTEXT!.db.prepare(query).bind(facultyId).all()
+    : await env.PLATFORM_CONTEXT!.db.prepare(query).all();
 
   return ok(rows.results);
 }
@@ -140,7 +140,7 @@ export async function handleListDepartments(request: Request, env: Env): Promise
 // ─── list academic terms ──────────────────────────────────────────────────────
 
 export async function handleListTerms(request: Request, env: Env): Promise<Response> {
-  const rows = await env.DB.prepare(`SELECT * FROM academic_terms ORDER BY start_date DESC`).all();
+  const rows = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT * FROM academic_terms ORDER BY start_date DESC`).all();
   return ok(rows.results);
 }
 
@@ -159,7 +159,7 @@ export async function handleListEnrollments(request: Request, env: Env): Promise
 
   const where = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
 
-  const rows = await env.DB.prepare(
+  const rows = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT e.*, c.code as course_code, c.title as course_name, c.credits,
             u.first_name, u.last_name, s.reg_no
      FROM enrollments e
@@ -180,7 +180,7 @@ export async function handleCreateEnrollment(request: Request, env: Env): Promis
   if (!student_id || !course_id) return error('student_id and course_id are required');
 
   // ── Resolve student → programme → career for RegNo generation ──────────────
-  const studentInfo = await env.DB.prepare(
+  const studentInfo = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT s.user_id, s.programme_id, s.reg_no,
             u.person_id, p.uid,
             pr.code as programme_code, pr.level as career
@@ -206,7 +206,7 @@ export async function handleCreateEnrollment(request: Request, env: Env): Promis
   // Determine admission year from the term or fall back to current year
   let admissionYear = new Date().getUTCFullYear();
   if (term_id) {
-    const term = await env.DB.prepare(
+    const term = await env.PLATFORM_CONTEXT!.db.prepare(
       `SELECT academic_year FROM academic_terms WHERE id = ?`
     ).bind(term_id).first<{ academic_year: string }>();
     if (term?.academic_year) {
@@ -217,10 +217,11 @@ export async function handleCreateEnrollment(request: Request, env: Env): Promis
 
   // ── Generate Registration Number if student has a programme and no reg_no yet ─
   let regNo: string | null = studentInfo.reg_no;
-  const batchOps: ReturnType<typeof env.DB.prepare>[] = [
-    env.DB.prepare(
-      `INSERT INTO enrollments (id, student_id, course_id, term_id) VALUES (?, ?, ?, ?)`
-    ).bind(enrollmentId, student_id, course_id, term_id || null),
+  const batchOps: { sql: string; params: any[] }[] = [
+    {
+      sql: `INSERT INTO enrollments (id, student_id, course_id, term_id) VALUES (?, ?, ?, ?)`,
+      params: [enrollmentId, student_id, course_id, term_id || null]
+    }
   ];
 
   if (
@@ -232,39 +233,38 @@ export async function handleCreateEnrollment(request: Request, env: Env): Promis
   ) {
     try {
       regNo = await generateRegNo(
-        env.DB,
+        env.PLATFORM_CONTEXT!.db,
         studentInfo.programme_id,
         studentInfo.programme_code,
         admissionYear,
         studentInfo.career
       );
 
-      // Write reg_no to students table (only if not already in BMI format)
-      batchOps.push(
-        env.DB.prepare(
-          `UPDATE students SET reg_no = ?, updated_at = datetime('now')
-           WHERE user_id = ? AND (reg_no IS NULL OR reg_no NOT LIKE 'BMI/%')`
-        ).bind(regNo, student_id)
-      );
+      batchOps.push({
+        sql: `UPDATE students SET reg_no = ?, updated_at = datetime('now')
+              WHERE user_id = ? AND (reg_no IS NULL OR reg_no NOT LIKE 'BMI/%')`,
+        params: [regNo, student_id]
+      });
 
-      // Write registration_number to active student_programmes row (Phase 3 column)
-      batchOps.push(
-        env.DB.prepare(
-          `UPDATE student_programmes
-           SET registration_number = ?, updated_at = datetime('now')
-           WHERE uid = ? AND current_flag = 1 AND registration_number IS NULL`
-        ).bind(regNo, studentInfo.uid)
-      );
+      batchOps.push({
+        sql: `UPDATE student_programmes
+              SET registration_number = ?, updated_at = datetime('now')
+              WHERE uid = ? AND current_flag = 1 AND registration_number IS NULL`,
+        params: [regNo, studentInfo.uid]
+      });
     } catch (e) {
-      // Non-fatal: log and continue without RegNo — ops can re-run generator
       console.error('[reg_number] Failed to generate registration number:', e);
       regNo = null;
     }
   }
 
   // Execute enrollment (+ optional reg_no updates) atomically
-  await env.DB.batch(batchOps);
+  await env.PLATFORM_CONTEXT!.db.transaction(async (tx) => {
+    for (const op of batchOps) {
+      await tx.prepare(op.sql).bind(...op.params).run();
+    }
+  });
 
-  const created = await env.DB.prepare(`SELECT * FROM enrollments WHERE id = ?`).bind(enrollmentId).first();
+  const created = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT * FROM enrollments WHERE id = ?`).bind(enrollmentId).first();
   return json({ success: true, data: { ...created, registration_number: regNo } }, 201);
 }

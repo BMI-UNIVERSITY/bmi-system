@@ -4,12 +4,12 @@ import type { Env } from '../lib/types';
 import { getPortalUrl } from '../lib/config';
 
 export async function handleRequestRecommendation(request: Request, env: Env, applicationId: string, userId: string): Promise<Response> {
-  const app = await env.DB.prepare('SELECT id, program FROM applications WHERE id = ? AND user_id = ?')
+  const app = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id, program FROM applications WHERE id = ? AND user_id = ?')
     .bind(applicationId, userId).first<{ id: string; program: string }>();
 
   if (!app) return error('Application not found or access denied', 404);
 
-  const recCount = await env.DB.prepare(
+  const recCount = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT COUNT(*) as count FROM recommendation_requests WHERE application_id = ?'
   ).bind(applicationId).first<{ count: number }>();
 
@@ -32,7 +32,7 @@ export async function handleRequestRecommendation(request: Request, env: Env, ap
 
   const sanitizedName = referee_name.replace(/<[^>]*>/g, '').substring(0, 200);
 
-  const existingRec = await env.DB.prepare(
+  const existingRec = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT id FROM recommendation_requests WHERE application_id = ? AND referee_email = ?'
   ).bind(applicationId, referee_email.toLowerCase()).first();
 
@@ -43,12 +43,12 @@ export async function handleRequestRecommendation(request: Request, env: Env, ap
   const token = crypto.randomUUID();
   const reqId = crypto.randomUUID();
 
-  await env.DB.prepare(`
+  await env.PLATFORM_CONTEXT!.db.prepare(`
     INSERT INTO recommendation_requests (id, application_id, referee_name, referee_email, token)
     VALUES (?, ?, ?, ?, ?)
   `).bind(reqId, applicationId, sanitizedName, referee_email.toLowerCase(), token).run();
 
-  const applicant = await env.DB.prepare('SELECT first_name, last_name FROM users WHERE id = ?')
+  const applicant = await env.PLATFORM_CONTEXT!.db.prepare('SELECT first_name, last_name FROM users WHERE id = ?')
     .bind(userId).first<{ first_name: string; last_name: string }>();
 
   if (env.RESEND_API_KEY && applicant) {
@@ -73,7 +73,7 @@ export async function handleRequestRecommendation(request: Request, env: Env, ap
 }
 
 export async function handleGetRecommendationInfo(request: Request, env: Env, token: string): Promise<Response> {
-  const req = await env.DB.prepare(`
+  const req = await env.PLATFORM_CONTEXT!.db.prepare(`
     SELECT r.id, r.referee_name, r.status, r.requested_at,
            u.first_name, u.last_name, a.program
     FROM recommendation_requests r
@@ -97,7 +97,7 @@ export async function handleGetRecommendationInfo(request: Request, env: Env, to
 }
 
 export async function handleUploadRecommendation(request: Request, env: Env, token: string): Promise<Response> {
-  const req = await env.DB.prepare(`
+  const req = await env.PLATFORM_CONTEXT!.db.prepare(`
     SELECT r.id, r.application_id, a.user_id, r.status, r.requested_at
     FROM recommendation_requests r
     JOIN applications a ON r.application_id = a.id
@@ -132,18 +132,18 @@ export async function handleUploadRecommendation(request: Request, env: Env, tok
 
   const docId = crypto.randomUUID();
 
-  await env.DB.prepare(`
+  await env.PLATFORM_CONTEXT!.db.prepare(`
     INSERT INTO documents (id, application_id, user_id, doc_type, file_name, r2_key, mime_type, file_size_bytes)
     VALUES (?, ?, ?, 'recommendation', ?, ?, ?, ?)
   `).bind(docId, req.application_id, req.user_id, file.name, r2Key, file.type, file.size).run();
 
-  await env.DB.prepare(`
+  await env.PLATFORM_CONTEXT!.db.prepare(`
     UPDATE recommendation_requests 
     SET status = 'submitted', document_id = ?, completed_at = datetime('now')
     WHERE id = ?
   `).bind(docId, req.id).run();
 
-  const applicant = await env.DB.prepare('SELECT email, first_name FROM users WHERE id = ?')
+  const applicant = await env.PLATFORM_CONTEXT!.db.prepare('SELECT email, first_name FROM users WHERE id = ?')
     .bind(req.user_id).first<{ email: string; first_name: string }>();
 
   if (applicant && env.RESEND_API_KEY) {
@@ -158,12 +158,12 @@ export async function handleUploadRecommendation(request: Request, env: Env, tok
 }
 
 export async function handleListRecommendations(request: Request, env: Env, applicationId: string, userId: string): Promise<Response> {
-  const app = await env.DB.prepare('SELECT id FROM applications WHERE id = ? AND user_id = ?')
+  const app = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id FROM applications WHERE id = ? AND user_id = ?')
     .bind(applicationId, userId).first();
 
   if (!app) return error('Not found', 404);
 
-  const { results } = await env.DB.prepare(`
+  const { results } = await env.PLATFORM_CONTEXT!.db.prepare(`
     SELECT id, referee_name, referee_email, status, requested_at, completed_at
     FROM recommendation_requests
     WHERE application_id = ?

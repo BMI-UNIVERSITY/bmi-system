@@ -1,8 +1,9 @@
+import { makeEnv } from './test-helpers';
 /**
  * Auth Handler Unit Tests
  *
  * Tests the handleRegister and handleLogin request handlers.
- * env.DB is fully mocked — no real D1 instance required.
+ * env.PLATFORM_CONTEXT.db is fully mocked — no real D1 instance required.
  * env.WRITE_QUEUE is mocked to prevent Durable Object binding errors in Node.
  */
 
@@ -47,27 +48,36 @@ function makeEnv(overrides: Record<string, unknown> = {}) {
   const db = {
     prepare: vi.fn().mockReturnThis(),
     bind: vi.fn().mockReturnThis(),
-    first: vi.fn(),
-    run: vi.fn().mockResolvedValue({}),
+    first: vi.fn().mockResolvedValue(null),
+    run: vi.fn().mockResolvedValue({ success: true }),
     all: vi.fn().mockResolvedValue({ results: [] }),
     batch: vi.fn().mockResolvedValue([]),
+    transaction: vi.fn().mockImplementation(async (cb: any) => cb(db)),
+    query: vi.fn().mockResolvedValue([]),
+    queryOne: vi.fn().mockResolvedValue(null),
+    getPlatform: vi.fn().mockReturnValue('test'),
+  };
+  const context = {
+    db,
+    kv: { get: vi.fn().mockResolvedValue(null), put: vi.fn().mockResolvedValue(undefined), delete: vi.fn().mockResolvedValue(undefined), list: vi.fn().mockResolvedValue({ keys: [] }) },
+    queue: { send: vi.fn().mockResolvedValue(undefined), sendBatch: vi.fn().mockResolvedValue(undefined) },
+    rateLimiter: { checkAndIncrement: vi.fn().mockResolvedValue({ allowed: true, remaining: 29 }), reset: vi.fn().mockResolvedValue(undefined) },
+    writeQueue: { enqueue: vi.fn().mockResolvedValue(undefined) },
+    secrets: { get: vi.fn().mockResolvedValue(null), getSecret: vi.fn().mockResolvedValue(null) },
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+    tracer: { getRequestId: vi.fn().mockReturnValue('test-id'), setTag: vi.fn() },
   };
   return {
-    DB: db,
+    PLATFORM_CONTEXT: context,
     PASSWORD_PEPPER: 'test-pepper',
     JWT_SECRET: 'test-jwt-secret',
     RESEND_API_KEY: undefined as string | undefined,
     ENVIRONMENT: 'test',
-    // Mock Durable Object binding to prevent DO instantiation errors in Node
-    WRITE_QUEUE: {
-      get: vi.fn().mockReturnValue({
-        fetch: vi.fn().mockResolvedValue(new Response('{"success":true}')),
-      }),
-      idFromName: vi.fn().mockReturnValue('mock-do-id'),
-    },
+    WRITE_QUEUE: { get: vi.fn(), idFromName: vi.fn() },
     ...overrides,
   };
 }
+
 
 function makeRequest(method: string, body: unknown) {
   return new Request('http://localhost/api/auth/register', {
@@ -120,8 +130,8 @@ describe('handleRegister', () => {
       first_name: 'Jane',
       last_name: 'Smith',
     });
-    env.DB.prepare.mockReturnThis();
-    env.DB.first = vi.fn().mockResolvedValue(null); // no existing user
+    env.PLATFORM_CONTEXT.db.prepare.mockReturnThis();
+    env.PLATFORM_CONTEXT.db.first = vi.fn().mockResolvedValue(null); // no existing user
     const res = await handleRegister(req, env as any);
     expect(res.status).toBe(400);
     const body = await res.json() as any;
@@ -130,7 +140,7 @@ describe('handleRegister', () => {
 
   it('returns 400 for a common password', async () => {
     vi.mocked(isCommonPassword).mockReturnValueOnce(true);
-    env.DB.first = vi.fn().mockResolvedValue(null);
+    env.PLATFORM_CONTEXT.db.first = vi.fn().mockResolvedValue(null);
     const req = makeRequest('POST', {
       email: 'user@example.com',
       password: 'Password123!',
@@ -144,7 +154,7 @@ describe('handleRegister', () => {
   });
 
   it('returns 409 when email already exists', async () => {
-    env.DB.first = vi.fn().mockResolvedValue({ id: 'existing-user-id' });
+    env.PLATFORM_CONTEXT.db.first = vi.fn().mockResolvedValue({ id: 'existing-user-id' });
     const req = makeRequest('POST', {
       email: 'existing@example.com',
       password: 'StrongPass1!',
@@ -156,7 +166,7 @@ describe('handleRegister', () => {
   });
 
   it('returns 200 and sends verification email on success', async () => {
-    env.DB.first = vi.fn().mockResolvedValue(null); // no existing user
+    env.PLATFORM_CONTEXT.db.first = vi.fn().mockResolvedValue(null); // no existing user
     env.RESEND_API_KEY = 'test-key';
     const req = makeRequest('POST', {
       email: 'newuser@example.com',
@@ -199,14 +209,14 @@ describe('handleLogin', () => {
   });
 
   it('returns 401 when user not found', async () => {
-    env.DB.first = vi.fn().mockResolvedValue(null);
+    env.PLATFORM_CONTEXT.db.first = vi.fn().mockResolvedValue(null);
     const req = makeRequest('POST', { email: 'ghost@example.com', password: 'Pass1!' });
     const res = await handleLogin(req, env as any);
     expect(res.status).toBe(401);
   });
 
   it('returns 403 when user is unverified', async () => {
-    env.DB.first = vi.fn().mockResolvedValue({
+    env.PLATFORM_CONTEXT.db.first = vi.fn().mockResolvedValue({
       id: 'u1', email: 'x@x.com', password_hash: 'hash',
       first_name: 'A', last_name: 'B', role: 'applicant',
       is_verified: 0, mfa_secret: null, mfa_enabled: 0,
@@ -229,10 +239,10 @@ describe('handleLogin', () => {
       failed_login_attempts: 0, locked_until: null,
     };
     // Mock: first call returns the user, subsequent calls for session insert return {}
-    env.DB.first = vi.fn()
+    env.PLATFORM_CONTEXT.db.first = vi.fn()
       .mockResolvedValueOnce(mockUser)  // user lookup
       .mockResolvedValue({});           // brute force check / session
-    env.DB.run = vi.fn().mockResolvedValue({});
+    env.PLATFORM_CONTEXT.db.run = vi.fn().mockResolvedValue({});
     const req = makeRequest('POST', { email: 'verified@example.com', password: 'ValidPass1!' });
     const res = await handleLogin(req, env as any);
     // Should succeed or require MFA — either way not 401/403 for a valid verified user

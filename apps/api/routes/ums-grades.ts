@@ -44,13 +44,13 @@ export async function handleListGrades(
 
   const where = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
 
-  const countRow = await env.DB.prepare(
+  const countRow = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT COUNT(*) as total FROM grades g
      INNER JOIN enrollments e ON g.enrollment_id = e.id
      ${where}`
   ).bind(...bindings).first<{ total: number }>();
 
-  const rows = await env.DB.prepare(
+  const rows = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT g.*, e.student_id, e.course_id, e.term_id,
             c.code as course_code, c.title as course_name, c.credits,
             s.reg_no, u.first_name, u.last_name
@@ -87,18 +87,18 @@ export async function handleCreateGrade(request: Request, env: Env, gradedBy: st
     return error('Missing required fields: enrollment_id, assessment_type, score, max_score');
   }
 
-  const enrollment = await env.DB.prepare(
+  const enrollment = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT id FROM enrollments WHERE id = ?`
   ).bind(enrollment_id).first();
   if (!enrollment) return error('Enrollment not found', 404);
 
   const id = crypto.randomUUID().replace(/-/g, '');
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `INSERT INTO grades (id, enrollment_id, assessment_type, score, max_score, graded_by)
      VALUES (?, ?, ?, ?, ?, ?)`
   ).bind(id, enrollment_id, assessment_type, parseFloat(String(score)), parseFloat(String(max_score)), gradedBy).run();
 
-  const created = await env.DB.prepare(`SELECT * FROM grades WHERE id = ?`).bind(id).first();
+  const created = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT * FROM grades WHERE id = ?`).bind(id).first();
   return json({ success: true, data: created }, 201);
 }
 
@@ -116,12 +116,12 @@ export async function handleUpdateGrade(request: Request, env: Env, gradeId: str
   if (!updates.length) return error('No valid fields to update');
 
   updates.push(`updated_at = datetime('now')`);
-  const result = await env.DB.prepare(
+  const result = await env.PLATFORM_CONTEXT!.db.prepare(
     `UPDATE grades SET ${updates.join(', ')} WHERE id = ?`
   ).bind(...vals, gradeId).run();
 
   if (!result.meta.changes) return error('Grade not found', 404);
 
-  const updated = await env.DB.prepare(`SELECT * FROM grades WHERE id = ?`).bind(gradeId).first();
+  const updated = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT * FROM grades WHERE id = ?`).bind(gradeId).first();
   return ok(updated);
 }

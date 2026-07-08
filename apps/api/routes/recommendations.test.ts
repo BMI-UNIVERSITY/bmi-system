@@ -1,3 +1,4 @@
+import { makeEnv } from './test-helpers';
 import { describe, it, expect, vi } from 'vitest';
 import {
   handleRequestRecommendation,
@@ -34,7 +35,7 @@ describe('recommendations routes', () => {
       method: 'POST',
       body: JSON.stringify({ referee_name: 'Dr. Bob', referee_email: 'bob@uni.edu' }),
     });
-    const res = await handleRequestRecommendation(req, { DB: db as any } as any, 'app1', 'user1');
+    const res = await handleRequestRecommendation(req, makeEnv(db), 'app1', 'user1');
     expect(res.status).toBe(404);
   });
 
@@ -47,7 +48,7 @@ describe('recommendations routes', () => {
       method: 'POST',
       body: JSON.stringify({ referee_name: 'Dr. Bob', referee_email: 'bob@uni.edu' }),
     });
-    const res = await handleRequestRecommendation(req, { DB: db as any } as any, 'app1', 'user1');
+    const res = await handleRequestRecommendation(req, makeEnv(db), 'app1', 'user1');
     expect(res.status).toBe(400);
   });
 
@@ -60,7 +61,7 @@ describe('recommendations routes', () => {
       method: 'POST',
       body: JSON.stringify({ referee_name: 'Dr. Bob', referee_email: 'not-an-email' }),
     });
-    const res = await handleRequestRecommendation(req, { DB: db as any } as any, 'app1', 'user1');
+    const res = await handleRequestRecommendation(req, makeEnv(db), 'app1', 'user1');
     expect(res.status).toBe(400);
   });
 
@@ -74,7 +75,7 @@ describe('recommendations routes', () => {
       method: 'POST',
       body: JSON.stringify({ referee_name: 'Dr. Bob', referee_email: 'bob@uni.edu' }),
     });
-    const res = await handleRequestRecommendation(req, { DB: db as any } as any, 'app1', 'user1');
+    const res = await handleRequestRecommendation(req, makeEnv(db), 'app1', 'user1');
     expect(res.status).toBe(409);
   });
 
@@ -90,7 +91,7 @@ describe('recommendations routes', () => {
       method: 'POST',
       body: JSON.stringify({ referee_name: 'Dr. Bob', referee_email: 'bob@uni.edu' }),
     });
-    const res = await handleRequestRecommendation(req, { DB: db as any } as any, 'app1', 'user1');
+    const res = await handleRequestRecommendation(req, makeEnv(db), 'app1', 'user1');
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.data.status).toBe('requested');
@@ -100,7 +101,7 @@ describe('recommendations routes', () => {
     const db = makeDB([null]);
     const res = await handleGetRecommendationInfo(
       new Request('http://localhost'),
-      { DB: db as any } as any,
+      makeEnv(db),
       'invalid-token'
     );
     expect(res.status).toBe(404);
@@ -111,7 +112,7 @@ describe('recommendations routes', () => {
     const db = makeDB([{ id: 'r1', requested_at: oldDate }]);
     const res = await handleGetRecommendationInfo(
       new Request('http://localhost'),
-      { DB: db as any } as any,
+      makeEnv(db),
       'some-token'
     );
     expect(res.status).toBe(410);
@@ -123,7 +124,7 @@ describe('recommendations routes', () => {
     const db = makeDB([recData]);
     const res = await handleGetRecommendationInfo(
       new Request('http://localhost'),
-      { DB: db as any } as any,
+      makeEnv(db),
       'valid-token'
     );
     expect(res.status).toBe(200);
@@ -132,7 +133,7 @@ describe('recommendations routes', () => {
   it('handleListRecommendations returns 404 if application not found', async () => {
     const db = makeDB([null]);
     const req = new Request('http://localhost');
-    const res = await handleListRecommendations(req, { DB: db as any } as any, 'app1', 'user1');
+    const res = await handleListRecommendations(req, makeEnv(db), 'app1', 'user1');
     expect(res.status).toBe(404);
   });
 
@@ -146,7 +147,7 @@ describe('recommendations routes', () => {
       }))
     };
     const req = new Request('http://localhost');
-    const res = await handleListRecommendations(req, { DB: db as any } as any, 'app1', 'user1');
+    const res = await handleListRecommendations(req, makeEnv(db), 'app1', 'user1');
     const body = await res.json() as any;
     expect(body.data[0].referee_name).toBe('Dr. Bob');
   });

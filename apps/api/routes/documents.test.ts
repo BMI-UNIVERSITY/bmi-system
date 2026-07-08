@@ -1,3 +1,4 @@
+import { makeEnv } from './test-helpers';
 /**
  * Document Handler Unit Tests
  *
@@ -20,6 +21,10 @@ function makeEnv(overrides: Record<string, unknown> = {}) {
     first: vi.fn(),
     run: vi.fn().mockResolvedValue({}),
     all: vi.fn().mockResolvedValue({ results: [] }),
+    transaction: vi.fn().mockImplementation(async (cb: any) => cb(db)),
+    query: vi.fn().mockResolvedValue([]),
+    queryOne: vi.fn().mockResolvedValue(null),
+    getPlatform: vi.fn().mockReturnValue('test'),
   };
 
   const documents = {
@@ -28,15 +33,21 @@ function makeEnv(overrides: Record<string, unknown> = {}) {
     delete: vi.fn().mockResolvedValue(undefined),
   };
 
+  const context = {
+    db,
+    kv: { get: vi.fn().mockResolvedValue(null), put: vi.fn().mockResolvedValue(undefined), delete: vi.fn().mockResolvedValue(undefined), list: vi.fn().mockResolvedValue({ keys: [] }) },
+    queue: { send: vi.fn().mockResolvedValue(undefined), sendBatch: vi.fn().mockResolvedValue(undefined) },
+    rateLimiter: { checkAndIncrement: vi.fn().mockResolvedValue({ allowed: true, remaining: 29 }), reset: vi.fn().mockResolvedValue(undefined) },
+    writeQueue: { enqueue: vi.fn().mockResolvedValue(undefined) },
+    secrets: { get: vi.fn().mockResolvedValue(null), getSecret: vi.fn().mockResolvedValue(null) },
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+    tracer: { getRequestId: vi.fn().mockReturnValue('test-id'), setTag: vi.fn() },
+  };
+
   return {
-    DB: db,
+    PLATFORM_CONTEXT: context,
     DOCUMENTS: documents,
-    WRITE_QUEUE: {
-      get: vi.fn().mockReturnValue({
-        fetch: vi.fn().mockResolvedValue(new Response('{"success":true}')),
-      }),
-      idFromName: vi.fn().mockReturnValue('mock-do-id'),
-    },
+    WRITE_QUEUE: { get: vi.fn(), idFromName: vi.fn() },
     ENVIRONMENT: 'test',
     ...overrides,
   };
@@ -91,7 +102,7 @@ describe('handleUploadDocument', () => {
   });
 
   it('returns 404 when application does not belong to the user (IDOR guard)', async () => {
-    env.DB.first = vi.fn().mockResolvedValue(null); // application not found for this user
+    env.PLATFORM_CONTEXT.db.first = vi.fn().mockResolvedValue(null); // application not found for this user
     const validPdfMagic = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2D]); // %PDF-
     const req = makeUploadRequest(
       `http://localhost/api/documents/upload?application_id=00000000-0000-0000-0000-000000000001`,
@@ -107,7 +118,7 @@ describe('handleUploadDocument', () => {
 
   it('rejects file with invalid magic bytes (content type spoofing)', async () => {
     // Simulate application exists
-    env.DB.first = vi.fn()
+    env.PLATFORM_CONTEXT.db.first = vi.fn()
       .mockResolvedValueOnce({ id: 'app-1', user_id: 'user-1' }) // application found
       .mockResolvedValueOnce({ count: 0 });                        // doc count
     // File named .pdf but actually text content
@@ -127,10 +138,10 @@ describe('handleUploadDocument', () => {
   it('returns 200 and stores the document on valid PDF upload', async () => {
     // Valid PDF magic bytes
     const validPdf = new Uint8Array([0x25, 0x50, 0x44, 0x46, 0x2D, 0x31, 0x2E]);
-    env.DB.first = vi.fn()
+    env.PLATFORM_CONTEXT.db.first = vi.fn()
       .mockResolvedValueOnce({ id: 'app-1', user_id: 'user-1' })
       .mockResolvedValueOnce({ count: 0 });
-    env.DB.run = vi.fn().mockResolvedValue({});
+    env.PLATFORM_CONTEXT.db.run = vi.fn().mockResolvedValue({});
     const req = makeUploadRequest(
       `http://localhost/api/documents/upload?application_id=00000000-0000-0000-0000-000000000001&doc_type=transcript`,
       validPdf,
@@ -157,14 +168,14 @@ describe('handleDownloadDocument', () => {
   });
 
   it('returns 404 when document record not found', async () => {
-    env.DB.first = vi.fn().mockResolvedValue(null);
+    env.PLATFORM_CONTEXT.db.first = vi.fn().mockResolvedValue(null);
     const req = new Request('http://localhost/api/documents/doc-1/download');
     const res = await handleDownloadDocument(req, env as any, 'doc-1', 'user-1', 'student');
     expect(res.status).toBe(404);
   });
 
   it('returns 403 when student tries to access another user\'s document (IDOR)', async () => {
-    env.DB.first = vi.fn().mockResolvedValue({
+    env.PLATFORM_CONTEXT.db.first = vi.fn().mockResolvedValue({
       id: 'doc-1',
       user_id: 'other-user', // owned by someone else
       r2_key: 'documents/other-user/app-1/transcript-uuid.pdf',
@@ -177,7 +188,7 @@ describe('handleDownloadDocument', () => {
   });
 
   it('allows admin to access any document regardless of ownership', async () => {
-    env.DB.first = vi.fn().mockResolvedValue({
+    env.PLATFORM_CONTEXT.db.first = vi.fn().mockResolvedValue({
       id: 'doc-1',
       user_id: 'student-user',
       r2_key: 'documents/student-user/app-1/transcript-uuid.pdf',
@@ -190,7 +201,7 @@ describe('handleDownloadDocument', () => {
       httpMetadata: { contentType: 'application/pdf' },
     };
     env.DOCUMENTS.get = vi.fn().mockResolvedValue(mockR2Object);
-    env.DB.run = vi.fn().mockResolvedValue({});
+    env.PLATFORM_CONTEXT.db.run = vi.fn().mockResolvedValue({});
     const req = new Request('http://localhost/api/documents/doc-1/download');
     const res = await handleDownloadDocument(req, env as any, 'doc-1', 'admin-user', 'admin');
     expect(res.status).toBe(200);
@@ -200,12 +211,12 @@ describe('handleDownloadDocument', () => {
   });
 
   it('sets Content-Disposition: inline for PDF', async () => {
-    env.DB.first = vi.fn().mockResolvedValue({
+    env.PLATFORM_CONTEXT.db.first = vi.fn().mockResolvedValue({
       id: 'doc-1', user_id: 'user-1', r2_key: 'key',
       file_name: 'report.pdf', mime_type: 'application/pdf',
     });
     env.DOCUMENTS.get = vi.fn().mockResolvedValue({ body: new ReadableStream() });
-    env.DB.run = vi.fn().mockResolvedValue({});
+    env.PLATFORM_CONTEXT.db.run = vi.fn().mockResolvedValue({});
     const req = new Request('http://localhost/api/documents/doc-1/download');
     const res = await handleDownloadDocument(req, env as any, 'doc-1', 'user-1', 'student');
     expect(res.status).toBe(200);
@@ -213,13 +224,13 @@ describe('handleDownloadDocument', () => {
   });
 
   it('sets Content-Disposition: attachment for Word documents', async () => {
-    env.DB.first = vi.fn().mockResolvedValue({
+    env.PLATFORM_CONTEXT.db.first = vi.fn().mockResolvedValue({
       id: 'doc-1', user_id: 'user-1', r2_key: 'key',
       file_name: 'document.docx',
       mime_type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     });
     env.DOCUMENTS.get = vi.fn().mockResolvedValue({ body: new ReadableStream() });
-    env.DB.run = vi.fn().mockResolvedValue({});
+    env.PLATFORM_CONTEXT.db.run = vi.fn().mockResolvedValue({});
     const req = new Request('http://localhost/api/documents/doc-1/download');
     const res = await handleDownloadDocument(req, env as any, 'doc-1', 'user-1', 'student');
     expect(res.status).toBe(200);

@@ -1,9 +1,10 @@
 import { verifyJWT } from './jwt';
 import { errorResponse, type JWTPayload } from './types';
+import type { IDatabase } from '@bmi/ports';
 
 export async function requireAuth(
   request: Request,
-  db: D1Database,
+  db: IDatabase,
   jwtSecret: string,
   requiredRoles?: string[]
 ): Promise<{ user: JWTPayload } | Response> {

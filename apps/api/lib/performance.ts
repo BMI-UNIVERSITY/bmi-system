@@ -1,9 +1,10 @@
+import type { IDatabase, IPreparedStatement } from '@bmi/ports';
 /**
  * Performance Monitoring and Database Optimization Utilities
  * Provides query performance tracking, batch operations, and monitoring
  */
 
-import type { D1Database } from '@cloudflare/workers-types';
+
 
 export interface QueryMetrics {
   query: string;
@@ -60,7 +61,7 @@ const RESPONSE_TIME_THRESHOLDS = {
  * Wraps a D1 query with performance monitoring
  */
 export async function executeWithMonitoring<T = any>(
-  query: D1PreparedStatement,
+  query: IPreparedStatement,
   operation: string = 'unknown'
 ): Promise<{ result: T; metrics: QueryMetrics }> {
   const startTime = performance.now();
@@ -189,8 +190,8 @@ function addPerformanceAlert(alert: PerformanceAlert): void {
  * Provides better performance than sequential operations
  */
 export async function executeBatch(
-  db: D1Database,
-  operations: D1PreparedStatement[],
+  db: IDatabase,
+  operations: IPreparedStatement[],
   maxBatchSize: number = 25
 ): Promise<BatchOperationResult> {
   const startTime = performance.now();
@@ -198,19 +199,24 @@ export async function executeBatch(
   let successfulOperations = 0;
 
   // Split operations into chunks to respect D1 batch size limits
-  const chunks: D1PreparedStatement[][] = [];
+  const chunks: IPreparedStatement[][] = [];
   for (let i = 0; i < operations.length; i += maxBatchSize) {
     chunks.push(operations.slice(i, i + maxBatchSize));
   }
 
+  // Process operations sequentially within transactions for portability
   try {
     for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
       const chunk = chunks[chunkIndex];
       try {
-        await db.batch(chunk);
+        await db.transaction(async (tx) => {
+          for (const stmt of chunk) {
+            await stmt.run();
+          }
+        });
         successfulOperations += chunk.length;
       } catch {
-        // If batch fails, try operations individually to identify failures
+        // If transaction fails, try operations individually to identify failures
         for (let opIndex = 0; opIndex < chunk.length; opIndex++) {
           const globalIndex = chunkIndex * maxBatchSize + opIndex;
           try {
@@ -226,7 +232,6 @@ export async function executeBatch(
       }
     }
   } catch (e) {
-    // This should rarely happen since we handle batch failures above
     console.error('Unexpected batch execution error:', e);
   }
 
@@ -244,7 +249,7 @@ export async function executeBatch(
 /**
  * Optimized user lookup with caching-friendly query patterns
  */
-export async function findUserByEmail(db: D1Database, email: string): Promise<any> {
+export async function findUserByEmail(db: IDatabase, email: string): Promise<any> {
   const { result } = await executeWithMonitoring(
     db.prepare('SELECT id, email, password_hash, first_name, last_name, role, is_verified, mfa_secret, mfa_enabled, session_version FROM users WHERE email = ? LIMIT 1')
       .bind(email.toLowerCase()),
@@ -257,7 +262,7 @@ export async function findUserByEmail(db: D1Database, email: string): Promise<an
  * Optimized application submission with batch operations
  */
 export async function createApplicationWithDependencies(
-  db: D1Database,
+  db: IDatabase,
   applicationData: {
     appId: string;
     userId: string;
@@ -296,7 +301,7 @@ export async function createApplicationWithDependencies(
  * Optimized admission pipeline with parallel operations where possible
  */
 export async function executeAdmissionPipelineOptimized(
-  db: D1Database,
+  db: IDatabase,
   context: {
     applicationId: string;
     userId: string;
@@ -483,7 +488,7 @@ export function getPerformanceAlerts(): {
 /**
  * Clear expired tokens and sessions (maintenance operation)
  */
-export async function cleanupExpiredData(db: D1Database): Promise<BatchOperationResult> {
+export async function cleanupExpiredData(db: IDatabase): Promise<BatchOperationResult> {
   const now = new Date().toISOString();
   
   const cleanupOps = [

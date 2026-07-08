@@ -3,7 +3,7 @@
  *
  * Single source of truth for all request-body and query-param validation.
  * Every public API handler that accepts a body MUST parse it through
- * the appropriate schema here before touching env.DB.
+ * the appropriate schema here before touching env.PLATFORM_CONTEXT!.db.
  *
  * Design rules enforced here:
  *  1. ALL string fields have explicit .max() limits to prevent DoS via

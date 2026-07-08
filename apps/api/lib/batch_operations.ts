@@ -1,9 +1,10 @@
+import type { IDatabase } from '@bmi/ports';
 /**
  * Batch Operations for High-Performance Database Tasks
  * Optimizes bulk operations and admission pipeline processing
  */
 
-import type { D1Database } from '@cloudflare/workers-types';
+
 import { executeBatch, executeWithMonitoring } from './performance';
 
 export interface BulkAdmissionRequest {
@@ -30,7 +31,7 @@ export interface BulkAdmissionResult {
  * Process multiple admissions in optimized batches
  */
 export async function processBulkAdmissions(
-  db: D1Database,
+  db: IDatabase,
   request: BulkAdmissionRequest
 ): Promise<BulkAdmissionResult> {
   const { applicationIds, adminId, batchSize = 10 } = request;
@@ -126,7 +127,7 @@ export async function processBulkAdmissions(
  * Simplified admission pipeline optimized for bulk processing
  */
 async function executeSimplifiedAdmissionPipeline(
-  db: D1Database,
+  db: IDatabase,
   context: {
     applicationId: string;
     userId: string;
@@ -233,7 +234,7 @@ async function executeSimplifiedAdmissionPipeline(
 /**
  * Bulk cleanup of expired records with progress tracking
  */
-export async function bulkCleanupExpiredRecords(db: D1Database): Promise<{
+export async function bulkCleanupExpiredRecords(db: IDatabase): Promise<{
   success: boolean;
   recordsDeleted: number;
   tablesProcessed: string[];
@@ -305,7 +306,7 @@ export async function bulkCleanupExpiredRecords(db: D1Database): Promise<{
 /**
  * Optimize database indexes and analyze performance
  */
-export async function optimizeDatabaseIndexes(db: D1Database): Promise<{
+export async function optimizeDatabaseIndexes(db: IDatabase): Promise<{
   success: boolean;
   indexesAnalyzed: number;
   recommendations: string[];

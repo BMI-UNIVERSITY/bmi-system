@@ -35,7 +35,7 @@ export async function handleListTransactions(request: Request, env: Env): Promis
   const whereClause = filters.length > 0 ? `WHERE ${filters.join(' AND ')}` : '';
   
   const countQuery = `SELECT COUNT(*) as count FROM invoices i ${whereClause}`;
-  const countResult = await env.DB.prepare(countQuery).bind(...bindings).first<{ count: number }>();
+  const countResult = await env.PLATFORM_CONTEXT!.db.prepare(countQuery).bind(...bindings).first<{ count: number }>();
   const total = countResult?.count || 0;
 
   const dataQuery = `
@@ -47,7 +47,7 @@ export async function handleListTransactions(request: Request, env: Env): Promis
     LIMIT ? OFFSET ?
   `;
   
-  const { results } = await env.DB.prepare(dataQuery).bind(...bindings, perPage, offset).all();
+  const { results } = await env.PLATFORM_CONTEXT!.db.prepare(dataQuery).bind(...bindings, perPage, offset).all();
 
   const items = results.map((inv: any) => ({
     id: inv.id,

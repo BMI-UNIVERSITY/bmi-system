@@ -1,4 +1,5 @@
-import type { D1Database } from '@cloudflare/workers-types';
+import type { IDatabase } from '@bmi/ports';
+
 
 /**
  * Atomically generates a new Application Number for a given calendar year.
@@ -7,7 +8,7 @@ import type { D1Database } from '@cloudflare/workers-types';
  *
  * Format: APP-{YYYY}-{5-digit padded serial}  e.g. APP-2026-00001
  */
-export async function generateApplicationNumber(db: D1Database, year: number): Promise<string> {
+export async function generateApplicationNumber(db: IDatabase, year: number): Promise<string> {
   const result = await db.prepare(
     `INSERT INTO application_number_counters (year, last_serial)
      VALUES (?, 1)

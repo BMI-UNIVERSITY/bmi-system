@@ -1,3 +1,4 @@
+import type { IDatabase } from '@bmi/ports';
 /**
  * BMI UMS — Provisioning Job Dispatcher
  * ─────────────────────────────────────────────────────────────────────────────
@@ -7,7 +8,7 @@
  */
 
 import type { Env } from './types';
-import type { D1Database } from '@cloudflare/workers-types';
+
 import { sendEmail } from './email';
 
 export type ProvisioningJobType = 'finance' | 'library' | 'lms' | 'portal' | 'email' | 'id_card';
@@ -23,23 +24,23 @@ export interface ProvisioningJob {
 /**
  * Enqueue a set of provisioning jobs for a newly admitted student.
  */
-export async function enqueueProvisioningJobs(db: D1Database, uid: string): Promise<void> {
+export async function enqueueProvisioningJobs(db: IDatabase, uid: string): Promise<void> {
   const jobs: ProvisioningJobType[] = ['finance', 'library', 'lms', 'portal', 'email', 'id_card'];
   const now = new Date().toISOString();
   
-  const batchOps = jobs.map(jobType => 
-    db.prepare(
-      `INSERT INTO provisioning_jobs (id, uid, job_type, created_at)
-       VALUES (lower(hex(randomblob(16))), ?, ?, ?)`
-    ).bind(uid, jobType, now)
-  );
-
-  await db.batch(batchOps);
+  await db.transaction(async (tx) => {
+    for (const jobType of jobs) {
+      await tx.prepare(
+        `INSERT INTO provisioning_jobs (id, uid, job_type, created_at)
+         VALUES (lower(hex(randomblob(16))), ?, ?, ?)`
+      ).bind(uid, jobType, now).run();
+    }
+  });
 }
 
 /** Move a failed job to dead status and send ops alert. */
 async function deadLetterJob(env: Env, job: ProvisioningJob, lastError: string): Promise<void> {
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `UPDATE provisioning_jobs SET status='dead', last_error=?, completed_at=datetime('now') WHERE id=?`
   ).bind(lastError, job.id).run();
 
@@ -87,7 +88,7 @@ export async function processProvisioningJob(env: Env, job: ProvisioningJob): Pr
   const delays = [1000, 4000, 16000]; // ms
   
   // Mark as processing
-  await env.DB.prepare(`UPDATE provisioning_jobs SET status='processing' WHERE id=?`)
+  await env.PLATFORM_CONTEXT!.db.prepare(`UPDATE provisioning_jobs SET status='processing' WHERE id=?`)
     .bind(job.id).run();
 
   for (let attempt = job.attempts; attempt < 3; attempt++) {
@@ -100,7 +101,7 @@ export async function processProvisioningJob(env: Env, job: ProvisioningJob): Pr
       await executeJob(env, job);
       
       // Success
-      await env.DB.prepare(
+      await env.PLATFORM_CONTEXT!.db.prepare(
         `UPDATE provisioning_jobs SET status='completed', attempts=?, completed_at=datetime('now') WHERE id=?`
       ).bind(attempt + 1, job.id).run();
       return;
@@ -109,7 +110,7 @@ export async function processProvisioningJob(env: Env, job: ProvisioningJob): Pr
     }
 
     // Update attempts
-    await env.DB.prepare(
+    await env.PLATFORM_CONTEXT!.db.prepare(
       `UPDATE provisioning_jobs SET attempts=?, last_error=?, status='failed' WHERE id=?`
     ).bind(attempt + 1, lastError, job.id).run().catch(() => {});
 
@@ -124,7 +125,7 @@ export async function processProvisioningJob(env: Env, job: ProvisioningJob): Pr
  * Safe to call via ctx.waitUntil().
  */
 export async function dispatchPendingJobs(env: Env): Promise<void> {
-  const { results } = await env.DB.prepare(
+  const { results } = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT * FROM provisioning_jobs WHERE status IN ('pending', 'failed') AND attempts < 3 LIMIT 20`
   ).all<ProvisioningJob>();
 

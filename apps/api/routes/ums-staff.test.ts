@@ -1,3 +1,4 @@
+import { makeEnv } from './test-helpers';
 import { describe, it, expect, vi } from 'vitest';
 import {
   handleListStaff,
@@ -35,7 +36,7 @@ describe('ums-staff routes', () => {
     }));
 
     const req = new Request('http://localhost/api/staff?page=1&perPage=10');
-    const res = await handleListStaff(req, { DB: db as any } as any);
+    const res = await handleListStaff(req, makeEnv(db));
     const body = await res.json() as any;
 
     expect(res.status).toBe(200);
@@ -50,7 +51,7 @@ describe('ums-staff routes', () => {
     });
     const db = { prepare: vi.fn().mockReturnValue({ bind: bindMock }) };
     const req = new Request('http://localhost/api/staff?search=Alice');
-    await handleListStaff(req, { DB: db as any } as any);
+    await handleListStaff(req, makeEnv(db));
     // Verify search param is bound correctly (3 times for OR clauses)
     const firstCallArgs = bindMock.mock.calls[0];
     expect(firstCallArgs).toContain('%Alice%');
@@ -59,7 +60,7 @@ describe('ums-staff routes', () => {
   it('handleGetStaff returns 404 for unknown staff', async () => {
     const db = { prepare: vi.fn().mockReturnValue({ bind: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) }) }) };
     const req = new Request('http://localhost/api/staff/nobody');
-    const res = await handleGetStaff(req, { DB: db as any } as any, 'nobody');
+    const res = await handleGetStaff(req, makeEnv(db), 'nobody');
     expect(res.status).toBe(404);
   });
 
@@ -67,7 +68,7 @@ describe('ums-staff routes', () => {
     const staffData = { user_id: 'u1', first_name: 'Alice', staff_no: 'S001' };
     const db = { prepare: vi.fn().mockReturnValue({ bind: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(staffData) }) }) };
     const req = new Request('http://localhost/api/staff/u1');
-    const res = await handleGetStaff(req, { DB: db as any } as any, 'u1');
+    const res = await handleGetStaff(req, makeEnv(db), 'u1');
     const body = await res.json() as any;
     expect(body.data.first_name).toBe('Alice');
   });
@@ -78,7 +79,7 @@ describe('ums-staff routes', () => {
       method: 'POST',
       body: JSON.stringify({ email: 'test@test.com' }), // missing first_name, last_name, staff_no
     });
-    const res = await handleCreateStaff(req, { DB: db as any } as any);
+    const res = await handleCreateStaff(req, makeEnv(db));
     expect(res.status).toBe(400);
   });
 
@@ -95,7 +96,7 @@ describe('ums-staff routes', () => {
       method: 'POST',
       body: JSON.stringify({ email: 'alice@bmi.edu', first_name: 'Alice', last_name: 'Smith', staff_no: 'S001' }),
     });
-    const res = await handleCreateStaff(req, { DB: db as any } as any);
+    const res = await handleCreateStaff(req, makeEnv(db));
     expect(res.status).toBe(201);
   });
 
@@ -109,7 +110,7 @@ describe('ums-staff routes', () => {
       method: 'PUT',
       body: JSON.stringify({ first_name: 'New' }),
     });
-    const res = await handleUpdateStaff(req, { DB: db as any } as any, 'nobody');
+    const res = await handleUpdateStaff(req, makeEnv(db), 'nobody');
     expect(res.status).toBe(404);
   });
 
@@ -126,7 +127,7 @@ describe('ums-staff routes', () => {
       method: 'PUT',
       body: JSON.stringify({ first_name: 'Updated', designation: 'Professor' }),
     });
-    const res = await handleUpdateStaff(req, { DB: db as any } as any, 'u1');
+    const res = await handleUpdateStaff(req, makeEnv(db), 'u1');
     expect(res.status).toBe(200);
   });
 });

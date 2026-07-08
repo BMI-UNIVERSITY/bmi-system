@@ -1,3 +1,4 @@
+import type { IDatabase } from '@bmi/ports';
 import { ok, error, logAdminAction } from '../lib/types';
 import { sendEmail, applicationSubmittedEmail, statusUpdateEmail } from '../lib/email';
 import type { Env } from '../lib/types';
@@ -31,9 +32,9 @@ export async function handleSubmitApplication(request: Request, env: Env, userId
   }
 
   const [existingApp, maxApps, deadline] = await Promise.all([
-    env.DB.prepare('SELECT COUNT(*) as count FROM applications WHERE user_id = ? AND status NOT IN (\'rejected\')').bind(userId).first<{count: number}>(),
-    env.DB.prepare('SELECT value FROM app_config WHERE key = \'max_applications_per_user\'').first<{value: string}>(),
-    env.DB.prepare('SELECT value FROM app_config WHERE key = \'application_deadline\'').first<{value: string}>()
+    env.PLATFORM_CONTEXT!.db.prepare('SELECT COUNT(*) as count FROM applications WHERE user_id = ? AND status NOT IN (\'rejected\')').bind(userId).first<{count: number}>(),
+    env.PLATFORM_CONTEXT!.db.prepare('SELECT value FROM app_config WHERE key = \'max_applications_per_user\'').first<{value: string}>(),
+    env.PLATFORM_CONTEXT!.db.prepare('SELECT value FROM app_config WHERE key = \'application_deadline\'').first<{value: string}>()
   ]);
 
   // Fast validation checks
@@ -44,7 +45,7 @@ export async function handleSubmitApplication(request: Request, env: Env, userId
 
   const maxAppsConfig = maxApps?.value;
   if (maxAppsConfig) {
-    const totalCountResult = await env.DB.prepare('SELECT COUNT(*) as count FROM applications WHERE user_id = ?').bind(userId).first<{count: number}>();
+    const totalCountResult = await env.PLATFORM_CONTEXT!.db.prepare('SELECT COUNT(*) as count FROM applications WHERE user_id = ?').bind(userId).first<{count: number}>();
     const totalApps = totalCountResult?.count || 0;
 
     if (totalApps >= parseInt(maxAppsConfig)) {
@@ -66,7 +67,7 @@ export async function handleSubmitApplication(request: Request, env: Env, userId
 
   // Create application with optimized batch operations
   try {
-    await createApplicationWithDependenciesOptimized(env.DB, {
+    await createApplicationWithDependenciesOptimized(env.PLATFORM_CONTEXT!.db, {
       appId,
       userId,
       program,
@@ -83,12 +84,12 @@ export async function handleSubmitApplication(request: Request, env: Env, userId
   if (ctx) {
     ctx.waitUntil(
       executeWithMonitoring(
-        env.DB.prepare('DELETE FROM application_drafts WHERE user_id = ?').bind(userId),
+        env.PLATFORM_CONTEXT!.db.prepare('DELETE FROM application_drafts WHERE user_id = ?').bind(userId),
         'delete_application_draft'
       ).catch(e => console.error('[draft] Failed to delete draft:', e))
     );
   } else {
-    await env.DB.prepare('DELETE FROM application_drafts WHERE user_id = ?').bind(userId).run().catch(() => {});
+    await env.PLATFORM_CONTEXT!.db.prepare('DELETE FROM application_drafts WHERE user_id = ?').bind(userId).run().catch(() => {});
   }
 
   // Async operations for non-critical tasks
@@ -97,7 +98,7 @@ export async function handleSubmitApplication(request: Request, env: Env, userId
   if (ctx) {
     // Generate application number asynchronously
     ctx.waitUntil(
-      generateAndUpdateApplicationNumber(env.DB, appId)
+      generateAndUpdateApplicationNumber(env.PLATFORM_CONTEXT!.db, appId)
         .catch(e => console.error('[app_number] Background generation failed:', e))
     );
     
@@ -110,9 +111,9 @@ export async function handleSubmitApplication(request: Request, env: Env, userId
     // Fallback for non-context execution (testing)
     const year = new Date().getUTCFullYear();
     try {
-      applicationNumber = await generateApplicationNumber(env.DB, year);
+      applicationNumber = await generateApplicationNumber(env.PLATFORM_CONTEXT!.db, year);
       await executeWithMonitoring(
-        env.DB.prepare('UPDATE applications SET application_number = ? WHERE id = ?').bind(applicationNumber, appId),
+        env.PLATFORM_CONTEXT!.db.prepare('UPDATE applications SET application_number = ? WHERE id = ?').bind(applicationNumber, appId),
         'set_application_number'
       );
     } catch (e) {
@@ -144,7 +145,7 @@ export async function handleSaveDraft(request: Request, env: Env, userId: string
   const { current_step, application_data } = parsed;
 
   // Enforce 60-second cooldown
-  const existing = await env.DB.prepare(
+  const existing = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT updated_at FROM application_drafts WHERE user_id = ?'
   ).bind(userId).first<{ updated_at: string }>();
 
@@ -161,7 +162,7 @@ export async function handleSaveDraft(request: Request, env: Env, userId: string
 
   // Insert or Update the draft
   await executeWithMonitoring(
-    env.DB.prepare(`
+    env.PLATFORM_CONTEXT!.db.prepare(`
       INSERT INTO application_drafts (user_id, application_data, current_step, updated_at, created_at)
       VALUES (?, ?, ?, datetime('now'), datetime('now'))
       ON CONFLICT(user_id) DO UPDATE SET 
@@ -178,7 +179,7 @@ export async function handleSaveDraft(request: Request, env: Env, userId: string
 
 // Optimized application creation with enhanced batching
 async function createApplicationWithDependenciesOptimized(
-  db: D1Database,
+  db: IDatabase,
   applicationData: {
     appId: string;
     userId: string;
@@ -215,7 +216,7 @@ async function createApplicationWithDependenciesOptimized(
 }
 
 // Background application number generation
-async function generateAndUpdateApplicationNumber(db: D1Database, appId: string): Promise<void> {
+async function generateAndUpdateApplicationNumber(db: IDatabase, appId: string): Promise<void> {
   const year = new Date().getUTCFullYear();
   try {
     const applicationNumber = await generateApplicationNumber(db, year);
@@ -242,7 +243,7 @@ async function sendApplicationNotificationsOptimized(
 
   // Get user data with single query
   const userResult = await executeWithMonitoring(
-    env.DB.prepare('SELECT email, first_name FROM users WHERE id = ?').bind(userId),
+    env.PLATFORM_CONTEXT!.db.prepare('SELECT email, first_name FROM users WHERE id = ?').bind(userId),
     'get_user_for_notification_email'
   );
   
@@ -281,7 +282,7 @@ async function sendApplicationNotificationsOptimized(
 }
 
 export async function handleGetMyApplication(request: Request, env: Env, userId: string): Promise<Response> {
-  const app = await env.DB.prepare(
+  const app = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT a.*, 
        (SELECT json_group_array(json_object('id', d.id, 'doc_type', d.doc_type, 'file_name', d.file_name, 'uploaded_at', d.uploaded_at))
         FROM documents d WHERE d.application_id = a.id) as documents
@@ -323,7 +324,7 @@ export async function handleListApplications(request: Request, env: Env): Promis
   query += ' ORDER BY a.submitted_at DESC LIMIT ? OFFSET ?';
   bindings.push(limit, offset);
 
-  const { results } = await env.DB.prepare(query).bind(...bindings).all();
+  const { results } = await env.PLATFORM_CONTEXT!.db.prepare(query).bind(...bindings).all();
   return ok(results);
 }
 
@@ -331,7 +332,7 @@ export async function handleGetApplication(request: Request, env: Env): Promise<
   const url = new URL(request.url);
   const appId = url.pathname.split('/')[4];
 
-  const app = await env.DB.prepare(
+  const app = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT a.*, u.first_name, u.last_name, u.email,
        (SELECT json_group_array(json_object('id', d.id, 'doc_type', d.doc_type, 'file_name', d.file_name, 'uploaded_at', d.uploaded_at))
         FROM documents d WHERE d.application_id = a.id) as documents
@@ -373,7 +374,7 @@ export async function handleUpdateStatus(
   }
 
   const appResult = await executeWithMonitoring(
-    env.DB.prepare(
+    env.PLATFORM_CONTEXT!.db.prepare(
       `SELECT a.id, a.status, a.program, a.user_id, u.email, u.first_name
        FROM applications a JOIN users u ON a.user_id = u.id
        WHERE a.id = ?`
@@ -391,18 +392,18 @@ export async function handleUpdateStatus(
 
   // Use batch operations for status update
   const statusUpdateOps = [
-    env.DB.prepare(
+    env.PLATFORM_CONTEXT!.db.prepare(
       `UPDATE applications SET status = ?, reviewer_id = ?, reviewer_notes = ?, reviewed_at = datetime('now'), updated_at = datetime('now')
        WHERE id = ?`
     ).bind(status, adminId, sanitizedNotes, appId),
     
-    env.DB.prepare(
+    env.PLATFORM_CONTEXT!.db.prepare(
       `INSERT INTO application_status_logs (id, application_id, changed_by, old_status, new_status, notes)
        VALUES (?, ?, ?, ?, ?, ?)`
     ).bind(crypto.randomUUID(), appId, adminId, oldStatus, status, sanitizedNotes)
   ];
 
-  const batchResult = await executeBatch(env.DB, statusUpdateOps);
+  const batchResult = await executeBatch(env.PLATFORM_CONTEXT!.db, statusUpdateOps);
   if (!batchResult.success) {
     return error('Failed to update application status. Please try again.');
   }
@@ -411,7 +412,7 @@ export async function handleUpdateStatus(
 
   if (status === 'accepted') {
     await executeWithMonitoring(
-      env.DB.prepare(`UPDATE users SET role = 'student', updated_at = datetime('now') WHERE id = ?`).bind(app.user_id),
+      env.PLATFORM_CONTEXT!.db.prepare(`UPDATE users SET role = 'student', updated_at = datetime('now') WHERE id = ?`).bind(app.user_id),
       'promote_user_to_student'
     );
 
@@ -419,7 +420,7 @@ export async function handleUpdateStatus(
     try {
       if (ctx) {
         ctx.waitUntil((async () => {
-          await executeAdmissionPipelineOptimized(env.DB, {
+          await executeAdmissionPipelineOptimized(env.PLATFORM_CONTEXT!.db, {
             applicationId: appId,
             userId: app.user_id,
             actorId: adminId,
@@ -428,7 +429,7 @@ export async function handleUpdateStatus(
           await dispatchPendingJobs(env);
         })().catch(e => console.error('[lifecycle] Admission pipeline background error:', e)));
       } else {
-        const result = await executeAdmissionPipelineOptimized(env.DB, {
+        const result = await executeAdmissionPipelineOptimized(env.PLATFORM_CONTEXT!.db, {
           applicationId: appId,
           userId: app.user_id,
           actorId: adminId,
@@ -482,18 +483,18 @@ export async function handleGetLifecycle(
   userId: string,
   userRole: string
 ): Promise<Response> {
-  const app = await env.DB.prepare('SELECT id, user_id FROM applications WHERE id = ?')
+  const app = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id, user_id FROM applications WHERE id = ?')
     .bind(appId).first<{ id: string; user_id: string }>();
   if (!app) return error('Application not found', 404);
   if (userRole !== 'admin' && userRole !== 'staff' && app.user_id !== userId) {
     return error('Access denied', 403);
   }
-  const events = await getLifecycleHistory(env.DB, { applicationId: appId });
+  const events = await getLifecycleHistory(env.PLATFORM_CONTEXT!.db, { applicationId: appId });
   return ok(events);
 }
 
 export async function handleGetStatusLogs(request: Request, env: Env, appId: string, userId: string, userRole: string): Promise<Response> {
-  const app = await env.DB.prepare('SELECT id, user_id FROM applications WHERE id = ?')
+  const app = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id, user_id FROM applications WHERE id = ?')
     .bind(appId).first<{ id: string; user_id: string }>();
 
   if (!app) return error('Application not found', 404);
@@ -502,7 +503,7 @@ export async function handleGetStatusLogs(request: Request, env: Env, appId: str
     return error('Access denied', 403);
   }
 
-  const { results } = await env.DB.prepare(
+  const { results } = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT l.old_status, l.new_status, l.notes, l.changed_at,
             u.first_name as changed_by_name
      FROM application_status_logs l

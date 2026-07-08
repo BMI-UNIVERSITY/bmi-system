@@ -2,7 +2,7 @@ import { Env } from '../lib/types';
 import { ok } from '../lib/types';
 
 export async function handleListTimetabling(request: Request, env: Env): Promise<Response> {
-  const rows = await env.DB.prepare(
+  const rows = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT t.*, 
             c.code as course_code, c.title as course_name,
             u.first_name, u.last_name
@@ -37,7 +37,7 @@ export async function handleCreateTimetabling(request: Request, env: Env): Promi
   const body = await request.json() as Record<string, string>;
   const id = crypto.randomUUID().replace(/-/g, '');
 
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `INSERT INTO timetabling (id, course_id, instructor_id, classroom_id, day_of_week, start_time, end_time)
      VALUES (?, ?, ?, ?, ?, ?, ?)`
   ).bind(

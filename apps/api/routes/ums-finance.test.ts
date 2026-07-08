@@ -1,3 +1,4 @@
+import { makeEnv } from './test-helpers';
 import { describe, it, expect, vi } from 'vitest';
 import { handleListTransactions } from './ums-finance';
 
@@ -26,7 +27,7 @@ describe('ums-finance routes', () => {
   it('returns all transactions without filter', async () => {
     const db = makeDB({ count: 1 }, [sampleInvoice]);
     const req = new Request('http://localhost/api/finance/transactions');
-    const res = await handleListTransactions(req, { DB: db as any } as any);
+    const res = await handleListTransactions(req, makeEnv(db));
     const body = await res.json() as any;
 
     expect(res.status).toBe(200);
@@ -42,7 +43,7 @@ describe('ums-finance routes', () => {
     const paidInvoice = { ...sampleInvoice, id: 'inv-abcdef12', status: 'paid' };
     const db = makeDB({ count: 1 }, [paidInvoice]);
     const req = new Request('http://localhost/api/finance/transactions');
-    const res = await handleListTransactions(req, { DB: db as any } as any);
+    const res = await handleListTransactions(req, makeEnv(db));
     const body = await res.json() as any;
     expect(body.data[0].status).toBe('Paid');
   });
@@ -51,7 +52,7 @@ describe('ums-finance routes', () => {
     const failedInvoice = { ...sampleInvoice, id: 'inv-zzzzzzzz', status: 'cancelled' };
     const db = makeDB({ count: 1 }, [failedInvoice]);
     const req = new Request('http://localhost/api/finance/transactions');
-    const res = await handleListTransactions(req, { DB: db as any } as any);
+    const res = await handleListTransactions(req, makeEnv(db));
     const body = await res.json() as any;
     expect(body.data[0].status).toBe('Failed');
   });
@@ -63,7 +64,7 @@ describe('ums-finance routes', () => {
     });
     const db = { prepare: vi.fn().mockReturnValue({ bind: bindMock }) };
     const req = new Request('http://localhost/api/finance/transactions?status=paid');
-    await handleListTransactions(req, { DB: db as any } as any);
+    await handleListTransactions(req, makeEnv(db));
     // 'paid' is a hard-coded clause — bindings should NOT include 'paid'
     const allBindArgs = bindMock.mock.calls.flat();
     expect(allBindArgs).not.toContain('paid');
@@ -76,7 +77,7 @@ describe('ums-finance routes', () => {
     });
     const db = { prepare: vi.fn().mockReturnValue({ bind: bindMock }) };
     const req = new Request('http://localhost/api/finance/transactions?status=pending');
-    await handleListTransactions(req, { DB: db as any } as any);
+    await handleListTransactions(req, makeEnv(db));
     const allBindArgs = bindMock.mock.calls.flat();
     expect(allBindArgs).not.toContain('pending');
   });
@@ -88,7 +89,7 @@ describe('ums-finance routes', () => {
     });
     const db = { prepare: vi.fn().mockReturnValue({ bind: bindMock }) };
     const req = new Request('http://localhost/api/finance/transactions?status=overdue');
-    await handleListTransactions(req, { DB: db as any } as any);
+    await handleListTransactions(req, makeEnv(db));
     expect(bindMock.mock.calls.some((args: any[]) => args.includes('overdue'))).toBe(true);
   });
 
@@ -96,7 +97,7 @@ describe('ums-finance routes', () => {
     const noNameInvoice = { ...sampleInvoice, first_name: null, last_name: null };
     const db = makeDB({ count: 1 }, [noNameInvoice]);
     const req = new Request('http://localhost/api/finance/transactions');
-    const res = await handleListTransactions(req, { DB: db as any } as any);
+    const res = await handleListTransactions(req, makeEnv(db));
     const body = await res.json() as any;
     expect(body.data[0].studentName).toBe('Unknown Student');
   });
@@ -104,7 +105,7 @@ describe('ums-finance routes', () => {
   it('returns correct pagination metadata', async () => {
     const db = makeDB({ count: 55 }, []);
     const req = new Request('http://localhost/api/finance/transactions?page=2&perPage=10');
-    const res = await handleListTransactions(req, { DB: db as any } as any);
+    const res = await handleListTransactions(req, makeEnv(db));
     const body = await res.json() as any;
     expect(body.page).toBe(2);
     expect(body.perPage).toBe(10);
@@ -119,7 +120,7 @@ describe('ums-finance routes', () => {
     });
     const db = { prepare: vi.fn().mockReturnValue({ bind: bindMock }) };
     const req = new Request('http://localhost/api/finance/transactions?perPage=9999');
-    const res = await handleListTransactions(req, { DB: db as any } as any);
+    const res = await handleListTransactions(req, makeEnv(db));
     const body = await res.json() as any;
     expect(body.perPage).toBe(100);
   });

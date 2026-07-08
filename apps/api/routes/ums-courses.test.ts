@@ -1,3 +1,4 @@
+import { makeEnv } from './test-helpers';
 import { describe, it, expect, vi } from 'vitest';
 import {
   handleListUmsCourses,
@@ -35,7 +36,7 @@ describe('ums-courses routes', () => {
       }),
     };
     const req = new Request('http://localhost/api/courses');
-    const res = await handleListUmsCourses(req, { DB: db as any } as any);
+    const res = await handleListUmsCourses(req, makeEnv(db));
     const body = await res.json() as any;
     expect(body.data.items[0].code).toBe('CS101');
   });
@@ -47,7 +48,7 @@ describe('ums-courses routes', () => {
     });
     const db = { prepare: vi.fn().mockReturnValue({ bind: bindMock }) };
     const req = new Request('http://localhost/api/courses?search=math');
-    await handleListUmsCourses(req, { DB: db as any } as any);
+    await handleListUmsCourses(req, makeEnv(db));
     const firstCallArgs = bindMock.mock.calls[0];
     expect(firstCallArgs).toContain('%math%');
   });
@@ -58,7 +59,7 @@ describe('ums-courses routes', () => {
       method: 'POST',
       body: JSON.stringify({ code: 'CS101' }), // missing title, credits, term, capacity
     });
-    const res = await handleCreateCourse(req, { DB: db as any } as any);
+    const res = await handleCreateCourse(req, makeEnv(db));
     expect(res.status).toBe(400);
   });
 
@@ -76,7 +77,7 @@ describe('ums-courses routes', () => {
       method: 'POST',
       body: JSON.stringify({ code: 'CS201', title: 'Advanced', credits: 3, term: 'Fall', capacity: 30 }),
     });
-    const res = await handleCreateCourse(req, { DB: db as any } as any);
+    const res = await handleCreateCourse(req, makeEnv(db));
     expect(res.status).toBe(201);
     const body = await res.json() as any;
     expect(body.data.code).toBe('CS201');
@@ -95,7 +96,7 @@ describe('ums-courses routes', () => {
       method: 'PUT',
       body: JSON.stringify({ title: 'New Title' }),
     });
-    const res = await handleUpdateCourse(req, { DB: db as any } as any, 'c-bad');
+    const res = await handleUpdateCourse(req, makeEnv(db), 'c-bad');
     expect(res.status).toBe(404);
   });
 
@@ -105,7 +106,7 @@ describe('ums-courses routes', () => {
       method: 'PUT',
       body: JSON.stringify({ unknown_field: 'x' }),
     });
-    const res = await handleUpdateCourse(req, { DB: db as any } as any, 'c1');
+    const res = await handleUpdateCourse(req, makeEnv(db), 'c1');
     expect(res.status).toBe(400);
   });
 
@@ -116,7 +117,7 @@ describe('ums-courses routes', () => {
       })
     };
     const req = new Request('http://localhost/api/courses/c-gone', { method: 'DELETE' });
-    const res = await handleDeleteCourse(req, { DB: db as any } as any, 'c-gone');
+    const res = await handleDeleteCourse(req, makeEnv(db), 'c-gone');
     expect(res.status).toBe(404);
   });
 
@@ -127,7 +128,7 @@ describe('ums-courses routes', () => {
       })
     };
     const req = new Request('http://localhost/api/courses/c1', { method: 'DELETE' });
-    const res = await handleDeleteCourse(req, { DB: db as any } as any, 'c1');
+    const res = await handleDeleteCourse(req, makeEnv(db), 'c1');
     expect(res.status).toBe(200);
   });
 
@@ -140,7 +141,7 @@ describe('ums-courses routes', () => {
       })
     };
     const req = new Request('http://localhost/api/programs');
-    const res = await handleListPrograms(req, { DB: db as any } as any);
+    const res = await handleListPrograms(req, makeEnv(db));
     expect(res.status).toBe(200);
   });
 
@@ -150,7 +151,7 @@ describe('ums-courses routes', () => {
         all: vi.fn().mockResolvedValue({ results: [{ id: 'f1', name: 'Engineering' }] })
       })
     };
-    const res = await handleListFaculties(new Request('http://localhost'), { DB: db as any } as any);
+    const res = await handleListFaculties(new Request('http://localhost'), makeEnv(db));
     const body = await res.json() as any;
     expect(body.data[0].name).toBe('Engineering');
   });
@@ -161,7 +162,7 @@ describe('ums-courses routes', () => {
         all: vi.fn().mockResolvedValue({ results: [{ id: 'd1' }] })
       })
     };
-    const res = await handleListDepartments(new Request('http://localhost/api/depts'), { DB: db as any } as any);
+    const res = await handleListDepartments(new Request('http://localhost/api/depts'), makeEnv(db));
     expect(res.status).toBe(200);
   });
 
@@ -171,7 +172,7 @@ describe('ums-courses routes', () => {
     });
     const db = { prepare: vi.fn().mockReturnValue({ bind: bindMock, all: vi.fn() }) };
     const req = new Request('http://localhost/api/depts?faculty_id=f1');
-    await handleListDepartments(req, { DB: db as any } as any);
+    await handleListDepartments(req, makeEnv(db));
     expect(bindMock).toHaveBeenCalledWith('f1');
   });
 
@@ -181,7 +182,7 @@ describe('ums-courses routes', () => {
         all: vi.fn().mockResolvedValue({ results: [{ id: 't1', name: 'Fall 2026' }] })
       })
     };
-    const res = await handleListTerms(new Request('http://localhost'), { DB: db as any } as any);
+    const res = await handleListTerms(new Request('http://localhost'), makeEnv(db));
     const body = await res.json() as any;
     expect(body.data[0].name).toBe('Fall 2026');
   });
@@ -194,7 +195,7 @@ describe('ums-courses routes', () => {
       })
     };
     const req = new Request('http://localhost/api/enrollments');
-    const res = await handleListEnrollments(req, { DB: db as any } as any);
+    const res = await handleListEnrollments(req, makeEnv(db));
     expect(res.status).toBe(200);
   });
 });

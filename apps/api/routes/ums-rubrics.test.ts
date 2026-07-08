@@ -1,3 +1,4 @@
+import { makeEnv } from './test-helpers';
 import { describe, it, expect, vi } from 'vitest';
 import {
   handleListRubrics,
@@ -18,7 +19,7 @@ describe('ums-rubrics routes', () => {
       })
     };
     const req = new Request('http://localhost/api/rubrics');
-    const res = await handleListRubrics(req, { DB: db as any } as any);
+    const res = await handleListRubrics(req, makeEnv(db));
     const body = await res.json() as any;
 
     expect(res.status).toBe(200);
@@ -33,7 +34,7 @@ describe('ums-rubrics routes', () => {
       })
     };
     const req = new Request('http://localhost/api/rubrics');
-    const res = await handleListRubrics(req, { DB: db as any } as any);
+    const res = await handleListRubrics(req, makeEnv(db));
     expect(res.status).toBe(400);
   });
 
@@ -50,7 +51,7 @@ describe('ums-rubrics routes', () => {
       body: JSON.stringify({ title: 'New Rubric', criteria: [{ name: 'q1', points: 5 }], total_points: 50 }),
       headers: { 'Content-Type': 'application/json' }
     });
-    const res = await handleCreateRubric(req, { DB: db as any } as any);
+    const res = await handleCreateRubric(req, makeEnv(db));
     expect(res.status).toBe(200);
   });
 
@@ -61,7 +62,7 @@ describe('ums-rubrics routes', () => {
       })
     };
     const req = new Request('http://localhost/api/rubrics/r1', { method: 'DELETE' });
-    const res = await handleDeleteRubric(req, { DB: db as any } as any, 'r1');
+    const res = await handleDeleteRubric(req, makeEnv(db), 'r1');
     const body = await res.json() as any;
 
     expect(res.status).toBe(200);

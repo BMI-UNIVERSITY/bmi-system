@@ -21,7 +21,7 @@ function slugify(text: string): string {
 
 /** GET /api/cms/posts — list all posts (admin/staff, includes drafts) */
 export async function handleListPosts(_request: Request, env: Env): Promise<Response> {
-  const rows = await env.DB.prepare(
+  const rows = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT p.id, p.title, p.slug, p.excerpt, p.status, p.tags, p.published_at, p.created_at,
             u.first_name, u.last_name
      FROM cms_posts p
@@ -65,7 +65,7 @@ export async function handleCreatePost(
   if (!body.title?.trim()) return error('Title is required');
 
   const slug = slugify(body.title);
-  const existing = await env.DB.prepare(
+  const existing = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT id FROM cms_posts WHERE slug = ?',
   ).bind(slug).first();
   if (existing) return error('A post with this title already exists', 409);
@@ -75,7 +75,7 @@ export async function handleCreatePost(
   const tagsJson = body.tags ? JSON.stringify(body.tags) : null;
   const publishedAt = status === 'published' ? new Date().toISOString() : null;
 
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `INSERT INTO cms_posts (id, title, slug, excerpt, content, tags, status, author_id, published_at)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
   )
@@ -93,7 +93,7 @@ export async function handleUpdatePost(
   postId: string,
   editorId: string,
 ): Promise<Response> {
-  const existing = await env.DB.prepare('SELECT id, status FROM cms_posts WHERE id = ?')
+  const existing = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id, status FROM cms_posts WHERE id = ?')
     .bind(postId)
     .first<{ id: string; status: string }>();
   if (!existing) return error('Post not found', 404);
@@ -129,7 +129,7 @@ export async function handleUpdatePost(
   if (publishedAt !== undefined) { sets.push('published_at = ?'); binds.push(publishedAt); }
 
   binds.push(postId);
-  await env.DB.prepare(`UPDATE cms_posts SET ${sets.join(', ')} WHERE id = ?`)
+  await env.PLATFORM_CONTEXT!.db.prepare(`UPDATE cms_posts SET ${sets.join(', ')} WHERE id = ?`)
     .bind(...binds)
     .run();
 
@@ -144,11 +144,11 @@ export async function handleDeletePost(
   postId: string,
   adminId: string,
 ): Promise<Response> {
-  const existing = await env.DB.prepare('SELECT id FROM cms_posts WHERE id = ?')
+  const existing = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id FROM cms_posts WHERE id = ?')
     .bind(postId).first();
   if (!existing) return error('Post not found', 404);
 
-  await env.DB.prepare('DELETE FROM cms_posts WHERE id = ?').bind(postId).run();
+  await env.PLATFORM_CONTEXT!.db.prepare('DELETE FROM cms_posts WHERE id = ?').bind(postId).run();
   await logAdminAction(env, adminId, 'cms_post_deleted', 'cms_post', postId);
   return ok({ deleted: true });
 }
@@ -157,7 +157,7 @@ export async function handleDeletePost(
 
 /** GET /api/cms/pages — list all pages (admin/staff) */
 export async function handleListPages(_request: Request, env: Env): Promise<Response> {
-  const rows = await env.DB.prepare(
+  const rows = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT id, title, slug, status, published_at, created_at FROM cms_pages ORDER BY created_at DESC`,
   ).all<{ id: string; title: string; slug: string; status: string; published_at: string | null; created_at: string }>();
   return ok(rows.results);
@@ -174,14 +174,14 @@ export async function handleCreatePage(
   if (!body.title?.trim()) return error('Title is required');
 
   const slug = slugify(body.title);
-  const existing = await env.DB.prepare('SELECT id FROM cms_pages WHERE slug = ?').bind(slug).first();
+  const existing = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id FROM cms_pages WHERE slug = ?').bind(slug).first();
   if (existing) return error('A page with this slug already exists', 409);
 
   const status = body.status ?? 'draft';
   const id = crypto.randomUUID();
   const publishedAt = status === 'published' ? new Date().toISOString() : null;
 
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `INSERT INTO cms_pages (id, title, slug, content, status, author_id, published_at)
      VALUES (?, ?, ?, ?, ?, ?, ?)`,
   ).bind(id, body.title.trim(), slug, body.content ?? null, status, authorId, publishedAt).run();
@@ -197,9 +197,9 @@ export async function handleDeletePage(
   pageId: string,
   adminId: string,
 ): Promise<Response> {
-  const existing = await env.DB.prepare('SELECT id FROM cms_pages WHERE id = ?').bind(pageId).first();
+  const existing = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id FROM cms_pages WHERE id = ?').bind(pageId).first();
   if (!existing) return error('Page not found', 404);
-  await env.DB.prepare('DELETE FROM cms_pages WHERE id = ?').bind(pageId).run();
+  await env.PLATFORM_CONTEXT!.db.prepare('DELETE FROM cms_pages WHERE id = ?').bind(pageId).run();
   await logAdminAction(env, adminId, 'cms_page_deleted', 'cms_page', pageId);
   return ok({ deleted: true });
 }

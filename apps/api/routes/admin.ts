@@ -30,12 +30,12 @@ export async function handleAdminSetup(request: Request, env: Env): Promise<Resp
     return error('Email and password are required');
   }
 
-  const existing = await env.DB.prepare('SELECT id FROM users WHERE role = ?').bind('admin').first();
+  const existing = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id FROM users WHERE role = ?').bind('admin').first();
   if (existing) {
     return error('An admin already exists. Use the admin panel to promote additional users.', 409);
   }
 
-  const existingUser = await env.DB.prepare('SELECT id FROM users WHERE email = ?').bind(body.email.toLowerCase()).first();
+  const existingUser = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id FROM users WHERE email = ?').bind(body.email.toLowerCase()).first();
   if (existingUser) {
     return error('A user with this email already exists', 409);
   }
@@ -44,7 +44,7 @@ export async function handleAdminSetup(request: Request, env: Env): Promise<Resp
   const passwordHash = await hashPassword(body.password, env.PASSWORD_PEPPER);
   const userId = crypto.randomUUID();
 
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `INSERT INTO users (id, email, password_hash, first_name, last_name, role, is_verified)
      VALUES (?, ?, ?, ?, ?, 'admin', 1)`
   ).bind(
@@ -63,11 +63,11 @@ export async function handleListUsers(request: Request, env: Env): Promise<Respo
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 200);
   const offset = Math.max(parseInt(url.searchParams.get('offset') || '0'), 0);
 
-  const users = await env.DB.prepare(
+  const users = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT id, email, first_name, last_name, role, is_verified, created_at FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?'
   ).bind(limit, offset).all();
 
-  const totalResult = await env.DB.prepare('SELECT COUNT(*) as total FROM users').first<{ total: number }>();
+  const totalResult = await env.PLATFORM_CONTEXT!.db.prepare('SELECT COUNT(*) as total FROM users').first<{ total: number }>();
 
   return ok({ users: users.results, total: totalResult?.total ?? 0, limit, offset });
 }
@@ -89,12 +89,12 @@ export async function handleUpdateUserRole(request: Request, env: Env, actorId: 
     return error(`Invalid role. Must be one of: ${validRoles.join(', ')}`);
   }
 
-  const target = await env.DB.prepare('SELECT id, role FROM users WHERE id = ?').bind(targetId).first<{ id: string; role: string }>();
+  const target = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id, role FROM users WHERE id = ?').bind(targetId).first<{ id: string; role: string }>();
   if (!target) {
     return error('User not found', 404);
   }
 
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `UPDATE users SET role = ?, updated_at = datetime('now') WHERE id = ?`
   ).bind(body.role, targetId).run();
 
@@ -111,7 +111,7 @@ export async function handleDeleteUser(request: Request, env: Env, actorId: stri
     return error('You cannot delete your own account', 400);
   }
 
-  const target = await env.DB.prepare(
+  const target = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT id, email, first_name, last_name, role FROM users WHERE id = ?'
   ).bind(targetId).first<{ id: string; email: string; first_name: string; last_name: string; role: string }>();
 
@@ -124,7 +124,7 @@ export async function handleDeleteUser(request: Request, env: Env, actorId: stri
   }
 
   // Cascade will automatically delete applications, documents, enrollments, sessions
-  await env.DB.prepare('DELETE FROM users WHERE id = ?').bind(targetId).run();
+  await env.PLATFORM_CONTEXT!.db.prepare('DELETE FROM users WHERE id = ?').bind(targetId).run();
 
   await logAdminAction(env, actorId, 'delete_user', 'user', targetId, {
     deleted_email: target.email,
@@ -139,7 +139,7 @@ export async function handleAdminResetPassword(request: Request, env: Env, actor
   const url = new URL(request.url);
   const targetId = url.pathname.split('/')[4];
 
-  const target = await env.DB.prepare(
+  const target = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT id, email, first_name FROM users WHERE id = ?'
   ).bind(targetId).first<{ id: string; email: string; first_name: string }>();
 
@@ -148,12 +148,12 @@ export async function handleAdminResetPassword(request: Request, env: Env, actor
   }
 
   // Delete any old unused tokens for this user first
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     'DELETE FROM password_reset_tokens WHERE user_id = ? AND used_at IS NULL'
   ).bind(targetId).run();
 
   const resetToken = crypto.randomUUID();
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `INSERT INTO password_reset_tokens (id, user_id, token, expires_at)
      VALUES (?, ?, ?, datetime('now', '+24 hours'))`
   ).bind(crypto.randomUUID(), targetId, resetToken).run();
@@ -225,12 +225,12 @@ export async function handleGetAuditLogs(request: Request, env: Env): Promise<Re
   query += ' ORDER BY l.created_at DESC LIMIT ? OFFSET ?';
   bindings.push(limit, offset);
 
-  const logs = await env.DB.prepare(query).bind(...bindings).all();
+  const logs = await env.PLATFORM_CONTEXT!.db.prepare(query).bind(...bindings).all();
 
   const totalQuery = actionFilter
     ? 'SELECT COUNT(*) as total FROM admin_audit_logs WHERE action = ?'
     : 'SELECT COUNT(*) as total FROM admin_audit_logs';
-  const totalResult = await env.DB.prepare(totalQuery)
+  const totalResult = await env.PLATFORM_CONTEXT!.db.prepare(totalQuery)
     .bind(...(actionFilter ? [actionFilter] : []))
     .first<{ total: number }>();
 
@@ -253,11 +253,11 @@ export async function handleBulkEmails(request: Request, env: Env): Promise<Resp
   for (const to of recipients) {
     try {
       const logId = crypto.randomUUID();
-      await env.DB.prepare(
+      await env.PLATFORM_CONTEXT!.db.prepare(
         `INSERT INTO email_logs (id, to_address, subject, status) VALUES (?, ?, ?, 'pending')`
       ).bind(logId, to, subject).run();
 
-      await env.EMAIL_QUEUE.send({ to, subject, html, logId });
+      await env.PLATFORM_CONTEXT!.queue.send({ to, subject, html, logId });
       enqueued++;
     } catch (e) {
       console.error(`Failed to enqueue email for ${to}:`, e);

@@ -1,3 +1,4 @@
+import { makeEnv } from './test-helpers';
 import { describe, it, expect, vi, beforeAll } from 'vitest';
 import {
   handleAdminSetup,
@@ -88,7 +89,7 @@ describe('admin routes — handleAdminSetup', () => {
       body: JSON.stringify({ email: 'a@b.com', password: 'pass123' }),
       headers: { 'X-Admin-Setup-Key': 'mykey' },
     });
-    const res = await handleAdminSetup(req, { DB: db as any, ADMIN_SETUP_KEY: 'mykey', PASSWORD_PEPPER: 'pepper' } as any);
+    const res = await handleAdminSetup(req, makeEnv(db, { ADMIN_SETUP_KEY: 'mykey', PASSWORD_PEPPER: 'pepper' }));
     expect(res.status).toBe(409);
   });
 
@@ -108,7 +109,7 @@ describe('admin routes — handleAdminSetup', () => {
       body: JSON.stringify({ email: 'admin@bmi.edu', password: 'SecurePass1!', first_name: 'Admin', last_name: 'User' }),
       headers: { 'X-Admin-Setup-Key': 'mykey' },
     });
-    const res = await handleAdminSetup(req, { DB: db as any, ADMIN_SETUP_KEY: 'mykey', PASSWORD_PEPPER: 'pepper' } as any);
+    const res = await handleAdminSetup(req, makeEnv(db, { ADMIN_SETUP_KEY: 'mykey', PASSWORD_PEPPER: 'pepper' }));
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.data.message).toContain('Admin account created');
@@ -128,7 +129,7 @@ describe('admin routes — handleListUsers', () => {
       }),
     };
     const req = new Request('http://localhost/api/admin/users?limit=10&offset=0');
-    const res = await handleListUsers(req, { DB: db as any } as any);
+    const res = await handleListUsers(req, makeEnv(db));
     const body = await res.json() as any;
     expect(body.data.total).toBe(1);
     expect(body.data.users).toHaveLength(1);
@@ -142,7 +143,7 @@ describe('admin routes — handleListUsers', () => {
     });
     const db = { prepare: vi.fn().mockReturnValue({ bind: bindMock, first: vi.fn().mockResolvedValue({ total: 0 }) }) };
     const req = new Request('http://localhost/api/admin/users?limit=9999');
-    await handleListUsers(req, { DB: db as any } as any);
+    await handleListUsers(req, makeEnv(db));
     // First argument of bind should be 200 (capped)
     expect(bindMock.mock.calls[0][0]).toBe(200);
   });
@@ -173,7 +174,7 @@ describe('admin routes — handleUpdateUserRole', () => {
       method: 'PATCH',
       body: JSON.stringify({ role: 'staff' }),
     });
-    const res = await handleUpdateUserRole(req, { DB: db as any } as any, 'actor1');
+    const res = await handleUpdateUserRole(req, makeEnv(db), 'actor1');
     expect(res.status).toBe(404);
   });
 
@@ -190,7 +191,7 @@ describe('admin routes — handleUpdateUserRole', () => {
       method: 'PATCH',
       body: JSON.stringify({ role: 'staff' }),
     });
-    const res = await handleUpdateUserRole(req, { DB: db as any } as any, 'actor1');
+    const res = await handleUpdateUserRole(req, makeEnv(db), 'actor1');
     expect(res.status).toBe(200);
   });
 });
@@ -205,14 +206,14 @@ describe('admin routes — handleDeleteUser', () => {
   it('returns 404 if user not found', async () => {
     const db = { prepare: vi.fn().mockReturnValue({ bind: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) }) }) };
     const req = new Request('http://localhost/api/admin/users/target1');
-    const res = await handleDeleteUser(req, { DB: db as any } as any, 'actor1');
+    const res = await handleDeleteUser(req, makeEnv(db), 'actor1');
     expect(res.status).toBe(404);
   });
 
   it('returns 403 if target is admin', async () => {
     const db = { prepare: vi.fn().mockReturnValue({ bind: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue({ id: 'target1', role: 'admin', email: 'a@b.com', first_name: 'A', last_name: 'B' }) }) }) };
     const req = new Request('http://localhost/api/admin/users/target1');
-    const res = await handleDeleteUser(req, { DB: db as any } as any, 'actor1');
+    const res = await handleDeleteUser(req, makeEnv(db), 'actor1');
     expect(res.status).toBe(403);
   });
 
@@ -226,7 +227,7 @@ describe('admin routes — handleDeleteUser', () => {
       }),
     };
     const req = new Request('http://localhost/api/admin/users/target1');
-    const res = await handleDeleteUser(req, { DB: db as any } as any, 'actor1');
+    const res = await handleDeleteUser(req, makeEnv(db), 'actor1');
     expect(res.status).toBe(200);
   });
 });
@@ -235,7 +236,7 @@ describe('admin routes — handleAdminResetPassword', () => {
   it('returns 404 if user not found', async () => {
     const db = { prepare: vi.fn().mockReturnValue({ bind: vi.fn().mockReturnValue({ first: vi.fn().mockResolvedValue(null) }) }) };
     const req = new Request('http://localhost/api/admin/users/nobody/reset-password');
-    const res = await handleAdminResetPassword(req, { DB: db as any } as any, 'actor1');
+    const res = await handleAdminResetPassword(req, makeEnv(db), 'actor1');
     expect(res.status).toBe(404);
   });
 
@@ -249,7 +250,7 @@ describe('admin routes — handleAdminResetPassword', () => {
       }),
     };
     const req = new Request('http://localhost/api/admin/users/u1/reset-password', { method: 'POST' });
-    const res = await handleAdminResetPassword(req, { DB: db as any, RESEND_API_KEY: 'key' } as any, 'actor1');
+    const res = await handleAdminResetPassword(req, makeEnv(db, { RESEND_API_KEY: 'key' }), 'actor1');
     expect(res.status).toBe(200);
     const body = await res.json() as any;
     expect(body.data.message).toContain('Password reset email sent');
@@ -268,7 +269,7 @@ describe('admin routes — handleGetAuditLogs', () => {
       }),
     };
     const req = new Request('http://localhost/api/admin/audit-logs');
-    const res = await handleGetAuditLogs(req, { DB: db as any } as any);
+    const res = await handleGetAuditLogs(req, makeEnv(db));
     const body = await res.json() as any;
     expect(body.data.logs[0].action).toBe('create_user');
   });
@@ -280,7 +281,7 @@ describe('admin routes — handleGetAuditLogs', () => {
     });
     const db = { prepare: vi.fn().mockReturnValue({ bind: bindMock }) };
     const req = new Request('http://localhost/api/admin/audit-logs?action=delete_user');
-    await handleGetAuditLogs(req, { DB: db as any } as any);
+    await handleGetAuditLogs(req, makeEnv(db));
     // action filter should be bound first
     expect(bindMock.mock.calls.some((args: any[]) => args.includes('delete_user'))).toBe(true);
   });
@@ -317,7 +318,7 @@ describe('admin routes — handleBulkEmails', () => {
       method: 'POST',
       body: JSON.stringify({ recipients: ['a@b.com', 'c@d.com'], subject: 'Hello', html: '<p>Hi</p>' }),
     });
-    const res = await handleBulkEmails(req, { DB: db as any, EMAIL_QUEUE: { send: queueSendMock } } as any);
+    const res = await handleBulkEmails(req, makeEnv(db));
     const body = await res.json() as any;
     expect(res.status).toBe(200);
     expect(body.data.message).toContain('2/2');

@@ -1,3 +1,4 @@
+import { makeEnv } from './routes/test-helpers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import app from './index';
 
@@ -35,7 +36,7 @@ describe('API Route Dispatcher & Authorization', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    env = {};
+    env = makeEnv();
     ctx = { waitUntil: vi.fn() };
   });
 
@@ -64,7 +65,7 @@ describe('API Route Dispatcher & Authorization', () => {
     const res = await app.fetch(req, env, ctx);
     
     expect(res.status).toBe(401);
-    expect(requireAuth).toHaveBeenCalledWith(req, env.DB, env.JWT_SECRET, ['admin', 'staff']);
+    expect(requireAuth).toHaveBeenCalledWith(req, env.PLATFORM_CONTEXT.db, env.JWT_SECRET, ['admin', 'staff']);
   });
 
   it('should block student access to admin routes', async () => {
@@ -75,7 +76,7 @@ describe('API Route Dispatcher & Authorization', () => {
     const res = await app.fetch(req, env, ctx);
     
     expect(res.status).toBe(403);
-    expect(requireAuth).toHaveBeenCalledWith(req, env.DB, env.JWT_SECRET, ['admin']);
+    expect(requireAuth).toHaveBeenCalledWith(req, env.PLATFORM_CONTEXT.db, env.JWT_SECRET, ['admin']);
   });
 
   it('should allow admin access to timetabling', async () => {
@@ -88,6 +89,6 @@ describe('API Route Dispatcher & Authorization', () => {
     // As long as it doesn't return 401/403 (it will either hit the mock or the actual handler which might 500, but auth passed)
     expect(res.status).not.toBe(401);
     expect(res.status).not.toBe(403);
-    expect(requireAuth).toHaveBeenCalledWith(req, env.DB, env.JWT_SECRET, ['admin', 'staff']);
+    expect(requireAuth).toHaveBeenCalledWith(req, env.PLATFORM_CONTEXT.db, env.JWT_SECRET, ['admin', 'staff']);
   });
 });

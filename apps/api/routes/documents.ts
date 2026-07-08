@@ -35,11 +35,11 @@ export async function handleUploadDocument(request: Request, env: Env, userId: s
   if (queryParsed instanceof Response) return queryParsed;
   const { application_id: applicationId, doc_type: docType } = queryParsed;
 
-  const app = await env.DB.prepare('SELECT id, user_id FROM applications WHERE id = ? AND user_id = ?')
+  const app = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id, user_id FROM applications WHERE id = ? AND user_id = ?')
     .bind(applicationId, userId).first();
   if (!app) return error('Application not found or access denied', 404);
 
-  const docCount = await env.DB.prepare(
+  const docCount = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT COUNT(*) as count FROM documents WHERE application_id = ?'
   ).bind(applicationId).first<{ count: number }>();
 
@@ -78,7 +78,7 @@ export async function handleUploadDocument(request: Request, env: Env, userId: s
   });
 
   const docId = crypto.randomUUID();
-  await env.DB.prepare(
+  await env.PLATFORM_CONTEXT!.db.prepare(
     `INSERT INTO documents (id, application_id, user_id, doc_type, file_name, r2_key, mime_type, file_size_bytes)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(docId, applicationId, userId, docType, safeFileName, r2Key, detectedMime, file.size).run();
@@ -111,7 +111,7 @@ export async function handleDownloadDocument(
   userId: string,
   userRole: string
 ): Promise<Response> {
-  const doc = await env.DB.prepare(
+  const doc = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT id, user_id, r2_key, file_name, mime_type FROM documents WHERE id = ?'
   ).bind(docId).first<{ id: string; user_id: string; r2_key: string; file_name: string; mime_type: string }>();
 
@@ -141,7 +141,7 @@ export async function handleDownloadDocument(
 
   // Audit: log every document access for GDPR compliance trail
   // Fire-and-forget — don't await so it doesn't slow the response
-  env.DB.prepare(
+  env.PLATFORM_CONTEXT!.db.prepare(
     `INSERT INTO admin_audit_logs (id, user_id, action, target_type, target_id, details, ip_address, user_agent)
      VALUES (?, ?, 'view_document', 'document', ?, ?, ?, ?)`
   ).bind(
@@ -176,13 +176,13 @@ export async function handleDeleteDocument(
   docId: string,
   adminId: string
 ): Promise<Response> {
-  const doc = await env.DB.prepare('SELECT r2_key, file_name FROM documents WHERE id = ?')
+  const doc = await env.PLATFORM_CONTEXT!.db.prepare('SELECT r2_key, file_name FROM documents WHERE id = ?')
     .bind(docId).first<{ r2_key: string; file_name: string }>();
 
   if (!doc) return error('Document not found', 404);
 
   await env.DOCUMENTS.delete(doc.r2_key);
-  await env.DB.prepare('DELETE FROM documents WHERE id = ?').bind(docId).run();
+  await env.PLATFORM_CONTEXT!.db.prepare('DELETE FROM documents WHERE id = ?').bind(docId).run();
 
   await logAdminAction(env, adminId, 'delete_document', 'document', docId, { file_name: doc.file_name }, request);
 

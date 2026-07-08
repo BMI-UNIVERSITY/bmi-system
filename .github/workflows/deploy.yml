@@ -25,7 +25,7 @@ jobs:
           filters: |
             api:
               - 'apps/api/**'
-              - 'packages/shared/**'
+              - 'packages/**'
               - 'package-lock.json'
               - 'package.json'
               - '.github/workflows/deploy.yml'
@@ -227,6 +227,9 @@ jobs:
       - name: Install all workspace dependencies
         run: |
           npm ci
+
+      - name: Build all workspaces
+        run: npm run build -ws --if-present
 
       - name: Type check shared package
         run: npm run typecheck

@@ -18,7 +18,7 @@ export async function runArchivalJob(env: Env) {
     
     try {
       // 1. Fetch old rows in batches to avoid D1 limits
-      const { results } = await env.DB.prepare(
+      const { results } = await env.PLATFORM_CONTEXT!.db.prepare(
         `SELECT * FROM ${rule.table} WHERE ${rule.dateCol} < ? LIMIT 1000`
       ).bind(cutoffIso).all();
       
@@ -46,12 +46,12 @@ export async function runArchivalJob(env: Env) {
       // 3. Purge from D1 using fetched IDs
       const ids = results.map((r: any) => r.id);
       
-      // Use batch prepared statements for atomic deletes
-      const batchOps = ids.map(id => 
-        env.DB.prepare(`DELETE FROM ${rule.table} WHERE id = ?`).bind(id)
-      );
-      
-      await env.DB.batch(batchOps);
+      // Use transaction for atomic deletes
+      await env.PLATFORM_CONTEXT!.db.transaction(async (tx) => {
+        for (const id of ids) {
+          await tx.prepare(`DELETE FROM ${rule.table} WHERE id = ?`).bind(id).run();
+        }
+      });
       
     } catch (e) {
       console.error(`Error processing archival for ${rule.table}:`, e);
