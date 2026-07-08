@@ -84,8 +84,8 @@ export const admissionsService = {
     });
     
     if (!response.ok) {
-      const error = await parseJsonSafe(response);
-      throw new Error(error.error || 'Failed to update application status');
+      const error = (await parseJsonSafe(response)) as { error?: string };
+      throw new Error(error?.error || 'Failed to update application status');
     }
     return response.json();
   },

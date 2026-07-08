@@ -33,8 +33,8 @@ describe('Admissions Component', () => {
 
   it('renders stat cards correctly when data is loaded', async () => {
     const mockApps = [
-      { id: '1', status: 'submitted', first_name: 'John', last_name: 'Doe', program: 'CS', degree_level: 'bachelors', email: 'john@test.com', submitted_at: '2023-01-01', created_at: '2023-01-01', updated_at: '2023-01-01' },
-      { id: '2', status: 'accepted', first_name: 'Jane', last_name: 'Smith', program: 'Math', degree_level: 'masters', email: 'jane@test.com', submitted_at: '2023-01-02', created_at: '2023-01-02', updated_at: '2023-01-02' },
+      { id: '1', applicant_id: 'u1', status: 'submitted', first_name: 'John', last_name: 'Doe', program: 'CS', degree_level: 'bachelors', email: 'john@test.com', submitted_at: '2023-01-01', created_at: '2023-01-01', updated_at: '2023-01-01' },
+      { id: '2', applicant_id: 'u2', status: 'accepted', first_name: 'Jane', last_name: 'Smith', program: 'Math', degree_level: 'masters', email: 'jane@test.com', submitted_at: '2023-01-02', created_at: '2023-01-02', updated_at: '2023-01-02' },
     ];
     
     vi.mocked(admissionsService.listApplications).mockResolvedValueOnce(mockApps);
