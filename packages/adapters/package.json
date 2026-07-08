@@ -18,7 +18,7 @@
   },
   "dependencies": {
     "@bmi/ports": "*",
-    "@keycloak/keycloak-admin-client": "^23.0.0",
+    "@keycloak/keycloak-admin-client": "^26.6.4",
     "stripe": "^14.14.0",
     "pdf-lib": "^1.17.1"
   },
