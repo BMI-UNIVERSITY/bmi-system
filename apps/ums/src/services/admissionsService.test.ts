@@ -60,6 +60,7 @@ describe('admissionsService', () => {
       vi.mocked(authFetch).mockResolvedValueOnce({
         ok: false,
         json: async () => ({ error: 'Invalid status' }),
+        text: async () => JSON.stringify({ error: 'Invalid status' }),
       } as Response);
 
       await expect(admissionsService.updateStatus('app1', 'invalid')).rejects.toThrow('Invalid status');
