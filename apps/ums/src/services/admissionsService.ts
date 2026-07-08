@@ -53,7 +53,7 @@ export const admissionsService = {
       return acc;
     }, {} as Record<string, string>);
     const qs = params && Object.keys(stringParams).length > 0 ? '?' + new URLSearchParams(stringParams).toString() : '';
-    const response = await authFetch(`${API_URL}/admin/applications${qs}`);
+    const response = await authFetch(`${API_URL.replace('/v1', '')}/admin/applications${qs}`);
     if (!response.ok) {
       throw new Error('Failed to load applications');
     }
@@ -64,7 +64,7 @@ export const admissionsService = {
    * Get a single application by ID
    */
   async getApplication(id: string) {
-    const response = await authFetch(`${API_URL}/admin/applications/${id}`);
+    const response = await authFetch(`${API_URL.replace('/v1', '')}/admin/applications/${id}`);
     if (!response.ok) {
       throw new Error('Failed to load application details');
     }
@@ -75,7 +75,7 @@ export const admissionsService = {
    * Update application status (New -> Under Review -> Accepted/Rejected)
    */
   async updateStatus(id: string, status: string, notes?: string) {
-    const response = await authFetch(`${API_URL}/admin/applications/${id}/status`, {
+    const response = await authFetch(`${API_URL.replace('/v1', '')}/admin/applications/${id}/status`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -94,8 +94,7 @@ export const admissionsService = {
    * Get audit log of status changes for an application
    */
   async getStatusLogs(id: string) {
-    // Falls back to the standard applications log endpoint if admin specific one doesn't exist
-    const response = await authFetch(`${API_URL}/applications/${id}/logs`);
+    const response = await authFetch(`${API_URL.replace('/v1', '')}/applications/${id}/lifecycle`);
     if (!response.ok) {
       throw new Error('Failed to load application audit logs');
     }
