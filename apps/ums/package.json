@@ -82,6 +82,7 @@
     "globals": "^17.6.0",
     "google-auth-library": "^10.6.2",
     "googleapis": "^173.0.0",
+    "happy-dom": "^20.10.6",
     "husky": "^9.1.7",
     "jsdom": "^29.1.1",
     "postcss": "^8.5.6",
