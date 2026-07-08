@@ -38,8 +38,13 @@ export default function Finances() {
   return (
     <div className="page" style={{ padding: '5rem 1.5rem 3rem', background: 'var(--bg)' }}>
       <div style={{ maxWidth: 1000, margin: '0 auto' }}>
-        <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '2.5rem', marginBottom: '0.5rem' }}>Financial Services</h1>
-        <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>Manage your tuition, fees, and view account balance.</p>
+        <div style={{ display: 'flex', alignItems: 'center', marginBottom: '0.5rem' }}>
+          <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '2.5rem', margin: 0 }}>Financial Services</h1>
+          <span className="badge badge-draft" style={{ marginLeft: '1rem', padding: '0.3rem 0.6rem', fontSize: '0.9rem' }}>Sandbox Mode</span>
+        </div>
+        <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
+          Manage your tuition, fees, and view account balance. Note: Payments are simulated in sandbox mode.
+        </p>
 
         {alert.msg && (
           <div className={`alert alert-${alert.type}`} style={{ marginBottom: '1.5rem' }} role="alert" aria-live="assertive">

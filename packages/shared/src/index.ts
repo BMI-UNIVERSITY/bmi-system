@@ -59,3 +59,6 @@ export type {
   WebhookEvent,
 } from './api-types.js';
 export { API_STATUS } from './api-types.js';
+
+// Grading logic
+export { calculateGrade, percentageToGrade } from './grading.js';

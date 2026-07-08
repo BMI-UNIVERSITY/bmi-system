@@ -4,6 +4,7 @@
  */
 import { ok, error, json } from '../lib/types';
 import type { Env } from '../lib/types';
+import { calculateGrade } from '@bmi/shared';
 
 function paginate(url: URL) {
   const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
@@ -64,18 +65,7 @@ export async function handleListGrades(
   ).bind(...bindings, perPage, offset).all();
 
   const mappedResults = rows.results.map((r: any) => {
-    let letter_grade = '';
-    let grade_point = 0;
-    if (r.max_score && r.max_score > 0) {
-      const p = (r.score / r.max_score) * 100;
-      if (p >= 70) { letter_grade = 'A'; grade_point = 4.0; }
-      else if (p >= 60) { letter_grade = 'B'; grade_point = 3.0; }
-      else if (p >= 50) { letter_grade = 'C'; grade_point = 2.0; }
-      else if (p >= 40) { letter_grade = 'D'; grade_point = 1.0; }
-      else { letter_grade = 'F'; grade_point = 0.0; }
-    } else if (r.score == 0 && r.max_score == 0) {
-      letter_grade = 'N/A';
-    }
+    const { letter_grade, grade_point } = calculateGrade(r.score, r.max_score);
     return { ...r, letter_grade, grade_point };
   });
 

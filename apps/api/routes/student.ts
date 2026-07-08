@@ -3,6 +3,7 @@
 
 import { error, ok } from '../lib/types';
 import type { Env } from '../lib/types';
+import { percentageToGrade } from '@bmi/shared';
 
 export async function handleGetDashboard(request: Request, env: Env, userId: string): Promise<Response> {
   // Get upcoming invoices
@@ -99,7 +100,7 @@ export async function handlePayInvoice(request: Request, env: Env, userId: strin
     'UPDATE invoices SET status = "paid" WHERE id = ? AND student_id = ?'
   ).bind(invoiceId, userId).run();
 
-  return ok({ success: true, message: 'Payment successful' });
+  return ok({ success: true, message: 'Payment successful', sandbox: true });
 }
 
 export async function handleDropCourse(request: Request, env: Env, userId: string, courseId: string): Promise<Response> {
@@ -115,32 +116,32 @@ export async function handleDropCourse(request: Request, env: Env, userId: strin
 
 export async function handleGetTranscript(request: Request, env: Env, userId: string): Promise<Response> {
   const { results: classes } = await env.DB.prepare(
-    `SELECT c.code, c.title, c.credits, c.term, e.grade, e.status
-     FROM enrollments e 
-     JOIN courses c ON e.course_id = c.id 
+    `SELECT c.code, c.title, c.credits, c.term, e.id as enrollment_id, e.status,
+            (SELECT AVG(g.score * 100.0 / NULLIF(g.max_score, 0))
+               FROM grades g WHERE g.enrollment_id = e.id AND g.max_score > 0) as avg_pct
+     FROM enrollments e
+     JOIN courses c ON e.course_id = c.id
      WHERE e.student_id = ? AND e.status != 'waitlisted'
      ORDER BY c.term DESC, c.code ASC`
   ).bind(userId).all();
   
-  // Calculate GPA
-  const gradePoints: Record<string, number> = {
-    'A+': 4.0, 'A': 4.0, 'A-': 3.7, 'B+': 3.3, 'B': 3.0, 'B-': 2.7,
-    'C+': 2.3, 'C': 2.0, 'C-': 1.7, 'D+': 1.3, 'D': 1.0, 'F': 0.0
-  };
-  
   let totalPoints = 0;
   let totalCredits = 0;
   
-  for (const c of classes as any[]) {
-    if (c.grade && gradePoints[c.grade] !== undefined) {
-      totalPoints += gradePoints[c.grade] * c.credits;
+  const withGrades = (classes as any[]).map((c) => {
+    let letter_grade = 'N/A';
+    if (c.avg_pct !== null) {
+      const gradeInfo = percentageToGrade(c.avg_pct);
+      letter_grade = gradeInfo.letter_grade;
+      totalPoints += gradeInfo.grade_point * c.credits;
       totalCredits += c.credits;
     }
-  }
+    return { ...c, grade: letter_grade };
+  });
   
   const gpa = totalCredits > 0 ? (totalPoints / totalCredits).toFixed(2) : null;
   
-  return ok({ classes, gpa });
+  return ok({ classes: withGrades, gpa });
 }
 
 export async function handleGetSettings(request: Request, env: Env, userId: string): Promise<Response> {

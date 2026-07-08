@@ -3,7 +3,6 @@
   "private": true,
   "workspaces": [
     "apps/*",
-    "apps/workers/*",
     "packages/*",
     "bmi-university"
   ],
