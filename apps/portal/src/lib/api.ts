@@ -244,14 +244,14 @@ export const api = {
   },
 
   registration: {
-    getStatus: () => request<{ success: boolean; data: any }>('/registration/status'),
-    getModules: () => request<{ success: boolean; data: any[] }>('/registration/modules'),
+    getStatus: () => request<any>('/registration/status'),
+    getModules: () => request<any[]>('/registration/modules'),
     saveStep: (stepKey: string, data: any) => 
-      request<{ success: boolean; error?: string }>(`/registration/${stepKey}`, {
+      request<any>(`/registration/${stepKey}`, {
         method: 'POST',
         body: JSON.stringify(data)
       }),
-    complete: () => request<{ success: boolean; error?: string }>('/registration/complete', { method: 'POST' })
+    complete: () => request<any>('/registration/complete', { method: 'POST' })
   }
 };
 

@@ -23,10 +23,10 @@ vi.mock('../../lib/api', () => ({
 describe('RegistrationWizard Page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(api.registration.getStatus).mockResolvedValue({ success: true, data: { current_data: {}, completed_steps: [], next_step: 'personal_details', registration_complete: false } });
-    vi.mocked(api.registration.getModules).mockResolvedValue({ success: true, data: [] });
-    vi.mocked(api.registration.saveStep).mockResolvedValue({ success: true });
-    vi.mocked(api.registration.complete).mockResolvedValue({ success: true });
+    vi.mocked(api.registration.getStatus).mockResolvedValue({ current_data: {}, completed_steps: [], next_step: 'personal_details', registration_complete: false });
+    vi.mocked(api.registration.getModules).mockResolvedValue([]);
+    vi.mocked(api.registration.saveStep).mockResolvedValue({ message: 'saved' });
+    vi.mocked(api.registration.complete).mockResolvedValue({ message: 'completed' });
   });
 
   const renderPage = async () => {
@@ -126,7 +126,7 @@ describe('RegistrationWizard Page', () => {
   });
 
   it('shows completion page when registration is complete', async () => {
-    vi.mocked(api.registration.getStatus).mockResolvedValue({ success: true, data: { registration_complete: true, current_data: {} } });
+    vi.mocked(api.registration.getStatus).mockResolvedValue({ registration_complete: true, current_data: {} });
 
     await renderPage();
     await waitFor(() => {

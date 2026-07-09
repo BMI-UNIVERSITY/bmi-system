@@ -79,11 +79,11 @@ export default function RegistrationWizard() {
   const fetchRegistrationStatus = async () => {
     try {
       const res = await api.registration.getStatus();
-      if (res.success && res.data) {
-        setData(res.data.current_data || {});
-        if (res.data.registration_complete) setCompleted(true);
+      if (res) {
+        setData(res.current_data || {});
+        if (res.registration_complete) setCompleted(true);
         const lastIndex = STEP_LABELS.length - 1 - [...STEP_LABELS].reverse().findIndex(
-          (_, i) => res.data.current_data?.[STEP_LABELS[STEP_LABELS.length - 1 - i]?.toLowerCase().replace(/ /g, '_')]
+          (_, i) => res.current_data?.[STEP_LABELS[STEP_LABELS.length - 1 - i]?.toLowerCase().replace(/ /g, '_')]
         );
         setCurrentStep(Math.max(0, STEP_LABELS.length - 1 - lastIndex));
       }
@@ -93,7 +93,7 @@ export default function RegistrationWizard() {
   const fetchModules = async () => {
     try {
       const res = await api.registration.getModules();
-      if (res.success && res.data) setAvailableModules(res.data);
+      if (Array.isArray(res)) setAvailableModules(res);
     } catch {}
   };
 
@@ -109,11 +109,7 @@ export default function RegistrationWizard() {
     setError('');
     try {
       const stepKey = STEP_LABELS[stepIdx].toLowerCase().replace(/ /g, '_');
-      const res = await api.registration.saveStep(stepKey, (data as any)[stepKey] || {});
-      if (!res.success) {
-        setError(res.error || 'Failed to save step');
-        return false;
-      }
+      await api.registration.saveStep(stepKey, (data as any)[stepKey] || {});
       return true;
     } catch (err: any) {
       setError(err.message || 'Network error saving step');
@@ -138,11 +134,7 @@ export default function RegistrationWizard() {
     setSubmitting(true);
     setError('');
     try {
-      const res = await api.registration.complete();
-      if (!res.success) {
-        setError(res.error || 'Failed to complete registration');
-        return;
-      }
+      await api.registration.complete();
       setCompleted(true);
     } catch (err: any) {
       setError(err.message || 'Network error completing registration');
