@@ -62,12 +62,40 @@ export default function Navbar() {
             <div className="dropdown" ref={dropdownRef} style={{ position: 'relative' }}>
               <button 
                 className="navbar-link btn" 
-                style={{ padding: '0.5rem 1rem', background: 'transparent', border: 'none', cursor: 'pointer', color: 'var(--navy-light)', fontWeight: 500, fontSize: '0.9rem' }}
+                style={{ 
+                  padding: '0.5rem 1rem', 
+                  background: 'transparent', 
+                  border: 'none', 
+                  cursor: 'pointer', 
+                  color: 'var(--navy-light)', 
+                  fontWeight: 500, 
+                  fontSize: '0.9rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
                 onClick={() => setDropdownOpen(!dropdownOpen)}
                 aria-haspopup="true"
                 aria-expanded={dropdownOpen}
               >
-                {user.first_name} ▼
+                <div style={{
+                  width: '28px',
+                  height: '28px',
+                  borderRadius: '50%',
+                  background: 'var(--navy)',
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontSize: '0.8rem',
+                  fontWeight: 600
+                }}>
+                  {user.first_name?.[0]?.toUpperCase()}
+                </div>
+                <span>{user.first_name}</span>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="6 9 12 15 18 9"></polyline>
+                </svg>
               </button>
               {dropdownOpen && (
                 <div 

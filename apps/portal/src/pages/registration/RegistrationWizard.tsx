@@ -4,6 +4,28 @@ import { api } from '../../lib/api';
 
 const STEP_LABELS = ['Personal Details', 'Address', 'Programme', 'Modules', 'Fees', 'Confirm'] as const;
 
+const COUNTRIES = [
+  { name: 'Liberia', code: '+231' },
+  { name: 'Kenya', code: '+254' },
+  { name: 'Nigeria', code: '+234' },
+  { name: 'Ghana', code: '+233' },
+  { name: 'Sierra Leone', code: '+232' },
+  { name: 'South Africa', code: '+27' },
+  { name: 'Uganda', code: '+256' },
+  { name: 'Tanzania', code: '+255' },
+  { name: 'Rwanda', code: '+250' },
+  { name: 'Egypt', code: '+20' },
+  { name: 'Ethiopia', code: '+251' },
+  { name: 'United States', code: '+1' },
+  { name: 'United Kingdom', code: '+44' },
+  { name: 'Canada', code: '+1' },
+  { name: 'Australia', code: '+61' },
+  { name: 'India', code: '+91' },
+  { name: 'China', code: '+86' },
+  { name: 'Brazil', code: '+55' },
+  { name: 'Other', code: '+' }
+].sort((a, b) => a.name === 'Liberia' ? -1 : b.name === 'Liberia' ? 1 : a.name.localeCompare(b.name));
+
 interface PersonalDetails {
   first_name: string; last_name: string; date_of_birth: string;
   gender: string; nationality: string; phone: string;
@@ -186,7 +208,35 @@ export default function RegistrationWizard() {
         </div>
         <div className="form-group">
           <label className="form-label">Nationality</label>
-          <input type="text" className="form-input" value={d.nationality || ''} onChange={e => updateField('personal_details', 'nationality', e.target.value)} placeholder="e.g., Liberian" />
+          <select 
+            className="form-select" 
+            value={(data.personal_details as any)?.nationality || ''} 
+            onChange={(e) => {
+              const nationality = e.target.value;
+              updateField('personal_details', 'nationality', nationality);
+              const country = COUNTRIES.find(c => c.name === nationality);
+              if (country) {
+                const currentPhone = (data.personal_details as any)?.phone || '';
+                // Only replace/prepend if empty or doesn't have a specific dial code yet
+                if (!currentPhone || (!currentPhone.startsWith('+') && currentPhone.length < 5) || currentPhone === '+') {
+                  updateField('personal_details', 'phone', country.code + (currentPhone === '+' ? '' : currentPhone));
+                } else {
+                  // If it starts with + but is a different code, we could replace it, but let's be safe and just prepend if they delete the old one
+                  const existingMatch = COUNTRIES.find(c => currentPhone.startsWith(c.code));
+                  if (existingMatch && existingMatch.code !== country.code) {
+                     updateField('personal_details', 'phone', currentPhone.replace(existingMatch.code, country.code));
+                  } else if (!currentPhone.startsWith('+')) {
+                     updateField('personal_details', 'phone', country.code + currentPhone);
+                  }
+                }
+              }
+            }}
+          >
+            <option value="">Select...</option>
+            {COUNTRIES.map(c => (
+              <option key={c.name} value={c.name}>{c.name}</option>
+            ))}
+          </select>
         </div>
         <div className="form-group">
           <label className="form-label">Phone</label>
