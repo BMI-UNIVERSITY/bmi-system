@@ -25,8 +25,8 @@ describe('ClaimAccount Page', () => {
 
   it('renders the claim form with heading and submit button', () => {
     renderWithRouter();
-    expect(screen.getByText('Claim Your Student Account')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Claim Account/i })).toBeInTheDocument();
+    expect(screen.getByText('Activate Student Account')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Activate Account/i })).toBeInTheDocument();
   });
 
   it('renders admission code and password input fields', () => {
@@ -37,7 +37,7 @@ describe('ClaimAccount Page', () => {
     expect(passwordInput).toBeInTheDocument();
   });
 
-  it('shows "Claiming..." while submitting', async () => {
+  it('shows "Activating Account..." while submitting', async () => {
     (globalThis.fetch as any).mockImplementation(() => new Promise(() => {}));
 
     renderWithRouter();
@@ -45,9 +45,9 @@ describe('ClaimAccount Page', () => {
     await userEvent.type(inputs[0], 'APP-001');
     const passwordInput = document.querySelector('input[type="password"]')!;
     await userEvent.type(passwordInput, 'Str0ng!Pass');
-    fireEvent.click(screen.getByRole('button', { name: /Claim Account/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Activate Account/i }));
 
-    expect(screen.getByRole('button', { name: /Claiming.../i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /Activating Account.../i })).toBeDisabled();
   });
 
   it('navigates to login on successful claim', async () => {
@@ -58,12 +58,11 @@ describe('ClaimAccount Page', () => {
     await userEvent.type(inputs[0], 'APP-001');
     const passwordInput = document.querySelector('input[type="password"]')!;
     await userEvent.type(passwordInput, 'Str0ng!Pass');
-    fireEvent.click(screen.getByRole('button', { name: /Claim Account/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Activate Account/i }));
 
     await waitFor(() => {
       expect(screen.getByText('Login Page')).toBeInTheDocument();
     });
-    expect(window.alert).toHaveBeenCalledWith('Account claimed successfully! Please login.');
   });
 
   it('shows error alert on failed claim', async () => {
@@ -77,10 +76,10 @@ describe('ClaimAccount Page', () => {
     await userEvent.type(inputs[0], 'BAD-CODE');
     const passwordInput = document.querySelector('input[type="password"]')!;
     await userEvent.type(passwordInput, 'Str0ng!Pass');
-    fireEvent.click(screen.getByRole('button', { name: /Claim Account/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Activate Account/i }));
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('Invalid admission code');
+      expect(screen.getByText('Invalid admission code')).toBeInTheDocument();
     });
   });
 
@@ -92,10 +91,10 @@ describe('ClaimAccount Page', () => {
     await userEvent.type(inputs[0], 'APP-001');
     const passwordInput = document.querySelector('input[type="password"]')!;
     await userEvent.type(passwordInput, 'Str0ng!Pass');
-    fireEvent.click(screen.getByRole('button', { name: /Claim Account/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Activate Account/i }));
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('An error occurred.');
+      expect(screen.getByText('A network error occurred. Please try again.')).toBeInTheDocument();
     });
   });
 });
