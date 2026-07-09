@@ -168,7 +168,7 @@ export async function handleCompleteRegistration(req: Request, env: Env, userId:
     if (!uid) return error('User lacks UID. Please contact support.', 400);
 
     const now = new Date().toISOString();
-    let programmeId = currentData.programme?.programme_id;
+    const programmeId = currentData.programme?.programme_id;
     let finalRegNo = userRow.reg_no;
 
     await db.transaction(async (tx) => {
