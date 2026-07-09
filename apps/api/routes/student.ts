@@ -13,7 +13,7 @@ export async function handleGetDashboard(request: Request, env: Env, userId: str
 
   // Get current enrollments
   const { results: enrollments } = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT e.id, c.code, c.title, c.credits, c.term, e.grade 
+    `SELECT e.id, c.code, c.title, c.credits, c.term, e.grade, c.id as course_id 
      FROM enrollments e 
      JOIN courses c ON e.course_id = c.id 
      WHERE e.student_id = ? AND e.status = 'enrolled'`

@@ -14,8 +14,12 @@ export default function Academics() {
     setLoading(true);
     try {
       if (activeTab === 'registration') {
-        const data = await api.student.getCourses();
-        setCourses(data);
+        const [coursesData, dashData] = await Promise.all([
+          api.student.getCourses(),
+          api.student.getDashboard()
+        ]);
+        setCourses(coursesData);
+        setDashboardData(dashData);
       } else if (activeTab === 'schedule') {
         const data = await api.student.getDashboard();
         setDashboardData(data);
@@ -126,14 +130,20 @@ export default function Academics() {
                             <td>{c.credits}</td>
                             <td>{c.capacity}</td>
                             <td>
-                              <button 
-                                className="btn btn-navy btn-sm" 
-                                onClick={() => handleEnroll(c.id)}
-                                disabled={actionLoading === c.id}
-                                aria-label={`Enroll in ${c.code}`}
-                              >
-                                {actionLoading === c.id ? 'Enrolling...' : 'Enroll'}
-                              </button>
+                              {dashboardData?.current_classes?.some((cc: any) => cc.course_id === c.id) ? (
+                                <button className="btn btn-outline btn-sm" disabled style={{ opacity: 0.7, cursor: 'not-allowed' }}>
+                                  Enrolled
+                                </button>
+                              ) : (
+                                <button 
+                                  className="btn btn-navy btn-sm" 
+                                  onClick={() => handleEnroll(c.id)}
+                                  disabled={actionLoading === c.id}
+                                  aria-label={`Enroll in ${c.code}`}
+                                >
+                                  {actionLoading === c.id ? 'Enrolling...' : 'Enroll'}
+                                </button>
+                              )}
                             </td>
                           </tr>
                         ))}
