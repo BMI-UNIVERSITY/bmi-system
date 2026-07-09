@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../../hooks/useAuth';
+import { api } from '../../lib/api';
 
 const STEP_LABELS = ['Personal Details', 'Address', 'Programme', 'Modules', 'Fees', 'Confirm'] as const;
 
@@ -55,13 +56,12 @@ export default function RegistrationWizard() {
 
   const fetchRegistrationStatus = async () => {
     try {
-      const res = await fetch('/api/registration/status');
-      const json = await res.json();
-      if (json.success && json.data) {
-        setData(json.data.current_data || {});
-        if (json.data.registration_complete) setCompleted(true);
+      const res = await api.registration.getStatus();
+      if (res.success && res.data) {
+        setData(res.data.current_data || {});
+        if (res.data.registration_complete) setCompleted(true);
         const lastIndex = STEP_LABELS.length - 1 - [...STEP_LABELS].reverse().findIndex(
-          (_, i) => json.data.current_data?.[STEP_LABELS[STEP_LABELS.length - 1 - i]?.toLowerCase().replace(/ /g, '_')]
+          (_, i) => res.data.current_data?.[STEP_LABELS[STEP_LABELS.length - 1 - i]?.toLowerCase().replace(/ /g, '_')]
         );
         setCurrentStep(Math.max(0, STEP_LABELS.length - 1 - lastIndex));
       }
@@ -70,9 +70,8 @@ export default function RegistrationWizard() {
 
   const fetchModules = async () => {
     try {
-      const res = await fetch('/api/registration/modules');
-      const json = await res.json();
-      if (json.success && json.data) setAvailableModules(json.data);
+      const res = await api.registration.getModules();
+      if (res.success && res.data) setAvailableModules(res.data);
     } catch {}
   };
 
@@ -88,19 +87,14 @@ export default function RegistrationWizard() {
     setError('');
     try {
       const stepKey = STEP_LABELS[stepIdx].toLowerCase().replace(/ /g, '_');
-      const res = await fetch(`/api/registration/${stepKey}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify((data as any)[stepKey] || {}),
-      });
-      const json = await res.json();
-      if (!json.success) {
-        setError(json.error || 'Failed to save step');
+      const res = await api.registration.saveStep(stepKey, (data as any)[stepKey] || {});
+      if (!res.success) {
+        setError(res.error || 'Failed to save step');
         return false;
       }
       return true;
-    } catch {
-      setError('Network error saving step');
+    } catch (err: any) {
+      setError(err.message || 'Network error saving step');
       return false;
     } finally {
       setLoading(false);
@@ -122,15 +116,14 @@ export default function RegistrationWizard() {
     setSubmitting(true);
     setError('');
     try {
-      const res = await fetch('/api/registration/complete', { method: 'POST' });
-      const json = await res.json();
-      if (!json.success) {
-        setError(json.error || 'Failed to complete registration');
+      const res = await api.registration.complete();
+      if (!res.success) {
+        setError(res.error || 'Failed to complete registration');
         return;
       }
       setCompleted(true);
-    } catch {
-      setError('Network error completing registration');
+    } catch (err: any) {
+      setError(err.message || 'Network error completing registration');
     } finally {
       setSubmitting(false);
     }

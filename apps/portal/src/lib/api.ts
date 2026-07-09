@@ -242,6 +242,17 @@ export const api = {
         body: JSON.stringify({ subject, description })
       }),
   },
+
+  registration: {
+    getStatus: () => request<{ success: boolean; data: any }>('/registration/status'),
+    getModules: () => request<{ success: boolean; data: any[] }>('/registration/modules'),
+    saveStep: (stepKey: string, data: any) => 
+      request<{ success: boolean; error?: string }>(`/registration/${stepKey}`, {
+        method: 'POST',
+        body: JSON.stringify(data)
+      }),
+    complete: () => request<{ success: boolean; error?: string }>('/registration/complete', { method: 'POST' })
+  }
 };
 
 export interface User {

@@ -3,30 +3,30 @@ import RegistrationWizard from './RegistrationWizard';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
+import { api } from '../../lib/api';
 
 vi.mock('../../hooks/useAuth', () => ({
   useAuth: () => ({ user: { id: 'user-1', email: 'test@test.com', role: 'student' } }),
 }));
 
-function createMockResponse(data: any, ok = true) {
-  return {
-    ok,
-    json: () => Promise.resolve(data),
-  };
-}
+vi.mock('../../lib/api', () => ({
+  api: {
+    registration: {
+      getStatus: vi.fn(),
+      getModules: vi.fn(),
+      saveStep: vi.fn(),
+      complete: vi.fn(),
+    },
+  },
+}));
 
 describe('RegistrationWizard Page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    globalThis.fetch = vi.fn().mockImplementation((url: string) => {
-      if (url === '/api/registration/status') {
-        return Promise.resolve(createMockResponse({ success: true, data: { current_data: {}, completed_steps: [], next_step: 'personal_details', registration_complete: false } }));
-      }
-      if (url === '/api/registration/modules') {
-        return Promise.resolve(createMockResponse({ success: true, data: [] }));
-      }
-      return Promise.resolve(createMockResponse({ success: true }));
-    });
+    vi.mocked(api.registration.getStatus).mockResolvedValue({ success: true, data: { current_data: {}, completed_steps: [], next_step: 'personal_details', registration_complete: false } });
+    vi.mocked(api.registration.getModules).mockResolvedValue({ success: true, data: [] });
+    vi.mocked(api.registration.saveStep).mockResolvedValue({ success: true });
+    vi.mocked(api.registration.complete).mockResolvedValue({ success: true });
   });
 
   const renderPage = async () => {
@@ -60,15 +60,15 @@ describe('RegistrationWizard Page', () => {
     fireEvent.click(screen.getByText('Save & Continue'));
 
     await waitFor(() => {
-      expect(globalThis.fetch).toHaveBeenCalledWith(
-        '/api/registration/personal_details',
-        expect.objectContaining({ method: 'POST' }),
+      expect(api.registration.saveStep).toHaveBeenCalledWith(
+        'personal_details',
+        expect.any(Object),
       );
     });
   });
 
   it('shows "Saving..." while saving step', async () => {
-    vi.mocked(globalThis.fetch).mockImplementation(() => new Promise(() => {}));
+    vi.mocked(api.registration.saveStep).mockImplementation(() => new Promise(() => {}));
 
     await renderPage();
     fireEvent.click(screen.getByText('Save & Continue'));
@@ -88,13 +88,13 @@ describe('RegistrationWizard Page', () => {
   });
 
   it('shows error message on fetch failure', async () => {
-    vi.mocked(globalThis.fetch).mockRejectedValue(new Error('Network error'));
+    vi.mocked(api.registration.saveStep).mockRejectedValue(new Error('Network error'));
 
     await renderPage();
     fireEvent.click(screen.getByText('Save & Continue'));
 
     await waitFor(() => {
-      expect(screen.getByText('Network error saving step')).toBeInTheDocument();
+      expect(screen.getByText('Network error')).toBeInTheDocument();
     });
   });
 
@@ -126,12 +126,7 @@ describe('RegistrationWizard Page', () => {
   });
 
   it('shows completion page when registration is complete', async () => {
-    vi.mocked(globalThis.fetch).mockImplementation((url: string) => {
-      if (url === '/api/registration/status') {
-        return Promise.resolve(createMockResponse({ success: true, data: { registration_complete: true, current_data: {} } }));
-      }
-      return Promise.resolve(createMockResponse({ success: true }));
-    });
+    vi.mocked(api.registration.getStatus).mockResolvedValue({ success: true, data: { registration_complete: true, current_data: {} } });
 
     await renderPage();
     await waitFor(() => {
@@ -147,9 +142,9 @@ describe('RegistrationWizard Page', () => {
     for (const key of stepKeys) {
       fireEvent.click(screen.getByText('Save & Continue'));
       await waitFor(() => {
-        expect(globalThis.fetch).toHaveBeenCalledWith(
-          `/api/registration/${key}`,
-          expect.objectContaining({ method: 'POST' }),
+        expect(api.registration.saveStep).toHaveBeenCalledWith(
+          key,
+          expect.any(Object),
         );
       });
     }
@@ -164,18 +159,15 @@ describe('RegistrationWizard Page', () => {
 
     fireEvent.click(screen.getByText('Complete Registration'));
     await waitFor(() => {
-      expect(globalThis.fetch).toHaveBeenCalledWith(
-        '/api/registration/complete',
-        expect.objectContaining({ method: 'POST' }),
-      );
+      expect(api.registration.complete).toHaveBeenCalled();
     });
   });
 
   it('fetches registration status and modules on mount', async () => {
     await renderPage();
     await waitFor(() => {
-      expect(globalThis.fetch).toHaveBeenCalledWith('/api/registration/status');
-      expect(globalThis.fetch).toHaveBeenCalledWith('/api/registration/modules');
+      expect(api.registration.getStatus).toHaveBeenCalled();
+      expect(api.registration.getModules).toHaveBeenCalled();
     });
   });
 });
