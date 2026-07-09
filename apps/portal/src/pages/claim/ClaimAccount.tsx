@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { apiFetch } from '../../lib/api';
 
 export default function ClaimAccount() {
   const [searchParams] = useSearchParams();
@@ -21,8 +20,9 @@ export default function ClaimAccount() {
     setLoading(true);
     setErrorMsg('');
     try {
-      const res = await apiFetch('/api/auth/claim', {
+      const res = await fetch('/api/auth/claim', {
         method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ admissionCode, password }),
       });
       if (res.ok) {
