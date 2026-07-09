@@ -295,7 +295,7 @@ jobs:
           restore-keys: turbo-${{ runner.os }}-
 
       - name: Build UMS (from Turbo cache)
-        run: npx turbo run build --filter=bmi-ums --concurrency=100%
+        run: npx turbo run build --filter=bmi-ums-frontend --concurrency=100%
         env:
           NODE_ENV: production
           VITE_API_URL: "https://bmi-api.bmiuniversity107.workers.dev"
