@@ -47,7 +47,6 @@ export const ALLOWED_ORIGINS: string[] = [
   UMS_URL,
   UMS_PAGES_URL,
   // Cloudflare Pages deployment branches
-  'https://main.bmi-university.pages.dev',
   'https://portal.bmi-university.pages.dev',
   'https://ums.bmi-university.pages.dev',
   ...DEV_ORIGINS,
