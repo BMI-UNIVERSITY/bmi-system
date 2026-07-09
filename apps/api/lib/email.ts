@@ -53,10 +53,10 @@ export async function processEmailDelivery(payload: EmailPayload, ctx: PlatformC
 export function buildEmailLayout(subtitle: string, content: string): string {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 40px 20px;">
-      <div style="background: #0f172a; padding: 28px 24px 20px; border-radius: 8px 8px 0 0; text-align: center;">
+      <div style="background: #ffffff; padding: 28px 24px 20px; border-radius: 8px 8px 0 0; border-bottom: 3px solid #d4af37; text-align: center;">
         <img src="https://bmi-portal.hkmministries.org/bmi-logo.png" alt="BMI University" style="height: 72px; width: auto; margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto;" />
-        <h1 style="color: #d4af37; margin: 0; font-size: 22px; letter-spacing: 0.5px;">BMI University</h1>
-        <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0; font-size: 13px;">${subtitle}</p>
+        <h1 style="color: #0f172a; margin: 0; font-size: 22px; letter-spacing: 0.5px;">BMI University</h1>
+        <p style="color: #475569; margin: 4px 0 0; font-size: 13px;">${subtitle}</p>
       </div>
       <div style="background: #fff; padding: 32px; border-radius: 0 0 8px 8px; border: 1px solid #e2e8f0;">
         ${content}
