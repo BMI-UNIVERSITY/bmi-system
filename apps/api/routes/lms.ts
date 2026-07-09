@@ -4,7 +4,7 @@ export async function handleLmsCourses(req: Request, env: Env, studentId: string
   try {
     const courses = await env.PLATFORM_CONTEXT!.lms.getCourses(studentId);
     return ok({ courses });
-  } catch (e: unknown) {
+  } catch {
     return error('Failed to fetch LMS courses', 500);
   }
 }
@@ -17,7 +17,7 @@ export async function handleLmsGrades(req: Request, env: Env, studentId: string)
 
     const grades = await env.PLATFORM_CONTEXT!.lms.getGrades(studentId, courseId);
     return ok({ grades });
-  } catch (e: unknown) {
+  } catch {
     return error('Failed to fetch LMS grades', 500);
   }
 }

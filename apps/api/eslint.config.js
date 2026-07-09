@@ -16,5 +16,12 @@ export default [
       'no-useless-assignment': 'off',
     },
   },
+  {
+    files: ['**/*.test.ts', '**/test-helpers.ts'],
+    rules: {
+      '@typescript-eslint/no-explicit-any': 'off',
+      '@typescript-eslint/no-unused-vars': 'off',
+    },
+  },
   { ignores: ['dist', 'node_modules', '.wrangler', 'scripts'] },
 ];

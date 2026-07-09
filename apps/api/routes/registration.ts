@@ -47,7 +47,7 @@ export interface RegistrationData {
 
 const STEP_ORDER: RegStep[] = ['personal_details', 'address', 'programme', 'modules', 'fees', 'confirm'];
 
-function validateStep(step: RegStep, data: any): string | null {
+function validateStep(step: RegStep, data: Record<string, unknown>): string | null {
   switch (step) {
     case 'personal_details':
       if (!data.first_name) return 'First name is required';
@@ -100,7 +100,7 @@ export async function handleSaveRegistrationStep(req: Request, env: Env, userId:
     ).bind(userId).first<{ value: string }>();
 
     const currentData: RegistrationData = existing ? JSON.parse(existing.value) : {};
-    currentData[step as RegStep] = body as any;
+    (currentData as Record<string, unknown>)[step] = body;
 
     await env.PLATFORM_CONTEXT!.db.prepare(
       `INSERT INTO metadata (id, key, value) VALUES (?, 'registration_data', ?) ON CONFLICT(id, key) DO UPDATE SET value=excluded.value`
@@ -111,7 +111,7 @@ export async function handleSaveRegistrationStep(req: Request, env: Env, userId:
       completed_steps: Object.keys(currentData).filter(k => STEP_ORDER.includes(k as RegStep)),
       all_completed: STEP_ORDER.every(s => currentData[s] !== undefined),
     });
-  } catch (e: unknown) {
+  } catch {
     return error('Failed to save registration step', 500);
   }
 }
@@ -132,7 +132,7 @@ export async function handleGetRegistrationStatus(req: Request, env: Env, userId
       current_data: currentData,
       registration_complete: nextStep === null,
     });
-  } catch (e: unknown) {
+  } catch {
     return error('Failed to get registration status', 500);
   }
 }
@@ -178,7 +178,7 @@ export async function handleCompleteRegistration(req: Request, env: Env, userId:
     }
 
     return ok({ message: 'Registration completed successfully' });
-  } catch (e: unknown) {
+  } catch {
     return error('Failed to complete registration', 500);
   }
 }
@@ -202,7 +202,7 @@ export async function handleGetAvailableModules(req: Request, env: Env, userId: 
     ).bind(...(programmeId ? [programmeId] : [])).all();
 
     return ok(results || []);
-  } catch (e: unknown) {
+  } catch {
     return error('Failed to get modules', 500);
   }
 }

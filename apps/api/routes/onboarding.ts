@@ -1,7 +1,6 @@
 
 import { ok, error } from '../lib/types';
 import type { Env } from '../lib/types';
-import { parseDocumentUploadQuery } from '../lib/schemas';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 

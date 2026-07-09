@@ -19,7 +19,7 @@ export async function handleCreatePaymentIntent(req: Request, env: Env, userId: 
       metadata: { userId }
     });
     return ok({ clientSecret: intent.clientSecret, intentId: intent.id });
-  } catch (e: unknown) {
+  } catch {
     return error('Failed to create payment intent', 500);
   }
 }
@@ -30,7 +30,7 @@ export async function handlePaymentWebhook(req: Request, env: Env): Promise<Resp
     const payload = await req.text();
     const intent = await env.PLATFORM_CONTEXT!.payment.handleWebhook(payload, signature);
     return ok({ received: true, intentId: intent.id, status: intent.status });
-  } catch (e: unknown) {
+  } catch {
     return error('Webhook processing failed', 400);
   }
 }

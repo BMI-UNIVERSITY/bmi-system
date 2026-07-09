@@ -24,7 +24,7 @@ export async function handleTransitionToAlumni(req: Request, env: Env, userId: s
     }
 
     return ok({ message: 'Successfully transitioned to alumni status' });
-  } catch (e: unknown) {
+  } catch {
     return error('Failed to transition to alumni', 500);
   }
 }

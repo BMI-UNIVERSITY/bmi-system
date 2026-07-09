@@ -72,7 +72,7 @@ export async function handleUploadDocument(request: Request, env: Env, userId: s
 
   const r2Key = `documents/${userId}/${applicationId}/${docType}-${crypto.randomUUID()}.${ext}`;
 
-  const storedFile = await env.PLATFORM_CONTEXT!.storage.upload({
+  await env.PLATFORM_CONTEXT!.storage.upload({
     key: r2Key,
     data: Buffer.from(fileBuffer),
     mimeType: detectedMime,
