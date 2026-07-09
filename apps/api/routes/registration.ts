@@ -1,6 +1,8 @@
 import { Env, ok, error, typedJson } from '../lib/types';
 import { ExecutionContext } from '@cloudflare/workers-types';
 import { sendEmail, buildEmailLayout } from '../lib/email';
+import { generateRegNo } from '../lib/reg_number';
+import { enqueueProvisioningJobs } from '../lib/provisioning';
 
 export type RegStep = 'personal_details' | 'address' | 'programme' | 'modules' | 'fees' | 'confirm';
 
@@ -149,36 +151,103 @@ export async function handleCompleteRegistration(req: Request, env: Env, userId:
     const missingStep = STEP_ORDER.find(s => currentData[s] === undefined);
     if (missingStep) return error(`Step ${missingStep} is not yet completed`, 400);
 
-    await env.PLATFORM_CONTEXT!.db.prepare(
-      `UPDATE students SET programme = ?, updated_at = datetime('now') WHERE user_id = ?`
-    ).bind(currentData.programme?.programme_name || '', userId).run();
+    const db = env.PLATFORM_CONTEXT!.db;
+    
+    // Fetch user details for provisioning and reg_no generation
+    const userRow = await db.prepare(
+      `SELECT u.email, u.first_name, u.last_name, s.reg_no, p.uid
+       FROM users u
+       LEFT JOIN students s ON s.user_id = u.id
+       LEFT JOIN persons p ON u.person_id = p.id
+       WHERE u.id = ?`
+    ).bind(userId).first<{ email: string; first_name: string; last_name: string; reg_no: string | null; uid: string | null }>();
+    
+    if (!userRow) return error('User not found', 404);
+    
+    const uid = userRow.uid;
+    if (!uid) return error('User lacks UID. Please contact support.', 400);
 
-    await env.PLATFORM_CONTEXT!.db.prepare(
-      `UPDATE metadata SET value = ? WHERE id = ? AND key = 'registration_data'`
-    ).bind(JSON.stringify({ ...currentData, _completed_at: new Date().toISOString() }), userId).run();
+    const now = new Date().toISOString();
+    let programmeId = currentData.programme?.programme_id;
+    let finalRegNo = userRow.reg_no;
 
-    const user = await env.PLATFORM_CONTEXT!.db.prepare(
-      `SELECT email, first_name FROM users WHERE id = ?`
-    ).bind(userId).first<{ email: string; first_name: string }>();
+    await db.transaction(async (tx) => {
+      // 1. Update students programme text
+      await tx.prepare(
+        `UPDATE students SET programme = ?, updated_at = ? WHERE user_id = ?`
+      ).bind(currentData.programme?.programme_name || '', now, userId).run();
 
-    if (user) {
+      // 2. Link student_programmes and generate Reg No if needed
+      if (programmeId) {
+        const year = new Date().getUTCFullYear();
+        const rowId = crypto.randomUUID().replace(/-/g, '');
+        
+        await tx.prepare(
+          `INSERT OR IGNORE INTO student_programmes
+             (id, uid, programme_id, admission_year, enrollment_date, status, current_flag, created_at, updated_at)
+           VALUES (?, ?, ?, ?, ?, 'active', 1, ?, ?)`
+        ).bind(rowId, uid, programmeId, year, now.split('T')[0], now, now).run();
+        
+        if (!finalRegNo || finalRegNo.startsWith('PENDING')) {
+          const progInfo = await tx.prepare(
+            `SELECT code, level FROM programs WHERE id = ?`
+          ).bind(programmeId).first<{ code: string; level: string }>();
+          
+          if (progInfo) {
+            finalRegNo = await generateRegNo(tx, programmeId, progInfo.code, year, progInfo.level);
+            await tx.prepare(
+              `UPDATE students SET reg_no = ?, updated_at = ? WHERE user_id = ?`
+            ).bind(finalRegNo, now, userId).run();
+            await tx.prepare(
+              `UPDATE student_programmes SET registration_number = ?, updated_at = ? WHERE uid = ? AND current_flag = 1`
+            ).bind(finalRegNo, now, uid).run();
+          }
+        }
+      }
+
+      // 3. Process Enrollments
+      const courses = currentData.modules?.selected_course_ids || [];
+      for (const courseId of courses) {
+        await tx.prepare(
+          `INSERT OR IGNORE INTO enrollments (id, student_id, course_id, status) VALUES (?, ?, ?, 'enrolled')`
+        ).bind(crypto.randomUUID(), userId, courseId).run();
+      }
+
+      // 4. Update metadata to show completion
+      await tx.prepare(
+        `UPDATE metadata SET value = ? WHERE id = ? AND key = 'registration_data'`
+      ).bind(JSON.stringify({ ...currentData, _completed_at: now }), userId).run();
+    });
+
+    // 5. Trigger Provisioning Jobs (Finance, Email, ID Card, LMS)
+    await enqueueProvisioningJobs(db, uid);
+
+    if (userRow.email) {
       ctx?.waitUntil(sendEmail(env, {
-        to: user.email,
+        to: userRow.email,
         subject: 'BMI University — Registration Complete',
         html: buildEmailLayout('Registration Complete', `
-          <h2 style="color: #0f172a;">Congratulations, ${user.first_name}!</h2>
+          <h2 style="color: #0f172a;">Congratulations, ${userRow.first_name}!</h2>
           <p style="color: #475569; line-height: 1.6;">
             Your registration at BMI University has been successfully completed.
+          </p>
+          <div style="background:#f8fafc;border-left:4px solid #d4af37;padding:16px;margin:20px 0;border-radius:4px;">
+            <p><strong>Registration Number:</strong> ${finalRegNo || 'Pending'}</p>
+            <p><strong>Programme:</strong> ${currentData.programme?.programme_name || 'N/A'}</p>
+          </div>
+          <p style="color: #475569; line-height: 1.6;">
+            Our systems are currently provisioning your student email, ID card, and enrolling you into the LMS. You will receive separate emails as these become available.
           </p>
           <p style="color: #475569; line-height: 1.6;">
             You can now access your courses, view your timetable, and begin your academic journey.
           </p>
         `),
-      }).catch(() => {}));
+      }).catch(e => console.error('[registration] Welcome email failed:', e)));
     }
 
     return ok({ message: 'Registration completed successfully' });
-  } catch {
+  } catch (e: unknown) {
+    console.error('Failed to complete registration:', e);
     return error('Failed to complete registration', 500);
   }
 }

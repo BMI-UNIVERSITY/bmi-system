@@ -12,6 +12,14 @@ vi.mock('../lib/email', () => ({
   buildEmailLayout: vi.fn().mockReturnValue('<html></html>'),
 }));
 
+vi.mock('../lib/provisioning', () => ({
+  enqueueProvisioningJobs: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../lib/reg_number', () => ({
+  generateRegNo: vi.fn().mockResolvedValue('BMI/UG-CS/226/001'),
+}));
+
 describe('Registration routes — handleSaveRegistrationStep', () => {
   let env: ReturnType<typeof makeEnv>;
 
@@ -260,9 +268,11 @@ describe('Registration routes — handleCompleteRegistration', () => {
       fees: { accepted_fee_structure: true, payment_method: 'bank_transfer', scholarship_claimed: false },
       confirm: { accepted_terms: true, data_accuracy_confirmed: true, signed_name: 'Jane Doe', signed_date: new Date().toISOString() },
     };
+    // Chain: 1st first() = metadata, 2nd = userRow (with uid), 3rd = progInfo
     const db = makeChainDB([
       { value: JSON.stringify(allSteps) },
-      { email: 'jane@test.com', first_name: 'Jane' },
+      { email: 'jane@test.com', first_name: 'Jane', last_name: 'Doe', reg_no: 'PENDING-ABC12345', uid: 'UID-001' },
+      { code: 'CS', level: 'UG' },
     ]);
     const localEnv = makeEnv(db);
 
