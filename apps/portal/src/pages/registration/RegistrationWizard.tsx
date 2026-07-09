@@ -148,7 +148,7 @@ export default function RegistrationWizard() {
           <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', lineHeight: 1.7 }}>
             Welcome to BMI University. You can now access your courses, view your timetable, and begin your academic journey.
           </p>
-          <a href="/student/dashboard" className="btn btn-gold btn-full">Go to Dashboard →</a>
+          <a href="/student/dashboard" className="btn btn-gold btn-full">Go to Dashboard</a>
         </div>
       </div>
     );
@@ -196,7 +196,7 @@ export default function RegistrationWizard() {
           <input type="text" className="form-input" value={d.nationality || ''} onChange={e => updateField('personal_details', 'nationality', e.target.value)} placeholder="e.g., Liberian" />
         </div>
         <div className="form-group">
-          <label className="form-label">Phone Number</label>
+          <label className="form-label">Phone</label>
           <input type="tel" className="form-input" value={d.phone || ''} onChange={e => updateField('personal_details', 'phone', e.target.value)} placeholder="+231..." />
         </div>
       </div>
@@ -465,7 +465,7 @@ export default function RegistrationWizard() {
           {STEP_LABELS.map((label, idx) => (
             <div key={label} className="step" style={{ minWidth: 0 }}>
               <div className={`step-circle ${idx < currentStep ? 'done' : idx === currentStep ? 'active' : ''}`}>
-                {idx < currentStep ? '✓' : stepIcons[idx]}
+                {idx < currentStep ? '✓' : idx + 1}
               </div>
               <span className="step-label" style={{
                 color: idx === currentStep ? 'var(--gold-dark)' : idx < currentStep ? 'var(--navy)' : 'var(--slate)',
@@ -509,15 +509,15 @@ export default function RegistrationWizard() {
             disabled={currentStep === 0}
             className="btn btn-outline"
           >
-            ← Previous
+            Previous
           </button>
           {currentStep < STEP_LABELS.length - 1 ? (
             <button onClick={handleNext} disabled={loading} className="btn btn-gold">
-              {loading ? 'Saving...' : 'Save & Continue →'}
+              {loading ? 'Saving...' : 'Save & Continue'}
             </button>
           ) : (
             <button onClick={handleSubmit} disabled={submitting} className="btn btn-navy">
-              {submitting ? 'Submitting...' : '✅ Complete Registration'}
+              {submitting ? 'Submitting...' : 'Complete Registration'}
             </button>
           )}
         </div>
