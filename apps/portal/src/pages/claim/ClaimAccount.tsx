@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
+import { API_WORKER_URL } from '@bmi/shared';
 
 export default function ClaimAccount() {
   const [searchParams] = useSearchParams();
@@ -8,6 +9,11 @@ export default function ClaimAccount() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const navigate = useNavigate();
+
+  const isDev = (import.meta as any).env?.DEV;
+  const BASE = (isDev
+    ? ((import.meta as any).env?.VITE_API_URL || '')
+    : ((import.meta as any).env?.VITE_API_URL || API_WORKER_URL)) + '/api';
 
   useEffect(() => {
     if (searchParams.get('code')) {
@@ -20,7 +26,7 @@ export default function ClaimAccount() {
     setLoading(true);
     setErrorMsg('');
     try {
-      const res = await fetch('/api/auth/claim', {
+      const res = await fetch(`${BASE}/auth/claim`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ admissionCode, password }),

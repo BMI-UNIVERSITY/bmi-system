@@ -274,6 +274,7 @@ export default withSentry(
         '/api/auth/login',
         '/api/auth/logout',
         '/api/auth/register',
+        '/api/auth/claim',
         '/api/auth/forgot-password',
         '/api/auth/reset-password',
         '/api/auth/resend-verification',
