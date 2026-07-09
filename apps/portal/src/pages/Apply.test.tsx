@@ -73,9 +73,11 @@ describe('Apply Page (Portal)', () => {
     
     // Continue to step 2
     fireEvent.click(screen.getByRole('button', { name: /Continue/i }));
+    await waitFor(() => {});
     
     // We are on Personal Info. Continue to step 3
     fireEvent.click(screen.getByRole('button', { name: /Continue/i }));
+    await waitFor(() => {});
     
     // We are on Background. Add text to prior education
     const bgInput = screen.getByLabelText(/Prior Education & Academic History \*/i);
@@ -83,6 +85,7 @@ describe('Apply Page (Portal)', () => {
     
     // Continue to step 4
     fireEvent.click(screen.getByRole('button', { name: /Continue/i }));
+    await waitFor(() => {});
     
     // Add text to personal statement
     const statementInput = screen.getByLabelText(/Personal Statement \*/i);
@@ -90,6 +93,7 @@ describe('Apply Page (Portal)', () => {
     
     // Continue to step 5
     fireEvent.click(screen.getByRole('button', { name: /Continue/i }));
+    await waitFor(() => {});
     
     // Submit
     fireEvent.click(screen.getByRole('button', { name: /Submit Application/i }));
