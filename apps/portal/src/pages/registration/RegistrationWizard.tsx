@@ -138,12 +138,17 @@ export default function RegistrationWizard() {
 
   if (completed) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="bg-white p-12 rounded-xl shadow-lg max-w-lg text-center">
-          <div className="text-6xl mb-6">🎉</div>
-          <h1 className="text-3xl font-bold text-gray-900 mb-4">Registration Complete!</h1>
-          <p className="text-gray-600 mb-6">Welcome to BMI University. You can now access your courses, view your timetable, and begin your academic journey.</p>
-          <a href="/student/dashboard" className="inline-block bg-blue-600 text-white px-8 py-3 rounded-lg font-medium hover:bg-blue-700">Go to Dashboard</a>
+      <div className="page-center">
+        <div className="card" style={{ maxWidth: 520, textAlign: 'center', padding: '3.5rem 3rem' }}>
+          <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>🎓</div>
+          <div className="gold-bar" style={{ margin: '0 auto 1.5rem' }} />
+          <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.8rem', color: 'var(--navy)', marginBottom: '1rem' }}>
+            Registration Complete!
+          </h1>
+          <p style={{ color: 'var(--text-muted)', marginBottom: '2rem', lineHeight: 1.7 }}>
+            Welcome to BMI University. You can now access your courses, view your timetable, and begin your academic journey.
+          </p>
+          <a href="/student/dashboard" className="btn btn-gold btn-full">Go to Dashboard →</a>
         </div>
       </div>
     );
@@ -164,41 +169,35 @@ export default function RegistrationWizard() {
   const renderPersonalDetails = () => {
     const d = data.personal_details || {} as PersonalDetails;
     return (
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">First Name</label>
-          <input type="text" value={d.first_name || ''} onChange={e => updateField('personal_details', 'first_name', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2" placeholder="Your first name" />
+      <div className="form-grid-2">
+        <div className="form-group">
+          <label className="form-label">First Name</label>
+          <input type="text" className="form-input" value={d.first_name || ''} onChange={e => updateField('personal_details', 'first_name', e.target.value)} placeholder="Your first name" />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label>
-          <input type="text" value={d.last_name || ''} onChange={e => updateField('personal_details', 'last_name', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2" placeholder="Your last name" />
+        <div className="form-group">
+          <label className="form-label">Last Name</label>
+          <input type="text" className="form-input" value={d.last_name || ''} onChange={e => updateField('personal_details', 'last_name', e.target.value)} placeholder="Your last name" />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
-          <input type="date" value={d.date_of_birth || ''} onChange={e => updateField('personal_details', 'date_of_birth', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2" />
+        <div className="form-group">
+          <label className="form-label">Date of Birth</label>
+          <input type="date" className="form-input" value={d.date_of_birth || ''} onChange={e => updateField('personal_details', 'date_of_birth', e.target.value)} />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
-          <select value={d.gender || ''} onChange={e => updateField('personal_details', 'gender', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2">
+        <div className="form-group">
+          <label className="form-label">Gender</label>
+          <select className="form-select" value={d.gender || ''} onChange={e => updateField('personal_details', 'gender', e.target.value)}>
             <option value="">Select...</option>
             <option value="male">Male</option>
             <option value="female">Female</option>
             <option value="other">Other</option>
           </select>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Nationality</label>
-          <input type="text" value={d.nationality || ''} onChange={e => updateField('personal_details', 'nationality', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2" placeholder="e.g., Liberian" />
+        <div className="form-group">
+          <label className="form-label">Nationality</label>
+          <input type="text" className="form-input" value={d.nationality || ''} onChange={e => updateField('personal_details', 'nationality', e.target.value)} placeholder="e.g., Liberian" />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-          <input type="tel" value={d.phone || ''} onChange={e => updateField('personal_details', 'phone', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2" placeholder="+231..." />
+        <div className="form-group">
+          <label className="form-label">Phone Number</label>
+          <input type="tel" className="form-input" value={d.phone || ''} onChange={e => updateField('personal_details', 'phone', e.target.value)} placeholder="+231..." />
         </div>
       </div>
     );
@@ -207,40 +206,39 @@ export default function RegistrationWizard() {
   const renderAddress = () => {
     const d = data.address || {} as Address;
     return (
-      <div className="grid grid-cols-2 gap-4">
-        <div className="col-span-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1">Current Address</label>
-          <textarea value={d.current_address || ''} onChange={e => updateField('address', 'current_address', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2" rows={2} placeholder="Street, town/city" />
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <div className="form-group">
+          <label className="form-label">Current Address</label>
+          <textarea className="form-textarea" value={d.current_address || ''} onChange={e => updateField('address', 'current_address', e.target.value)} rows={2} placeholder="Street, town/city" style={{ minHeight: 80 }} />
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-          <input type="text" value={d.city || ''} onChange={e => updateField('address', 'city', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2" />
+        <div className="form-grid-2">
+          <div className="form-group">
+            <label className="form-label">City</label>
+            <input type="text" className="form-input" value={d.city || ''} onChange={e => updateField('address', 'city', e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">State / County</label>
+            <input type="text" className="form-input" value={d.state || ''} onChange={e => updateField('address', 'state', e.target.value)} />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Country</label>
+            <input type="text" className="form-input" value={d.country || ''} onChange={e => updateField('address', 'country', e.target.value)} placeholder="e.g., Liberia" />
+          </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">State/County</label>
-          <input type="text" value={d.state || ''} onChange={e => updateField('address', 'state', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
-          <input type="text" value={d.country || ''} onChange={e => updateField('address', 'country', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2" placeholder="e.g., Liberia" />
-        </div>
-        <div></div>
-        <div className="col-span-2 border-t pt-4 mt-2">
-          <h3 className="font-medium text-gray-800 mb-3">Emergency Contact</h3>
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Contact Name</label>
-          <input type="text" value={d.emergency_contact_name || ''} onChange={e => updateField('address', 'emergency_contact_name', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2" />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Contact Phone</label>
-          <input type="tel" value={d.emergency_contact_phone || ''} onChange={e => updateField('address', 'emergency_contact_phone', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2" />
+        <div style={{ borderTop: '1.5px solid var(--border)', paddingTop: '1.25rem', marginTop: '0.5rem' }}>
+          <p style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--navy)', marginBottom: '1rem', fontSize: '0.95rem' }}>
+            🚨 Emergency Contact
+          </p>
+          <div className="form-grid-2">
+            <div className="form-group">
+              <label className="form-label">Contact Name</label>
+              <input type="text" className="form-input" value={d.emergency_contact_name || ''} onChange={e => updateField('address', 'emergency_contact_name', e.target.value)} />
+            </div>
+            <div className="form-group">
+              <label className="form-label">Contact Phone</label>
+              <input type="tel" className="form-input" value={d.emergency_contact_phone || ''} onChange={e => updateField('address', 'emergency_contact_phone', e.target.value)} />
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -248,16 +246,21 @@ export default function RegistrationWizard() {
 
   const renderProgramme = () => {
     const d = data.programme || {} as Programme;
+    const modes = [
+      { value: 'full_time', label: 'Full Time', icon: '🏛️', desc: 'On-campus, standard academic schedule' },
+      { value: 'part_time', label: 'Part Time', icon: '📅', desc: 'Flexible schedule for working students' },
+      { value: 'distance', label: 'Distance Learning', icon: '🌐', desc: 'Online, study from anywhere' },
+    ] as const;
     return (
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Programme</label>
-          <select value={d.programme_id || ''} onChange={e => {
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+        <div className="form-group">
+          <label className="form-label">Programme</label>
+          <select className="form-select" value={d.programme_id || ''} onChange={e => {
             const opt = e.target.options[e.target.selectedIndex];
             updateField('programme', 'programme_id', e.target.value);
             updateField('programme', 'programme_name', opt.dataset.name || '');
             updateField('programme', 'level', opt.dataset.level || '');
-          }} className="w-full border rounded-lg px-3 py-2">
+          }}>
             <option value="">Select a programme...</option>
             <option value="bsc-cs" data-name="BSc Computer Science" data-level="undergraduate">BSc Computer Science</option>
             <option value="bsc-ba" data-name="BSc Business Administration" data-level="undergraduate">BSc Business Administration</option>
@@ -267,14 +270,25 @@ export default function RegistrationWizard() {
             <option value="phd-theology" data-name="PhD Theology" data-level="doctorate">PhD Theology</option>
           </select>
         </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Study Mode</label>
-          <div className="space-y-2">
-            {(['full_time', 'part_time', 'distance'] as const).map(mode => (
-              <label key={mode} className="flex items-center gap-2">
-                <input type="radio" name="study_mode" value={mode} checked={d.study_mode === mode}
-                  onChange={e => updateField('programme', 'study_mode', e.target.value)} className="accent-blue-600" />
-                <span className="capitalize">{mode.replace('_', ' ')}</span>
+        <div className="form-group">
+          <label className="form-label">Study Mode</label>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+            {modes.map(mode => (
+              <label key={mode.value} style={{
+                display: 'flex', alignItems: 'center', gap: '1rem',
+                padding: '1rem 1.25rem', borderRadius: 'var(--radius-sm)',
+                border: `2px solid ${d.study_mode === mode.value ? 'var(--gold)' : 'var(--border)'}`,
+                background: d.study_mode === mode.value ? 'rgba(212,175,55,0.06)' : 'white',
+                cursor: 'pointer', transition: 'all 0.2s',
+              }}>
+                <input type="radio" name="study_mode" value={mode.value} checked={d.study_mode === mode.value}
+                  onChange={e => updateField('programme', 'study_mode', e.target.value)}
+                  style={{ accentColor: 'var(--gold)', width: 18, height: 18, flexShrink: 0 }} />
+                <span style={{ fontSize: '1.3rem' }}>{mode.icon}</span>
+                <div>
+                  <div style={{ fontWeight: 700, color: 'var(--navy)', fontSize: '0.95rem' }}>{mode.label}</div>
+                  <div style={{ fontSize: '0.8rem', color: 'var(--slate)' }}>{mode.desc}</div>
+                </div>
               </label>
             ))}
           </div>
@@ -299,31 +313,47 @@ export default function RegistrationWizard() {
     };
 
     if (availableModules.length === 0) {
-      return <p className="text-gray-500 text-center py-8">No modules available yet. Select a programme first.</p>;
+      return (
+        <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--slate)' }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📚</div>
+          <p>No modules available yet. Please select a programme first.</p>
+        </div>
+      );
     }
 
     return (
-      <div>
-        <div className="flex justify-between items-center mb-4">
-          <p className="text-sm text-gray-600">Select the modules for this semester:</p>
-          <span className="text-sm font-medium bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>Select modules for this semester:</p>
+          <span style={{
+            background: 'var(--navy)', color: 'var(--gold)', padding: '0.35rem 1rem',
+            borderRadius: 999, fontSize: '0.85rem', fontWeight: 700, fontFamily: 'var(--font-heading)'
+          }}>
             {d.total_credits || 0} Credits
           </span>
         </div>
-        <div className="space-y-2 max-h-96 overflow-y-auto">
-          {availableModules.map(m => (
-            <label key={m.id} className={`flex items-center justify-between p-3 rounded-lg border cursor-pointer hover:bg-gray-50 ${d.selected_course_ids.includes(m.id) ? 'border-blue-500 bg-blue-50' : ''}`}>
-              <div className="flex items-center gap-3">
-                <input type="checkbox" checked={d.selected_course_ids.includes(m.id)}
-                  onChange={() => toggleModule(m.id)} className="accent-blue-600" />
-                <div>
-                  <span className="font-medium text-gray-900">{m.code}</span>
-                  <span className="text-gray-600 ml-2">{m.name}</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', maxHeight: 380, overflowY: 'auto', paddingRight: 4 }}>
+          {availableModules.map(m => {
+            const selected = d.selected_course_ids.includes(m.id);
+            return (
+              <label key={m.id} style={{
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                padding: '0.9rem 1.1rem', borderRadius: 'var(--radius-sm)', cursor: 'pointer',
+                border: `2px solid ${selected ? 'var(--gold)' : 'var(--border)'}`,
+                background: selected ? 'rgba(212,175,55,0.06)' : 'white', transition: 'all 0.2s',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <input type="checkbox" checked={selected} onChange={() => toggleModule(m.id)}
+                    style={{ accentColor: 'var(--gold)', width: 16, height: 16 }} />
+                  <div>
+                    <span style={{ fontWeight: 700, color: 'var(--navy)', fontSize: '0.9rem' }}>{m.code}</span>
+                    <span style={{ color: 'var(--text-muted)', marginLeft: '0.5rem', fontSize: '0.9rem' }}>{m.name}</span>
+                  </div>
                 </div>
-              </div>
-              <span className="text-sm text-gray-500">{m.credits} cr</span>
-            </label>
-          ))}
+                <span style={{ fontSize: '0.8rem', color: 'var(--slate)', fontWeight: 600, flexShrink: 0 }}>{m.credits} cr</span>
+              </label>
+            );
+          })}
         </div>
       </div>
     );
@@ -332,24 +362,25 @@ export default function RegistrationWizard() {
   const renderFees = () => {
     const d = data.fees || {} as Fees;
     return (
-      <div className="space-y-4">
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
-          <h3 className="font-medium text-yellow-800 mb-2">Tuition & Fees</h3>
-          <p className="text-sm text-yellow-700">
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <div className="alert alert-warning">
+          <strong>💰 Tuition &amp; Fees</strong><br />
+          <span style={{ fontSize: '0.9rem', marginTop: '0.4rem', display: 'block' }}>
             Tuition fees vary by programme and study mode. A detailed invoice will be generated after registration.
             You agree to pay all applicable fees as outlined in the university fee schedule.
-          </p>
+          </span>
         </div>
-        <label className="flex items-center gap-2">
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer' }}>
           <input type="checkbox" checked={d.accepted_fee_structure || false}
             onChange={e => updateField('fees', 'accepted_fee_structure', e.target.checked)}
-            className="accent-blue-600" />
-          <span className="text-sm">I accept the fee structure and agree to pay all applicable tuition and fees</span>
+            style={{ accentColor: 'var(--gold)', width: 18, height: 18, marginTop: 2, flexShrink: 0 }} />
+          <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+            I accept the fee structure and agree to pay all applicable tuition and fees
+          </span>
         </label>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
-          <select value={d.payment_method || ''} onChange={e => updateField('fees', 'payment_method', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2">
+        <div className="form-group">
+          <label className="form-label">Preferred Payment Method</label>
+          <select className="form-select" value={d.payment_method || ''} onChange={e => updateField('fees', 'payment_method', e.target.value)}>
             <option value="">Select payment method...</option>
             <option value="bank_transfer">Bank Transfer / Wire</option>
             <option value="mobile_money">Mobile Money</option>
@@ -358,17 +389,17 @@ export default function RegistrationWizard() {
             <option value="sponsor">Sponsor / Employer</option>
           </select>
         </div>
-        <label className="flex items-center gap-2">
+        <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
           <input type="checkbox" checked={d.scholarship_claimed || false}
             onChange={e => updateField('fees', 'scholarship_claimed', e.target.checked)}
-            className="accent-blue-600" />
-          <span className="text-sm">I am claiming a scholarship</span>
+            style={{ accentColor: 'var(--gold)', width: 18, height: 18 }} />
+          <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>I am claiming a scholarship or sponsorship</span>
         </label>
         {d.scholarship_claimed && (
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Scholarship Details</label>
-            <textarea value={d.scholarship_details || ''} onChange={e => updateField('fees', 'scholarship_details', e.target.value)}
-              className="w-full border rounded-lg px-3 py-2" rows={2} placeholder="Name of scholarship / sponsor" />
+          <div className="form-group">
+            <label className="form-label">Scholarship / Sponsor Details</label>
+            <textarea className="form-textarea" value={d.scholarship_details || ''} onChange={e => updateField('fees', 'scholarship_details', e.target.value)}
+              rows={2} placeholder="Name of scholarship / sponsor organisation" style={{ minHeight: 80 }} />
           </div>
         )}
       </div>
@@ -378,76 +409,115 @@ export default function RegistrationWizard() {
   const renderConfirm = () => {
     const d = data.confirm || {} as Confirm;
     return (
-      <div className="space-y-4">
-        <h3 className="font-semibold text-gray-900">Registration Summary</h3>
-        <div className="bg-gray-50 rounded-lg p-4 space-y-2 text-sm">
-          {data.personal_details && <p><strong>Name:</strong> {data.personal_details.first_name} {data.personal_details.last_name}</p>}
-          {data.programme && <p><strong>Programme:</strong> {data.programme.programme_name} ({data.programme.study_mode.replace('_', ' ')})</p>}
-          {data.modules && <p><strong>Modules Selected:</strong> {data.modules.selected_course_ids.length} ({data.modules.total_credits} credits)</p>}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+        <div style={{
+          background: 'var(--bg)', borderRadius: 'var(--radius-sm)',
+          border: '1.5px solid var(--border)', padding: '1.25rem',
+        }}>
+          <p style={{ fontFamily: 'var(--font-heading)', fontWeight: 700, color: 'var(--navy)', marginBottom: '1rem' }}>
+            Registration Summary
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
+            {data.personal_details && <div><strong style={{ color: 'var(--navy)' }}>Name:</strong> {data.personal_details.first_name} {data.personal_details.last_name}</div>}
+            {data.programme && <div><strong style={{ color: 'var(--navy)' }}>Programme:</strong> {data.programme.programme_name} ({data.programme.study_mode.replace('_', ' ')})</div>}
+            {data.modules && <div><strong style={{ color: 'var(--navy)' }}>Modules Selected:</strong> {data.modules.selected_course_ids.length} ({data.modules.total_credits} credits)</div>}
+            {data.address && <div><strong style={{ color: 'var(--navy)' }}>Location:</strong> {data.address.city}, {data.address.country}</div>}
+          </div>
         </div>
-        <label className="flex items-center gap-2">
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer' }}>
           <input type="checkbox" checked={d.data_accuracy_confirmed || false}
             onChange={e => updateField('confirm', 'data_accuracy_confirmed', e.target.checked)}
-            className="accent-blue-600" />
-          <span className="text-sm">I confirm that all information provided is accurate and complete</span>
+            style={{ accentColor: 'var(--gold)', width: 18, height: 18, marginTop: 2, flexShrink: 0 }} />
+          <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>I confirm that all information provided is accurate and complete</span>
         </label>
-        <label className="flex items-center gap-2">
+        <label style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem', cursor: 'pointer' }}>
           <input type="checkbox" checked={d.accepted_terms || false}
             onChange={e => updateField('confirm', 'accepted_terms', e.target.checked)}
-            className="accent-blue-600" />
-          <span className="text-sm">I accept the university's terms and conditions</span>
+            style={{ accentColor: 'var(--gold)', width: 18, height: 18, marginTop: 2, flexShrink: 0 }} />
+          <span style={{ fontSize: '0.9rem', color: 'var(--text-muted)' }}>I accept BMI University's terms and conditions</span>
         </label>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Digital Signature (type your full name)</label>
-          <input type="text" value={d.signed_name || ''} onChange={e => updateField('confirm', 'signed_name', e.target.value)}
-            className="w-full border rounded-lg px-3 py-2" placeholder="Type your full legal name" />
+        <div className="form-group">
+          <label className="form-label">Digital Signature — type your full legal name</label>
+          <input type="text" className="form-input" value={d.signed_name || ''} onChange={e => updateField('confirm', 'signed_name', e.target.value)} placeholder="Your full legal name" />
+          <span className="form-hint">By typing your name you are providing a digital signature</span>
         </div>
       </div>
     );
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="max-w-3xl mx-auto px-4">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Student Registration</h1>
-        <p className="text-gray-600 mb-8">Complete all steps to finish your enrollment at BMI University.</p>
+  const stepIcons = ['👤', '🏠', '🎓', '📚', '💳', '✅'];
 
-        <div className="flex items-center mb-8 overflow-x-auto pb-2">
+  return (
+    <div className="page">
+      <div className="container" style={{ paddingTop: '2rem', paddingBottom: '3rem' }}>
+
+        {/* Header */}
+        <div style={{ marginBottom: '2rem' }}>
+          <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.9rem', color: 'var(--navy)', marginBottom: '0.4rem' }}>
+            Student Registration
+          </h1>
+          <p style={{ color: 'var(--text-muted)' }}>Complete all steps to finalise your enrollment at BMI University.</p>
+          <div className="gold-bar" style={{ marginTop: '0.75rem' }} />
+        </div>
+
+        {/* Step Indicator */}
+        <div className="steps" style={{ marginBottom: '2rem', overflowX: 'auto', paddingBottom: 4 }}>
           {STEP_LABELS.map((label, idx) => (
-            <div key={label} className="flex items-center">
-              <div className={`flex items-center justify-center w-8 h-8 rounded-full text-sm font-medium shrink-0
-                ${idx < currentStep ? 'bg-green-500 text-white' : idx === currentStep ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-500'}`}>
-                {idx < currentStep ? '✓' : idx + 1}
+            <div key={label} className="step" style={{ minWidth: 0 }}>
+              <div className={`step-circle ${idx < currentStep ? 'done' : idx === currentStep ? 'active' : ''}`}>
+                {idx < currentStep ? '✓' : stepIcons[idx]}
               </div>
-              <span className={`ml-2 text-sm font-medium whitespace-nowrap ${idx === currentStep ? 'text-blue-600' : 'text-gray-500'}`}>{label}</span>
-              {idx < STEP_LABELS.length - 1 && <div className="w-8 h-0.5 mx-2 bg-gray-300" />}
+              <span className="step-label" style={{
+                color: idx === currentStep ? 'var(--gold-dark)' : idx < currentStep ? 'var(--navy)' : 'var(--slate)',
+                fontWeight: idx === currentStep ? 700 : 500,
+                whiteSpace: 'nowrap', marginLeft: '0.4rem'
+              }}>
+                {label}
+              </span>
+              {idx < STEP_LABELS.length - 1 && (
+                <div className={`step-line ${idx < currentStep ? 'done' : ''}`} />
+              )}
             </div>
           ))}
         </div>
 
+        {/* Error banner */}
         {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">{error}</div>
+          <div className="alert alert-danger" style={{ marginBottom: '1.5rem' }}>{error}</div>
         )}
 
-        <div className="bg-white rounded-xl shadow-sm border p-6 min-h-[350px]">
-          <h2 className="text-xl font-semibold text-gray-900 mb-6">{STEP_LABELS[currentStep]}</h2>
+        {/* Step card */}
+        <div className="card" style={{ minHeight: 380 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1.75rem' }}>
+            <span style={{ fontSize: '1.5rem' }}>{stepIcons[currentStep]}</span>
+            <div>
+              <h2 style={{ fontFamily: 'var(--font-heading)', fontSize: '1.2rem', color: 'var(--navy)', lineHeight: 1.2 }}>
+                {STEP_LABELS[currentStep]}
+              </h2>
+              <p style={{ fontSize: '0.8rem', color: 'var(--slate)', marginTop: 2 }}>
+                Step {currentStep + 1} of {STEP_LABELS.length}
+              </p>
+            </div>
+          </div>
           {stepContent(currentStep)}
         </div>
 
-        <div className="flex justify-between mt-6">
-          <button onClick={handlePrevious} disabled={currentStep === 0}
-            className="px-6 py-2.5 border rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed">
-            Previous
+        {/* Navigation */}
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1.5rem' }}>
+          <button
+            onClick={handlePrevious}
+            disabled={currentStep === 0}
+            className="btn btn-outline"
+          >
+            ← Previous
           </button>
           {currentStep < STEP_LABELS.length - 1 ? (
-            <button onClick={handleNext} disabled={loading}
-              className="px-6 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50">
-              {loading ? 'Saving...' : 'Save & Continue'}
+            <button onClick={handleNext} disabled={loading} className="btn btn-gold">
+              {loading ? 'Saving...' : 'Save & Continue →'}
             </button>
           ) : (
-            <button onClick={handleSubmit} disabled={submitting}
-              className="px-8 py-2.5 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 font-medium">
-              {submitting ? 'Submitting...' : 'Complete Registration'}
+            <button onClick={handleSubmit} disabled={submitting} className="btn btn-navy">
+              {submitting ? 'Submitting...' : '✅ Complete Registration'}
             </button>
           )}
         </div>
