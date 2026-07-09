@@ -50,40 +50,16 @@ export async function processEmailDelivery(payload: EmailPayload, ctx: PlatformC
   }
 }
 
-export function applicationSubmittedEmail(firstName: string, program: string, applicationId: string): string {
+export function buildEmailLayout(subtitle: string, content: string): string {
   return `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 40px 20px;">
       <div style="background: #0f172a; padding: 28px 24px 20px; border-radius: 8px 8px 0 0; text-align: center;">
         <img src="https://bmi-portal.hkmministries.org/bmi-logo.png" alt="BMI University" style="height: 72px; width: auto; margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto;" />
         <h1 style="color: #d4af37; margin: 0; font-size: 22px; letter-spacing: 0.5px;">BMI University</h1>
-        <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0; font-size: 13px;">Application Received</p>
+        <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0; font-size: 13px;">${subtitle}</p>
       </div>
       <div style="background: #fff; padding: 32px; border-radius: 0 0 8px 8px; border: 1px solid #e2e8f0;">
-        <h2 style="color: #0f172a;">Dear ${firstName},</h2>
-        <p style="color: #475569; line-height: 1.6;">
-          Thank you for submitting your application to <strong>BMI University</strong>. We have received your application for:
-        </p>
-        <div style="background: #f8fafc; border-left: 4px solid #d4af37; padding: 16px; margin: 20px 0; border-radius: 4px;">
-          <strong style="color: #0f172a;">${program}</strong>
-        </div>
-        <p style="color: #475569; line-height: 1.6;">
-          <strong>Application Reference:</strong> <code style="background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">${applicationId.substring(0, 8).toUpperCase()}</code>
-        </p>
-        <p style="color: #475569; line-height: 1.6;">
-          Our admissions team will review your application and contact you within <strong>5–10 business days</strong>. 
-          You can track your application status at any time by logging into your portal.
-        </p>
-        <div style="margin: 24px 0; padding: 16px; background: #f8fafc; border-radius: 8px;">
-          <p style="margin: 0 0 8px; color: #475569; font-weight: 600;">Next Steps:</p>
-          <ol style="color: #475569; line-height: 1.8; margin: 0; padding-left: 20px;">
-            <li>Upload your transcripts and ID documents in the portal</li>
-            <li>Request letters of recommendation from your referees</li>
-          </ol>
-        </div>
-        <a href="${PORTAL_URL}/status" 
-           style="display: inline-block; background: #d4af37; color: #0f172a; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 16px;">
-          Track Application Status
-        </a>
+        ${content}
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;">
         <p style="color: #94a3b8; font-size: 13px;">
           Questions? Email us at <a href="mailto:bmiuniversity8@gmail.com" style="color: #d4af37;">bmiuniversity8@gmail.com</a><br>
@@ -94,7 +70,38 @@ export function applicationSubmittedEmail(firstName: string, program: string, ap
   `;
 }
 
-export function statusUpdateEmail(firstName: string, newStatus: string, program: string, notes?: string): string {
+export function applicationSubmittedEmail(firstName: string, program: string, applicationId: string): string {
+  const content = `
+    <h2 style="color: #0f172a;">Dear ${firstName},</h2>
+    <p style="color: #475569; line-height: 1.6;">
+      Thank you for submitting your application to <strong>BMI University</strong>. We have received your application for:
+    </p>
+    <div style="background: #f8fafc; border-left: 4px solid #d4af37; padding: 16px; margin: 20px 0; border-radius: 4px;">
+      <strong style="color: #0f172a;">${program}</strong>
+    </div>
+    <p style="color: #475569; line-height: 1.6;">
+      <strong>Application Reference:</strong> <code style="background: #f1f5f9; padding: 2px 8px; border-radius: 4px;">${applicationId.substring(0, 8).toUpperCase()}</code>
+    </p>
+    <p style="color: #475569; line-height: 1.6;">
+      Our admissions team will review your application and contact you within <strong>5–10 business days</strong>. 
+      You can track your application status at any time by logging into your portal.
+    </p>
+    <div style="margin: 24px 0; padding: 16px; background: #f8fafc; border-radius: 8px;">
+      <p style="margin: 0 0 8px; color: #475569; font-weight: 600;">Next Steps:</p>
+      <ol style="color: #475569; line-height: 1.8; margin: 0; padding-left: 20px;">
+        <li>Upload your transcripts and ID documents in the portal</li>
+        <li>Request letters of recommendation from your referees</li>
+      </ol>
+    </div>
+    <a href="${PORTAL_URL}/status" 
+       style="display: inline-block; background: #d4af37; color: #0f172a; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 16px;">
+      Track Application Status
+    </a>
+  `;
+  return buildEmailLayout('Application Received', content);
+}
+
+export function statusUpdateEmail(firstName: string, newStatus: string, program: string, notes?: string, admissionCode?: string): string {
   const statusMessages: Record<string, string> = {
     under_review: 'Your application is now under review by our admissions committee.',
     accepted: 'Congratulations! You have been accepted to BMI University. Welcome to the BMI family!',
@@ -102,29 +109,31 @@ export function statusUpdateEmail(firstName: string, newStatus: string, program:
     waitlisted: 'You have been placed on our waitlist. We will contact you if a space becomes available.',
   };
 
-  return `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 40px 20px;">
-      <div style="background: #0f172a; padding: 28px 24px 20px; border-radius: 8px 8px 0 0; text-align: center;">
-        <img src="https://bmi-portal.hkmministries.org/bmi-logo.png" alt="BMI University" style="height: 72px; width: auto; margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto;" />
-        <h1 style="color: #d4af37; margin: 0; font-size: 22px; letter-spacing: 0.5px;">BMI University</h1>
-        <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0; font-size: 13px;">Application Update</p>
+  const content = `
+    <h2 style="color: #0f172a;">Dear ${firstName},</h2>
+    <p style="color: #475569; line-height: 1.6;">
+      There is an update regarding your application for <strong>${program}</strong>:
+    </p>
+    <p style="color: #0f172a; font-size: 18px; font-weight: bold;">${statusMessages[newStatus] || `Status updated to: ${newStatus.replace('_', ' ')}`}</p>
+    ${notes ? `<p style="color: #475569; line-height: 1.6; font-style: italic;">${notes}</p>` : ''}
+    ${admissionCode && newStatus === 'accepted' ? `
+    <div style="margin: 24px 0; padding: 20px 24px; background: #f0fdf4; border: 2px solid #22c55e; border-radius: 8px;">
+      <p style="margin: 0 0 8px; color: #15803d; font-weight: 700; font-size: 15px;">🎓 Activate Your Student Account</p>
+      <p style="margin: 0 0 12px; color: #475569; font-size: 14px; line-height: 1.5;">
+        Use the one-time admission code below to set up your password and access your student portal. This code expires in <strong>7 days</strong>.
+      </p>
+      <div style="background: #0f172a; border-radius: 6px; padding: 12px 20px; text-align: center; margin-bottom: 16px;">
+        <span style="color: #d4af37; font-size: 22px; font-weight: 900; letter-spacing: 4px; font-family: monospace;">${admissionCode}</span>
       </div>
-      <div style="background: #fff; padding: 32px; border-radius: 0 0 8px 8px; border: 1px solid #e2e8f0;">
-        <h2 style="color: #0f172a;">Dear ${firstName},</h2>
-        <p style="color: #475569; line-height: 1.6;">
-          There is an update regarding your application for <strong>${program}</strong>:
-        </p>
-        <p style="color: #0f172a; font-size: 18px; font-weight: bold;">${statusMessages[newStatus] || `Status updated to: ${newStatus.replace('_', ' ')}`}</p>
-        ${notes ? `<p style="color: #475569; line-height: 1.6; font-style: italic;">${notes}</p>` : ''}
-        <a href="${PORTAL_URL}/status"
-           style="display: inline-block; background: #d4af37; color: #0f172a; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 16px;">
-          View Application Status
-        </a>
-        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;">
-        <p style="color: #94a3b8; font-size: 13px;">
-          Questions? Email us at <a href="mailto:bmiuniversity8@gmail.com" style="color: #d4af37;">bmiuniversity8@gmail.com</a>
-        </p>
-      </div>
-    </div>
+      <a href="${PORTAL_URL}/claim?code=${encodeURIComponent(admissionCode)}"
+         style="display: inline-block; background: #22c55e; color: #fff; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: bold;">
+        Claim Your Account →
+      </a>
+    </div>` : ''}
+    <a href="${PORTAL_URL}/status"
+       style="display: inline-block; background: #d4af37; color: #0f172a; padding: 12px 28px; border-radius: 6px; text-decoration: none; font-weight: bold; margin-top: 16px;">
+      View Application Status
+    </a>
   `;
+  return buildEmailLayout('Application Update', content);
 }

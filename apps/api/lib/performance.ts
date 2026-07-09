@@ -412,35 +412,6 @@ export async function executeAdmissionPipelineOptimized(
            (id, uid, application_id, stage, status, idempotency_key, actor_id, notes)
            VALUES (lower(hex(randomblob(16))), ?, ?, 'registration_number_generated', 'completed', ?, ?, ?)`
         ).bind(uid, applicationId, `${applicationId}:registration_number_generated`, actorId, `Registration number: ${regNo}`)
-      ];
-      
-      await executeBatch(db, updateOps);
-    }
-  } catch (e) {
-    // Distinguish between a missing programs row (expected until the table is seeded)
-    // and a genuine error from generateRegNo.
-    // ACTION REQUIRED: if regNo is always null, run:
-    //   SELECT * FROM programs;
-    // If empty, seed the table via the UMS Degree Programs screen or a migration.
-    if (!regNo) {
-      console.warn(
-        '[RegNo] programs table lookup returned no row for program:', program,
-        '— student enrolled with placeholder reg_no. Seed the programs table to fix.'
-      );
-    } else {
-      // generateRegNo itself threw — rethrow so the caller can log/alert properly.
-      console.error('[RegNo] generateRegNo failed for', program, ':', e);
-      throw e;
-    }
-  }
-
-  return { uid, regNo };
-}
-
-/**
- * Get performance metrics for monitoring
- */
-export function getPerformanceMetrics(): {
   recentQueries: QueryMetrics[];
   averageQueryTime: number;
   slowQueries: QueryMetrics[];

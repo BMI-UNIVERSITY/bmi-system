@@ -1,18 +1,10 @@
 import { Env, ok, error, typedJson } from '../lib/types';
 import { ExecutionContext } from '@cloudflare/workers-types';
-
-const DEFAULT_EMAIL_DOMAIN = 'student.bmi.edu';
+import { validatePasswordStrength, isCommonPassword, hashPassword } from './auth';
 
 interface ClaimBody {
   admissionCode?: string;
   password?: string;
-}
-
-interface ApplicationRow {
-  id: string;
-  user_id: string;
-  email: string;
-  [key: string]: unknown;
 }
 
 export async function handleClaimAccount(req: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
@@ -23,27 +15,26 @@ export async function handleClaimAccount(req: Request, env: Env, ctx: ExecutionC
     return error('Admission code and password are required', 400);
   }
 
+  const strength = validatePasswordStrength(password);
+  if (!strength.valid) return error(strength.errors.join('; '));
+  if (isCommonPassword(password)) return error('This password is too common. Please choose a stronger password.');
+
   try {
-    const { results } = await env.PLATFORM_CONTEXT!.db.prepare('SELECT * FROM applications WHERE id = ?').bind(admissionCode).all<ApplicationRow>();
-    if (!results || results.length === 0) {
-      return error('Invalid admission code', 404);
+    const user = await env.PLATFORM_CONTEXT!.db.prepare(
+      `SELECT id FROM users WHERE admission_code = ? AND account_claimed = 0 AND admission_code_expires_at > datetime('now')`
+    ).bind(admissionCode).first<{ id: string }>();
+
+    if (!user) {
+      return error('Invalid or expired admission code, or account already claimed.', 400);
     }
-    const applicant = results[0];
-    
-    const user = await env.PLATFORM_CONTEXT!.identity.createUser({
-      email: applicant.email,
-      password: password,
-      roles: ['student'],
-      metadata: { admissionCode },
-    });
 
-    const emailDomain = env.STUDENT_EMAIL_DOMAIN || DEFAULT_EMAIL_DOMAIN;
-    const emailPrefix = user.email.split('@')[0];
-    await env.PLATFORM_CONTEXT!.email.createMailbox(user.id, `${emailPrefix}@${emailDomain}`, password);
+    const hashedPassword = await hashPassword(password);
 
-    await env.PLATFORM_CONTEXT!.db.prepare('UPDATE applications SET status = ? WHERE id = ?').bind('enrolled', admissionCode).run();
+    await env.PLATFORM_CONTEXT!.db.prepare(
+      `UPDATE users SET password_hash = ?, account_claimed = 1, admission_code = NULL, admission_code_expires_at = NULL WHERE id = ?`
+    ).bind(hashedPassword, user.id).run();
 
-    return ok({ message: 'Account claimed successfully', user });
+    return ok({ message: 'Account claimed successfully.' });
   } catch (e: unknown) {
     const msg = e instanceof Error ? e.message : 'Failed to claim account';
     console.error(e);

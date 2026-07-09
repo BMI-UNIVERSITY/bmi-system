@@ -101,36 +101,31 @@ async function sendRegistrationEmailOptimized(env: Env, params: {
   firstName: string;
   verifyUrl: string;
 }): Promise<boolean> {
-  // Use cached template for better performance
-  const emailTemplate = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 40px 20px;">
-      <div style="background: #0f172a; padding: 24px; border-radius: 8px 8px 0 0; text-align: center;">
-        <h1 style="color: #d4af37; margin: 0; font-size: 24px;">BMI University</h1>
-        <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Email Verification</p>
-      </div>
-      <div style="background: #fff; padding: 32px; border-radius: 0 0 8px 8px; border: 1px solid #e2e8f0;">
-        <h2 style="color: #0f172a;">Welcome, ${params.firstName}!</h2>
-        <p style="color: #475569; line-height: 1.6;">
-          Thank you for creating an account at BMI University. Please verify your email address to activate your account.
-        </p>
-        <div style="margin: 32px 0; text-align: center;">
-          <a href="${params.verifyUrl}"
-             style="display: inline-block; background: #d4af37; color: #0f172a; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px;">
-            Verify Email Address
-          </a>
-        </div>
-        <p style="color: #94a3b8; font-size: 13px;">
-          Or copy this link into your browser:<br>
-          <a href="${params.verifyUrl}" style="color: #d4af37; word-break: break-all;">${params.verifyUrl}</a>
-        </p>
-        <p style="color: #94a3b8; font-size: 13px;">This link expires in 24 hours.</p>
-        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
-        <p style="color: #94a3b8; font-size: 12px;">
-          If you did not create this account, you can safely ignore this email.
-        </p>
-      </div>
+  const { buildEmailLayout } = await import('../lib/email');
+  const emailTemplate = buildEmailLayout(
+    'Email Verification',
+    `
+    <h2 style="color: #0f172a;">Welcome, ${params.firstName}!</h2>
+    <p style="color: #475569; line-height: 1.6;">
+      Thank you for creating an account at BMI University. Please verify your email address to activate your account.
+    </p>
+    <div style="margin: 32px 0; text-align: center;">
+      <a href="${params.verifyUrl}"
+         style="display: inline-block; background: #d4af37; color: #0f172a; padding: 14px 32px; border-radius: 6px; text-decoration: none; font-weight: bold; font-size: 16px;">
+        Verify Email Address
+      </a>
     </div>
-  `;
+    <p style="color: #94a3b8; font-size: 13px;">
+      Or copy this link into your browser:<br>
+      <a href="${params.verifyUrl}" style="color: #d4af37; word-break: break-all;">${params.verifyUrl}</a>
+    </p>
+    <p style="color: #94a3b8; font-size: 13px;">This link expires in 24 hours.</p>
+    <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;">
+    <p style="color: #94a3b8; font-size: 12px;">
+      If you did not create this account, you can safely ignore this email.
+    </p>
+    `
+  );
 
   return sendEmail(env, {
     to: params.to,
@@ -392,26 +387,22 @@ export async function handleForgotPassword(request: Request, env: Env): Promise<
     const resetUrl = `${baseUrl}/reset-password?token=${resetToken}`;
     const systemLabel = isStaffRole ? 'University Management System (UMS)' : 'Student Portal';
 
+    const { buildEmailLayout } = await import('../lib/email');
     await sendEmail(env, {
       to: body.email.toLowerCase(),
       subject: 'BMI University — Password Reset Request',
-      html: `
-        <div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#f8fafc;padding:40px 20px;">
-          <div style="background:#0f172a;padding:24px;border-radius:8px 8px 0 0;text-align:center;">
-            <h1 style="color:#d4af37;margin:0;font-size:24px;">BMI University</h1>
-            <p style="color:rgba(255,255,255,0.7);margin:4px 0 0;">Password Reset — ${systemLabel}</p>
-          </div>
-          <div style="background:#fff;padding:32px;border-radius:0 0 8px 8px;border:1px solid #e2e8f0;">
-            <h2 style="color:#0f172a;">Hi ${user.first_name},</h2>
-            <p style="color:#475569;line-height:1.6;">We received a request to reset your BMI University password for the <strong>${systemLabel}</strong>. Click the button below to set a new password:</p>
-            <div style="margin:32px 0;text-align:center;">
-              <a href="${resetUrl}" style="display:inline-block;padding:14px 32px;background:#d4af37;color:#0f172a;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px;">Reset Password</a>
-            </div>
-            <p style="color:#94a3b8;font-size:13px;">Or copy this link into your browser:<br><a href="${resetUrl}" style="color:#d4af37;word-break:break-all;">${resetUrl}</a></p>
-            <p style="color:#94a3b8;font-size:13px;">This link expires in <strong>1 hour</strong>. If you didn't request this, you can safely ignore this email.</p>
-          </div>
+      html: buildEmailLayout(
+        `Password Reset — ${systemLabel}`,
+        `
+        <h2 style="color:#0f172a;">Hi ${user.first_name},</h2>
+        <p style="color:#475569;line-height:1.6;">We received a request to reset your BMI University password for the <strong>${systemLabel}</strong>. Click the button below to set a new password:</p>
+        <div style="margin:32px 0;text-align:center;">
+          <a href="${resetUrl}" style="display:inline-block;padding:14px 32px;background:#d4af37;color:#0f172a;text-decoration:none;border-radius:6px;font-weight:bold;font-size:16px;">Reset Password</a>
         </div>
-      `
+        <p style="color:#94a3b8;font-size:13px;">Or copy this link into your browser:<br><a href="${resetUrl}" style="color:#d4af37;word-break:break-all;">${resetUrl}</a></p>
+        <p style="color:#94a3b8;font-size:13px;">This link expires in <strong>1 hour</strong>. If you didn't request this, you can safely ignore this email.</p>
+        `
+      )
     });
   }
 

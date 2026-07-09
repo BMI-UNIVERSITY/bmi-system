@@ -217,7 +217,7 @@ export default function Admissions() {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-gray-500">
-                      {app.submitted_at ? new Date(app.submitted_at).toLocaleDateString() : '—'}
+                      {app.submitted_at ? new Date(app.submitted_at + 'Z').toLocaleDateString() : '—'}
                     </td>
                     <td className="px-6 py-4 text-right">
                       <button
@@ -265,7 +265,7 @@ export default function Admissions() {
                 </div>
                 <div>
                   <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Submitted On</div>
-                  <div className="text-sm dark:text-gray-300 font-medium">{new Date(selectedApp.submitted_at).toLocaleDateString()}</div>
+                  <div className="text-sm dark:text-gray-300 font-medium">{new Date(selectedApp.submitted_at + 'Z').toLocaleDateString()}</div>
                 </div>
                 <div className="col-span-2">
                   <div className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Program Selected</div>
@@ -288,7 +288,7 @@ export default function Admissions() {
                     </div>
                     <div>
                       <span className="text-gray-500 block text-xs">Date of Birth</span>
-                      <span className="dark:text-gray-300 font-medium">{appDetails.date_of_birth ? new Date(appDetails.date_of_birth).toLocaleDateString() : "—"}</span>
+                      <span className="dark:text-gray-300 font-medium">{appDetails.date_of_birth ? new Date(appDetails.date_of_birth + 'Z').toLocaleDateString() : "—"}</span>
                     </div>
                     <div>
                       <span className="text-gray-500 block text-xs">Gender</span>
@@ -349,7 +349,7 @@ export default function Admissions() {
                             Changed to <span className="font-bold">{log.new_status.replace('_', ' ')}</span> by {log.changed_by_name}
                           </div>
                           <div className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                            <Clock size={12} /> {new Date(log.changed_at).toLocaleString()}
+                            <Clock size={12} /> {new Date(log.changed_at + 'Z').toLocaleString()}
                           </div>
                           {log.notes && (
                             <div className="mt-2 text-sm bg-gray-50 dark:bg-gray-800/50 p-2 rounded text-gray-600 dark:text-gray-400 italic">

@@ -1,66 +1,93 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { apiFetch } from '../../lib/api';
 
 export default function ClaimAccount() {
-  const [admissionCode, setAdmissionCode] = useState('');
+  const [searchParams] = useSearchParams();
+  const [admissionCode, setAdmissionCode] = useState(searchParams.get('code') || '');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
   const navigate = useNavigate();
+
+  useEffect(() => {
+    if (searchParams.get('code')) {
+      setAdmissionCode(searchParams.get('code') as string);
+    }
+  }, [searchParams]);
 
   const handleClaim = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setErrorMsg('');
     try {
-      const res = await fetch('/api/claim', {
+      const res = await apiFetch('/api/auth/claim', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ admissionCode, password }),
       });
       if (res.ok) {
-        alert('Account claimed successfully! Please login.');
-        navigate('/login');
+        navigate('/login', { state: { message: 'Account claimed successfully! You can now log in.' } });
       } else {
-        const data = (await res.json()) as any;
-        alert(data?.error || 'Failed to claim account');
+        const data = await res.json().catch(() => ({}));
+        setErrorMsg(data?.error || 'Failed to claim account. Code may be invalid or expired.');
       }
     } catch (err) {
-      alert('An error occurred.');
+      setErrorMsg('A network error occurred. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50">
-      <div className="max-w-md w-full bg-white p-8 rounded shadow">
-        <h2 className="text-2xl font-bold mb-6 text-center">Claim Your Student Account</h2>
-        <form onSubmit={handleClaim} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Admission Code</label>
+    <div className="layout-auth">
+      <div className="auth-card">
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <img src="/bmi-logo.png" alt="BMI University" style={{ height: 80, margin: '0 auto 1.5rem' }} />
+          <h1 style={{ color: 'var(--navy)', marginBottom: '0.5rem' }}>Activate Student Account</h1>
+          <p style={{ color: 'var(--slate)', fontSize: '0.9rem' }}>
+            Welcome to BMI University! Enter your admission code and set a password to access your portal.
+          </p>
+        </div>
+
+        {errorMsg && (
+          <div className="alert alert-danger" style={{ marginBottom: '1.5rem' }}>
+            {errorMsg}
+          </div>
+        )}
+
+        <form onSubmit={handleClaim}>
+          <div className="form-group">
+            <label className="form-label" htmlFor="admissionCode">Admission Code</label>
             <input 
+              id="admissionCode"
               type="text" 
-              className="w-full border p-2 rounded" 
+              className="form-input" 
               value={admissionCode} 
               onChange={e => setAdmissionCode(e.target.value)} 
+              placeholder="e.g. A-12345678"
               required 
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">New Password</label>
+          <div className="form-group" style={{ marginBottom: '2rem' }}>
+            <label className="form-label" htmlFor="password">Create Password</label>
             <input 
+              id="password"
               type="password" 
-              className="w-full border p-2 rounded" 
+              className="form-input" 
               value={password} 
               onChange={e => setPassword(e.target.value)} 
+              placeholder="Must be at least 8 characters"
+              minLength={8}
               required 
             />
           </div>
           <button 
             type="submit" 
-            className="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700" 
+            className="btn btn-navy" 
+            style={{ width: '100%', padding: '0.875rem' }}
             disabled={loading}
           >
-            {loading ? 'Claiming...' : 'Claim Account'}
+            {loading ? 'Activating Account...' : 'Activate Account'}
           </button>
         </form>
       </div>

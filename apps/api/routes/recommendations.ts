@@ -54,18 +54,24 @@ export async function handleRequestRecommendation(request: Request, env: Env, ap
   if (env.RESEND_API_KEY && applicant) {
     const baseUrl = getPortalUrl(env);
     const uploadUrl = `${baseUrl}/recommend/${token}`;
+    const { buildEmailLayout } = await import('../lib/email');
     await sendEmail(env, {
       to: referee_email,
       subject: `Recommendation Request for ${applicant.first_name} ${applicant.last_name}`,
-      html: `
-        <h2>Recommendation Request</h2>
-        <p>Dear ${sanitizedName},</p>
-        <p><strong>${applicant.first_name} ${applicant.last_name}</strong> has applied to the <strong>${app.program}</strong> program at BMI University and has requested a letter of recommendation from you.</p>
-        <p>Please use the secure link below to upload your recommendation letter. This link is unique to you and will expire after 30 days.</p>
-        <p><a href="${uploadUrl}" style="display:inline-block;padding:12px 24px;background:#0f172a;color:white;text-decoration:none;border-radius:6px;font-weight:bold;">Upload Recommendation Letter</a></p>
-        <p>Or copy this link: ${uploadUrl}</p>
-        <p>Thank you,<br/>BMI University Admissions</p>
-      `
+      html: buildEmailLayout(
+        'Recommendation Request',
+        `
+        <h2 style="color: #0f172a;">Dear ${sanitizedName},</h2>
+        <p style="color: #475569; line-height: 1.6;">
+          <strong>${applicant.first_name} ${applicant.last_name}</strong> has applied to the <strong>${app.program}</strong> program at BMI University and has requested a letter of recommendation from you.
+        </p>
+        <p style="color: #475569; line-height: 1.6;">
+          Please use the secure link below to upload your recommendation letter. This link is unique to you and will expire after 30 days.
+        </p>
+        <a href="${uploadUrl}" style="display:inline-block;padding:12px 24px;background:#0f172a;color:white;text-decoration:none;border-radius:6px;font-weight:bold;margin:16px 0;">Upload Recommendation Letter</a>
+        <p style="color: #475569; line-height: 1.6; font-size: 13px;">Or copy this link: <a href="${uploadUrl}" style="color:#d4af37;">${uploadUrl}</a></p>
+        `
+      )
     });
   }
 
@@ -147,10 +153,20 @@ export async function handleUploadRecommendation(request: Request, env: Env, tok
     .bind(req.user_id).first<{ email: string; first_name: string }>();
 
   if (applicant && env.RESEND_API_KEY) {
+    const { buildEmailLayout } = await import('../lib/email');
     await sendEmail(env, {
       to: applicant.email,
       subject: 'BMI University — Recommendation Received',
-      html: `<p>Dear ${applicant.first_name},</p><p>A recommendation letter has been received and added to your application.</p>`
+      html: buildEmailLayout(
+        'Recommendation Received',
+        `
+        <h2 style="color: #0f172a;">Dear ${applicant.first_name},</h2>
+        <p style="color: #475569; line-height: 1.6;">
+          A recommendation letter has been received and added to your application.
+        </p>
+        <a href="${getPortalUrl(env)}/status" style="display:inline-block;padding:12px 24px;background:#d4af37;color:#0f172a;text-decoration:none;border-radius:6px;font-weight:bold;margin:16px 0;">View Application Status</a>
+        `
+      )
     });
   }
 

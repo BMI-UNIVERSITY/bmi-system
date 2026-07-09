@@ -161,7 +161,7 @@ export default function Status() {
                       <div style={{ width: 8, height: 8, borderRadius: '50%', background: 'var(--gold)', marginTop: '0.5rem', flexShrink: 0 }} />
                       <div>
                         <div style={{ fontSize: '0.8rem', color: 'var(--slate)' }}>
-                          {new Date(log.changed_at).toLocaleString()}
+                          {new Date(log.changed_at + 'Z').toLocaleString()}
                         </div>
                         <div style={{ fontSize: '0.9rem', fontWeight: 600, textTransform: 'capitalize' }}>
                           {log.old_status ? `${log.old_status.replace('_', ' ')} → ` : ''}{log.new_status.replace('_', ' ')}
@@ -215,7 +215,7 @@ export default function Status() {
                               {r.status}
                             </span>
                           </td>
-                          <td>{new Date(r.requested_at).toLocaleDateString()}</td>
+                          <td>{new Date(r.requested_at + 'Z').toLocaleDateString()}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -254,7 +254,7 @@ export default function Status() {
                           <tr key={d.id}>
                             <td><span className={`badge ${d.doc_type === 'recommendation' ? 'badge-waitlisted' : 'badge-submitted'}`}>{d.doc_type.replace('_', ' ')}</span></td>
                             <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.file_name}</td>
-                            <td>{new Date(d.uploaded_at).toLocaleDateString()}</td>
+                            <td>{new Date(d.uploaded_at + 'Z').toLocaleDateString()}</td>
                           </tr>
                         ))}
                       </tbody>
