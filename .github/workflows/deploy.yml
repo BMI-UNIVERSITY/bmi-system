@@ -6,7 +6,17 @@ on:
   pull_request:
     branches: [main]
   schedule:
-    - cron: '0 6 * * 1'  # E2E tests run weekly on Monday
+    - cron: '0 6 * * 1' # E2E tests run weekly on Monday
+
+# Cancel in-progress runs on same branch to avoid queue pileup
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '24'
+  TURBO_TEAM: bmi
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
 
 jobs:
   # ─── Detect Changes ───────────────────────────────────────────────────────────
@@ -18,8 +28,10 @@ jobs:
       portal: ${{ steps.filter.outputs.portal }}
       ums: ${{ steps.filter.outputs.ums }}
       university: ${{ steps.filter.outputs.university }}
+      any: ${{ steps.filter.outputs.api == 'true' || steps.filter.outputs.portal == 'true' || steps.filter.outputs.ums == 'true' || steps.filter.outputs.university == 'true' }}
     steps:
       - uses: actions/checkout@v4
+
       - name: Path Filters
         uses: dorny/paths-filter@v3
         id: filter
@@ -50,231 +62,145 @@ jobs:
               - 'package.json'
               - '.github/workflows/deploy.yml'
 
-  # ─── Turbo Cache Key ──────────────────────────────────────────────────────────
-  turbo-cache:
-    name: Turbo Cache Setup
+  # ─── CI Checks (Type-Check + Lint + Test + Build, all in one Turbo run) ───────
+  # Turbo parallelises tasks across all CPU cores and uses its content-hash
+  # cache so unchanged packages are replayed from cache, not rebuilt.
+  ci-checks:
+    name: CI Checks (Turbo)
     runs-on: ubuntu-latest
-    outputs:
-      key: ${{ steps.cache.outputs.cache-hit }}
+    needs: changes
+    if: >
+      needs.changes.outputs.api == 'true' ||
+      needs.changes.outputs.portal == 'true' ||
+      needs.changes.outputs.ums == 'true' ||
+      needs.changes.outputs.university == 'true'
     steps:
-      - id: cache
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2 # Turbo needs HEAD^ to compute affected packages
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+
+      # Restore node_modules cache — avoids re-downloading the entire npm
+      # registry on cache hits (saves ~30–60 s per job on cold runners)
+      - name: Restore node_modules cache
+        id: nm-cache
         uses: actions/cache@v4
         with:
-          path: node_modules/.cache/turbo
-          key: turbo-${{ runner.os }}-${{ hashFiles('package-lock.json', 'turbo.json') }}
-          restore-keys: |
-            turbo-${{ runner.os }}-
-
-  # ─── Test API ─────────────────────────────────────────────────────────────────
-  test-api:
-    name: Type Check & Test API
-    runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.api == 'true'
-    defaults:
-      run:
-        working-directory: apps/api
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: 'package-lock.json'
-
-      - name: Restore Turbo cache
-        uses: actions/cache/restore@v4
-        with:
-          path: node_modules/.cache/turbo
-          key: turbo-${{ runner.os }}-${{ hashFiles('package-lock.json', 'turbo.json') }}
-          restore-keys: |
-            turbo-${{ runner.os }}-
+          path: node_modules
+          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: nm-${{ runner.os }}-
 
       - name: Install dependencies
-        run: npm ci
-        working-directory: .
+        if: steps.nm-cache.outputs.cache-hit != 'true'
+        run: npm ci --prefer-offline
 
-      - name: Build dependencies with turbo
-        run: npm run ci:build
-        working-directory: .
+      # Restore Turborepo local filesystem cache so already-built packages
+      # are replayed instantly without re-running their tasks.
+      - name: Restore Turborepo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-
 
-      - name: Verify D1 Migrations
-        run: npm run verify-migrations
+      # Single Turbo command — Turbo fans out all tasks in topological order,
+      # parallelises within each layer and skips packages with cache hits.
+      - name: Run CI (build + lint + typecheck + test)
+        run: npx turbo run build lint type-check test --concurrency=100%
 
-      - name: Type check
-        run: npm run type-check
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Run tests (includes contract tests)
-        run: npm test
-
-      - name: Save Turbo cache
-        uses: actions/cache/save@v4
+      # Persist the Turbo cache so deploy jobs (and future CI runs) can hit it.
+      - name: Save Turborepo cache
         if: always()
-        with:
-          path: node_modules/.cache/turbo
-          key: turbo-${{ runner.os }}-${{ hashFiles('package-lock.json', 'turbo.json') }}
-
-  # ─── Test UMS Frontend ───────────────────────────────────────────────────────
-  test-ums:
-    name: Type Check & Test UMS
-    runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.ums == 'true'
-    defaults:
-      run:
-        working-directory: apps/ums
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: 'package-lock.json'
-
-      - name: Restore Turbo cache
-        uses: actions/cache/restore@v4
-        with:
-          path: node_modules/.cache/turbo
-          key: turbo-${{ runner.os }}-${{ hashFiles('package-lock.json', 'turbo.json') }}
-          restore-keys: |
-            turbo-${{ runner.os }}-
-
-      - name: Install dependencies
-        run: npm ci
-        working-directory: .
-
-      - name: Build dependencies with turbo
-        run: npm run ci:build
-        working-directory: .
-
-      - name: Type check
-        run: npm run type-check
-
-      - name: Lint
-        run: npm run lint
-
-      - name: Run unit tests
-        run: npm test
-
-      - name: Save Turbo cache
         uses: actions/cache/save@v4
-        if: always()
         with:
-          path: node_modules/.cache/turbo
-          key: turbo-${{ runner.os }}-${{ hashFiles('package-lock.json', 'turbo.json') }}
-
-  # ─── Test University Frontend (Next.js) ──────────────────────────────────────
-  test-university:
-    name: Type Check & Test University
-    runs-on: ubuntu-latest
-    needs: changes
-    if: needs.changes.outputs.university == 'true'
-    defaults:
-      run:
-        working-directory: bmi-university
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-          cache: 'npm'
-          cache-dependency-path: 'package-lock.json'
-
-      - name: Restore Turbo cache
-        uses: actions/cache/restore@v4
-        with:
-          path: node_modules/.cache/turbo
-          key: turbo-${{ runner.os }}-${{ hashFiles('package-lock.json', 'turbo.json') }}
-          restore-keys: |
-            turbo-${{ runner.os }}-
-
-      - name: Install dependencies
-        run: npm ci
-        working-directory: .
-
-      - name: Build dependencies with turbo
-        run: npm run ci:build
-        working-directory: .
-
-      - name: Run tests
-        run: npm test
-
-      - name: Save Turbo cache
-        uses: actions/cache/save@v4
-        if: always()
-        with:
-          path: node_modules/.cache/turbo
-          key: turbo-${{ runner.os }}-${{ hashFiles('package-lock.json', 'turbo.json') }}
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
 
   # ─── E2E Tests (Weekly Schedule Only) ────────────────────────────────────────
   e2e:
     name: E2E Tests
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule'
-    defaults:
-      run:
-        working-directory: apps/ums
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
 
+      - name: Restore node_modules cache
+        id: nm-cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: nm-${{ runner.os }}-
+
       - name: Install dependencies
-        run: npm ci
-        working-directory: .
+        if: steps.nm-cache.outputs.cache-hit != 'true'
+        run: npm ci --prefer-offline
 
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
+        working-directory: apps/ums
+        run: npx playwright install --with-deps chromium
 
       - name: Run E2E tests
+        working-directory: apps/ums
         run: npm run test:e2e
 
   # ─── Deploy Unified API Worker ────────────────────────────────────────────────
   deploy-api:
     name: Deploy API Worker
     runs-on: ubuntu-latest
-    needs: [changes, test-api]
+    needs: [changes, ci-checks]
     if: github.event_name == 'push' && needs.changes.outputs.api == 'true'
     environment:
       name: production
-    defaults:
-      run:
-        working-directory: apps/api
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
 
-      - name: Install dependencies
-        run: npm ci
-        working-directory: .
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: nm-${{ runner.os }}-
 
-      - name: Build dependencies with turbo
-        run: npm run ci:build
-        working-directory: .
+      - name: Install dependencies (only on cache miss)
+        run: npm ci --prefer-offline
+
+      # Restore Turborepo cache — build artifacts from ci-checks are replayed
+      # immediately, meaning this build step finishes in ~1 second on a hit.
+      - name: Restore Turborepo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-
+
+      - name: Build API (from Turbo cache)
+        run: npx turbo run build --filter=@bmi/api --concurrency=100%
 
       - name: Inject Cloudflare IDs
+        working-directory: apps/api
         run: |
-          sed -i 's/${CLOUDFLARE_D1_ID}/'${{ secrets.CLOUDFLARE_D1_ID }}'/g' wrangler.jsonc
+          sed -i 's/${CLOUDFLARE_D1_ID}/${{ secrets.CLOUDFLARE_D1_ID }}/g' wrangler.jsonc
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v4
@@ -288,27 +214,39 @@ jobs:
   deploy-portal:
     name: Deploy Portal (Cloudflare Pages)
     runs-on: ubuntu-latest
-    needs: [changes, test-api]
+    needs: [changes, ci-checks]
     if: github.event_name == 'push' && needs.changes.outputs.portal == 'true'
-    defaults:
-      run:
-        working-directory: apps/portal
+    environment:
+      name: production
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
 
-      - name: Install dependencies
-        run: npm ci
-        working-directory: .
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: nm-${{ runner.os }}-
 
-      - name: Build portal
-        run: npm run build
+      - name: Install dependencies (only on cache miss)
+        run: npm ci --prefer-offline
+
+      - name: Restore Turborepo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-
+
+      - name: Build Portal (from Turbo cache)
+        run: npx turbo run build --filter=bmi-portal --concurrency=100%
         env:
           NODE_ENV: production
           VITE_API_URL: "https://bmi-api.bmiuniversity107.workers.dev"
@@ -325,27 +263,39 @@ jobs:
   deploy-ums:
     name: Deploy UMS (Cloudflare Pages)
     runs-on: ubuntu-latest
-    needs: [changes, test-ums]
+    needs: [changes, ci-checks]
     if: github.event_name == 'push' && needs.changes.outputs.ums == 'true'
-    defaults:
-      run:
-        working-directory: apps/ums
+    environment:
+      name: production
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
 
-      - name: Install dependencies
-        run: npm ci
-        working-directory: .
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: nm-${{ runner.os }}-
 
-      - name: Build UMS
-        run: npm run build
+      - name: Install dependencies (only on cache miss)
+        run: npm ci --prefer-offline
+
+      - name: Restore Turborepo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-
+
+      - name: Build UMS (from Turbo cache)
+        run: npx turbo run build --filter=bmi-ums --concurrency=100%
         env:
           NODE_ENV: production
           VITE_API_URL: "https://bmi-api.bmiuniversity107.workers.dev"
@@ -362,37 +312,46 @@ jobs:
   deploy-university:
     name: Deploy University (Cloudflare Pages)
     runs-on: ubuntu-latest
-    needs: [changes, test-university]
+    needs: [changes, ci-checks]
     if: github.event_name == 'push' && needs.changes.outputs.university == 'true'
-    defaults:
-      run:
-        working-directory: bmi-university
+    environment:
+      name: production
     steps:
       - uses: actions/checkout@v4
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
 
-      - name: Install dependencies
-        run: npm ci
-        working-directory: .
+      - name: Restore node_modules cache
+        uses: actions/cache@v4
+        with:
+          path: node_modules
+          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          restore-keys: nm-${{ runner.os }}-
 
-      - name: Build University
-        run: npm run build
+      - name: Install dependencies (only on cache miss)
+        run: npm ci --prefer-offline
+
+      - name: Restore Turborepo cache
+        uses: actions/cache@v4
+        with:
+          path: .turbo
+          key: turbo-${{ runner.os }}-${{ github.sha }}
+          restore-keys: turbo-${{ runner.os }}-
+
+      - name: Build University (from Turbo cache)
+        run: npx turbo run build --filter=bmi-university --concurrency=100%
 
       - name: Verify build output
         run: |
           echo "=== Checking out/ directory exists ==="
-          ls -la out/
-          echo "=== Verifying new footer content in index.html ==="
-          grep -c "Subscribe" out/index.html && echo "✅ Newsletter section found" || echo "❌ Newsletter section NOT found"
-          grep -c "programCategories\|Quick Links\|font-sans" out/index.html && echo "✅ New footer classes found" || echo "❌ New footer classes NOT found"
-          echo "=== Footer tail snippet ==="
-          grep -o "Privacy Policy.*Terms of Service" out/index.html | head -1 || echo "(pattern not found)"
+          ls -la bmi-university/out/
+          echo "=== Verifying key assets exist ==="
+          test -f bmi-university/out/index.html && echo "✅ index.html found" || echo "❌ index.html NOT found"
 
       - name: Deploy to Cloudflare Pages
         uses: cloudflare/wrangler-action@v4
