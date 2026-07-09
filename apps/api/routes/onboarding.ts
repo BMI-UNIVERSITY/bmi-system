@@ -78,7 +78,7 @@ export async function handleUploadStudentDocument(request: Request, env: Env, us
   const docType = url.searchParams.get('doc_type');
   if (!docType) return error('doc_type is required', 400);
 
-  let app = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id FROM applications WHERE user_id = ?').bind(userId).first<{id: string}>();
+  const app = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id FROM applications WHERE user_id = ?').bind(userId).first<{id: string}>();
   let applicationId = app?.id;
   if (!applicationId) {
     applicationId = `STUDENT-PROFILE-${userId}`;

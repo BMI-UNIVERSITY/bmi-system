@@ -32,7 +32,7 @@ export async function handleGetPerformanceMetrics(request: Request, env: Env): P
       recent_requests: metrics.responseTimeMetrics.slice(-10),
       average_response_time_ms: metrics.averageResponseTime,
       endpoint_performance: Object.entries(metrics.endpointPerformance)
-        .map(([endpoint, perf]) => ({
+        .map(([endpoint, perf]: [string, { count: number; avgDuration: number; errorRate: number }]) => ({
           endpoint,
           avg_duration_ms: perf.avgDuration.toFixed(2),
           request_count: perf.count,
@@ -70,7 +70,7 @@ export async function handleGetQueryAnalysis(request: Request, env: Env): Promis
   const metrics = getPerformanceMetrics();
   
   // Analyze query patterns
-  const queryPatterns = metrics.recentQueries.reduce((acc, query) => {
+  const queryPatterns = metrics.recentQueries.reduce((acc: Record<string, { count: number; totalDuration: number; errors: number }>, query) => {
     acc[query.query] = acc[query.query] || { count: 0, totalDuration: 0, errors: 0 };
     acc[query.query].count++;
     acc[query.query].totalDuration += query.duration;

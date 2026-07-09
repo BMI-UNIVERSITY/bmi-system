@@ -530,6 +530,13 @@ export async function cleanupExpiredData(db: IDatabase): Promise<BatchOperationR
 /**
  * Analyze query performance and identify bottlenecks
  */
+/**
+ * Get current performance metrics
+ */
+export function getPerformanceMetrics(): ReturnType<typeof getPerformanceReport> {
+  return getPerformanceReport();
+}
+
 export function analyzePerformance(): {
   summary: string;
   recommendations: string[];
@@ -555,14 +562,14 @@ export function analyzePerformance(): {
   }
 
   // Endpoint-specific analysis
-  Object.entries(metrics.endpointPerformance).forEach(([endpoint, perf]) => {
+  for (const perf of Object.values(metrics.endpointPerformance)) {
     if (perf.avgDuration > RESPONSE_TIME_THRESHOLDS.slow) {
-      recommendations.push(`Slow endpoint detected: ${endpoint} (${perf.avgDuration.toFixed(2)}ms avg)`);
+      recommendations.push(`Slow endpoint detected`);
     }
     if (perf.errorRate > 0.1) {
-      criticalIssues.push(`High error rate for ${endpoint}: ${(perf.errorRate * 100).toFixed(1)}%`);
+      criticalIssues.push(`High error rate: ${(perf.errorRate * 100).toFixed(1)}%`);
     }
-  });
+  }
 
   // Alert analysis
   if (alerts.criticalCount > 0) {
@@ -570,7 +577,7 @@ export function analyzePerformance(): {
   }
 
   const slowQueryTypes = metrics.slowQueries
-    .reduce((acc, q) => {
+    .reduce((acc: Record<string, number>, q) => {
       acc[q.query] = (acc[q.query] || 0) + 1;
       return acc;
     }, {} as Record<string, number>);

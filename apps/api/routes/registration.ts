@@ -195,7 +195,7 @@ export async function handleGetAvailableModules(req: Request, env: Env, userId: 
       programmeId = data.programme?.programme_id || null;
     }
 
-    let { results } = await env.PLATFORM_CONTEXT!.db.prepare(
+    const { results } = await env.PLATFORM_CONTEXT!.db.prepare(
       programmeId
         ? `SELECT c.id, c.code, c.name, c.credits, c.level FROM courses c JOIN programmes p ON c.programme_id = p.id WHERE p.id = ? ORDER BY c.code`
         : `SELECT c.id, c.code, c.name, c.credits, c.level FROM courses c ORDER BY c.code`

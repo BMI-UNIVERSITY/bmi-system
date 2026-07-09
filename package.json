@@ -11,11 +11,12 @@
     "bmi-university"
   ],
   "scripts": {
-    "prepare": "npm run build --workspace=@bmi/ports && npm run build --workspace=@bmi/adapters && npm run build --workspace=@bmi/bootstrap && npm run build --workspace=@bmi/shared && npm run build --workspace=@bmi/rate-limiter && npm run build --workspace=@bmi/api-middleware",
+    "prepare": "husky && npm run build --workspace=@bmi/ports && npm run build --workspace=@bmi/adapters && npm run build --workspace=@bmi/bootstrap && npm run build --workspace=@bmi/shared && npm run build --workspace=@bmi/rate-limiter && npm run build --workspace=@bmi/api-middleware",
     "ci:build": "turbo run build --filter=./packages/*",
     "ci:typecheck": "turbo run type-check typecheck",
     "ci:test": "turbo run test",
-    "ci:lint": "turbo run lint"
+    "ci:lint": "turbo run lint",
+    "ci:all": "turbo run build lint type-check test --concurrency=100%"
   },
   "overrides": {
     "cookie": "^0.7.0",
@@ -37,6 +38,7 @@
     "lightningcss-linux-x64-gnu": "1.32.0"
   },
   "devDependencies": {
+    "husky": "^9.1.7",
     "turbo": "^2.4.4"
   }
 }
