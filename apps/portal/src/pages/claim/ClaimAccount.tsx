@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { API_WORKER_URL } from '@bmi/shared';
+import { api } from '../../lib/api';
 
 export default function ClaimAccount() {
   const [searchParams] = useSearchParams();
@@ -9,11 +9,6 @@ export default function ClaimAccount() {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const navigate = useNavigate();
-
-  const isDev = (import.meta as any).env?.DEV;
-  const BASE = (isDev
-    ? ((import.meta as any).env?.VITE_API_URL || '')
-    : ((import.meta as any).env?.VITE_API_URL || API_WORKER_URL)) + '/api';
 
   useEffect(() => {
     if (searchParams.get('code')) {
@@ -26,19 +21,10 @@ export default function ClaimAccount() {
     setLoading(true);
     setErrorMsg('');
     try {
-      const res = await fetch(`${BASE}/auth/claim`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ admissionCode, password }),
-      });
-      if (res.ok) {
-        navigate('/login', { state: { message: 'Account claimed successfully! You can now log in.' } });
-      } else {
-        const data = await res.json().catch(() => ({}));
-        setErrorMsg((data as any)?.error || 'Failed to claim account. Code may be invalid or expired.');
-      }
-    } catch (err) {
-      setErrorMsg('A network error occurred. Please try again.');
+      await api.auth.claim(admissionCode, password);
+      navigate('/login', { state: { message: 'Account claimed successfully! You can now log in.' } });
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Failed to claim account. Code may be invalid or expired.');
     } finally {
       setLoading(false);
     }

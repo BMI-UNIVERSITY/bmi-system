@@ -110,6 +110,9 @@ export const api = {
 
     mfaEnable: (token: string) =>
       request<{ message: string }>('/auth/mfa/enable', { method: 'POST', body: JSON.stringify({ token }) }),
+      
+    claim: (admissionCode: string, password: string) =>
+      request<{ message: string }>('/auth/claim', { method: 'POST', body: JSON.stringify({ admissionCode, password }) }),
   },
 
   applications: {

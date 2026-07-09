@@ -5,10 +5,19 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
 
+import { api } from '../../lib/api';
+
+vi.mock('../../lib/api', () => ({
+  api: {
+    auth: {
+      claim: vi.fn(),
+    },
+  },
+}));
+
 describe('ClaimAccount Page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    globalThis.fetch = vi.fn();
     window.alert = vi.fn();
   });
 
@@ -38,7 +47,7 @@ describe('ClaimAccount Page', () => {
   });
 
   it('shows "Activating Account..." while submitting', async () => {
-    (globalThis.fetch as any).mockImplementation(() => new Promise(() => {}));
+    vi.mocked(api.auth.claim).mockImplementation(() => new Promise(() => {}));
 
     renderWithRouter();
     const inputs = screen.getAllByRole('textbox');
@@ -51,7 +60,7 @@ describe('ClaimAccount Page', () => {
   });
 
   it('navigates to login on successful claim', async () => {
-    (globalThis.fetch as any).mockResolvedValue({ ok: true });
+    vi.mocked(api.auth.claim).mockResolvedValue({ message: 'Success' });
 
     renderWithRouter();
     const inputs = screen.getAllByRole('textbox');
@@ -66,10 +75,7 @@ describe('ClaimAccount Page', () => {
   });
 
   it('shows error alert on failed claim', async () => {
-    (globalThis.fetch as any).mockResolvedValue({
-      ok: false,
-      json: () => Promise.resolve({ error: 'Invalid admission code' }),
-    });
+    vi.mocked(api.auth.claim).mockRejectedValue(new Error('Invalid admission code'));
 
     renderWithRouter();
     const inputs = screen.getAllByRole('textbox');
@@ -84,7 +90,7 @@ describe('ClaimAccount Page', () => {
   });
 
   it('shows generic alert on network error', async () => {
-    (globalThis.fetch as any).mockRejectedValue(new Error('Network error'));
+    vi.mocked(api.auth.claim).mockRejectedValue(new Error('Network error'));
 
     renderWithRouter();
     const inputs = screen.getAllByRole('textbox');
@@ -94,7 +100,7 @@ describe('ClaimAccount Page', () => {
     fireEvent.click(screen.getByRole('button', { name: /Activate Account/i }));
 
     await waitFor(() => {
-      expect(screen.getByText('A network error occurred. Please try again.')).toBeInTheDocument();
+      expect(screen.getByText('Network error')).toBeInTheDocument();
     });
   });
 });
