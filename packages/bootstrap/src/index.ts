@@ -129,7 +129,7 @@ function buildCloudflare(env: any): PlatformContext {
     lms: new MemoryLMSAdapter(), // TODO: replace with Moodle/Canvas adapter
     email: emailProvider,
     payment: new MemoryPaymentAdapter(), // TODO: replace with Stripe/PayPal adapter
-    document: new MemoryDocumentAdapter(), // TODO: replace with pdf-lib/Puppeteer adapter
+    document: new PdfDocumentAdapter(),
     notification: new MemoryNotificationAdapter(), // TODO: replace with Twilio/Slack adapter
     storage: storageProvider,
   };

@@ -30,6 +30,7 @@ import type { IDatabase } from '@bmi/ports';
 import { generateUID } from './uid';
 import { generateRegNo } from './reg_number';
 import { enqueueProvisioningJobs } from './provisioning';
+import type { PlatformContext } from '@bmi/bootstrap';
 
 // ─── Stage constants ──────────────────────────────────────────────────────────
 
@@ -42,6 +43,7 @@ export const STAGES = {
   STUDENT_RECORD_CREATED:           'student_record_created',
   PROGRAMME_ENROLLED:               'programme_enrolled',
   REGISTRATION_NUMBER_GENERATED:    'registration_number_generated',
+  DOCUMENTS_GENERATED:              'documents_generated',
   PROVISIONING_QUEUED:              'provisioning_queued',
   STUDENT_ACTIVE:                   'student_active',
   GRADUATED:                        'graduated',
@@ -143,7 +145,8 @@ export interface AdmissionContext {
  */
 export async function runAdmissionPipeline(
   db: IDatabase,
-  ctx: AdmissionContext
+  ctx: AdmissionContext,
+  platform?: PlatformContext
 ): Promise<{ uid: string | null; regNo: string | null }> {
   const { applicationId, userId, actorId, program } = ctx;
   const base = `${applicationId}`;
@@ -393,8 +396,69 @@ export async function runAdmissionPipeline(
     }
   }
 
-  // ─── Step 6: Mark provisioning queued ────────────────────────────────────
-  // Actual provisioning jobs are dispatched in Phase 6 (provisioning_jobs table).
+  // ─── Step 6: Generate admission documents ──────────────────────────────
+  const docKey = `${base}:documents_generated`;
+  if (uid && platform?.document && !(await isStageComplete(db, docKey))) {
+    try {
+      const user = await db.prepare(
+        `SELECT u.first_name, u.last_name, s.reg_no
+         FROM users u
+         LEFT JOIN students s ON s.user_id = u.id
+         WHERE u.id = ?`
+      ).bind(userId).first<{ first_name: string; last_name: string; reg_no: string | null }>();
+
+      if (user) {
+        const fullName = `${user.first_name} ${user.last_name}`;
+        const effectiveRegNo = regNo || user.reg_no || 'PENDING';
+
+        await Promise.all([
+          platform.document.generateDocument({
+            type: 'admission_letter',
+            userId,
+            metadata: { name: fullName, program, regNo: effectiveRegNo, uid, date: new Date().toISOString() },
+          }),
+          platform.document.generateDocument({
+            type: 'id_card',
+            userId,
+            metadata: { name: fullName, program, regNo: effectiveRegNo, uid },
+          }),
+        ]);
+
+        await appendLifecycleEvent(db, {
+          idempotencyKey: docKey,
+          stage: STAGES.DOCUMENTS_GENERATED,
+          status: 'completed',
+          uid,
+          applicationId,
+          actorId,
+          notes: 'Admission letter and ID card generated',
+        });
+      } else {
+        await appendLifecycleEvent(db, {
+          idempotencyKey: docKey,
+          stage: STAGES.DOCUMENTS_GENERATED,
+          status: 'skipped',
+          uid,
+          applicationId,
+          actorId,
+          notes: 'User not found — documents deferred',
+        });
+      }
+    } catch (e) {
+      await appendLifecycleEvent(db, {
+        idempotencyKey: docKey,
+        stage: STAGES.DOCUMENTS_GENERATED,
+        status: 'failed',
+        uid,
+        applicationId,
+        actorId,
+        errorDetail: String(e),
+      });
+    }
+  }
+
+  // ─── Step 7: Mark provisioning queued ────────────────────────────────────
+  // Actual provisioning jobs are dispatched (provisioning_jobs table).
   const provKey = `${base}:provisioning_queued`;
   if (uid && !(await isStageComplete(db, provKey))) {
     try {

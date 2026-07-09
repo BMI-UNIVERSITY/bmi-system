@@ -1,10 +1,6 @@
 import type { IDatabase } from '@bmi/ports';
 /**
  * BMI UMS — Provisioning Job Dispatcher
- * ─────────────────────────────────────────────────────────────────────────────
- * Enqueues and processes downstream provisioning jobs (LMS, Library, Finance, Email, ID Card).
- * Designed for async execution (via Cloudflare Queues or ctx.waitUntil).
- * Implements exponential backoff and dead-letter alerting identical to webhooks.
  */
 
 import type { Env } from './types';
@@ -21,9 +17,6 @@ export interface ProvisioningJob {
   attempts: number;
 }
 
-/**
- * Enqueue a set of provisioning jobs for a newly admitted student.
- */
 export async function enqueueProvisioningJobs(db: IDatabase, uid: string): Promise<void> {
   const jobs: ProvisioningJobType[] = ['finance', 'library', 'lms', 'portal', 'email', 'id_card'];
   const now = new Date().toISOString();
@@ -44,7 +37,6 @@ async function deadLetterJob(env: Env, job: ProvisioningJob, lastError: string):
     `UPDATE provisioning_jobs SET status='dead', last_error=?, completed_at=datetime('now') WHERE id=?`
   ).bind(lastError, job.id).run();
 
-  // Send ops alert
   if (env.OPS_ALERT_EMAIL && env.RESEND_API_KEY) {
     await sendEmail(env, {
       to: env.OPS_ALERT_EMAIL,
@@ -62,32 +54,152 @@ async function deadLetterJob(env: Env, job: ProvisioningJob, lastError: string):
             Review and retry at: Admin → Infrastructure → Provisioning
           </p>
         </div>`
-    }).catch(() => { /* Suppress alert failure */ });
+    }).catch(() => {});
   }
 }
 
-/** Stub external API call for provisioning (Simulates HTTP failures and successes) */
 async function executeJob(env: Env, job: ProvisioningJob): Promise<void> {
-  // In a real system, this would branch per job_type and call external APIs:
-  // e.g., if (job.job_type === 'lms') await fetch('https://lms.bmi.edu/api/provision', ...)
-  
-  // Simulated workload
-  await new Promise(r => setTimeout(r, 200));
+  const ctx = env.PLATFORM_CONTEXT!;
+  const uid = job.uid;
 
-  // Simulate ~10% transient failure rate
-  if (Math.random() < 0.1) {
-    throw new Error('Simulated external service timeout');
+  switch (job.job_type) {
+    case 'email': {
+      const user = await ctx.db.prepare(
+        `SELECT u.id, u.first_name, u.last_name, u.email, p.uid
+         FROM users u
+         JOIN persons p ON u.person_id = p.id
+         WHERE p.uid = ?`
+      ).bind(uid).first<{ id: string; first_name: string; last_name: string; email: string; uid: string }>();
+      if (!user) throw new Error('User not found for email provisioning');
+
+      const emailLocal = user.email.split('@')[0];
+      const studentEmail = `${emailLocal}@${env.STUDENT_EMAIL_DOMAIN || 'student.bmi.edu'}`;
+      const tempPassword = crypto.randomUUID().split('-').slice(0, 2).join('').toUpperCase() + 'Ab1!';
+
+      await ctx.email.createMailbox(uid, studentEmail, tempPassword);
+
+      await ctx.db.prepare(
+        `UPDATE users SET student_email = ?, updated_at = datetime('now') WHERE id = ?`
+      ).bind(studentEmail, user.id).run();
+
+      if (env.RESEND_API_KEY) {
+        const { buildEmailLayout } = await import('./email');
+        await sendEmail(env, {
+          to: user.email,
+          subject: 'BMI University — Your Student Email Account',
+          html: buildEmailLayout('Student Email Account', `
+            <h2 style="color:#0f172a;">Dear ${user.first_name},</h2>
+            <p style="color:#475569;line-height:1.6;">Your BMI University student email account has been created.</p>
+            <div style="background:#f8fafc;border-left:4px solid #d4af37;padding:16px;margin:20px 0;border-radius:4px;">
+              <p><strong>Email:</strong> ${studentEmail}</p>
+              <p><strong>Temporary Password:</strong> ${tempPassword}</p>
+            </div>
+            <p style="color:#475569;line-height:1.6;">Please change your password on first login. Your email account provides access to university communications and services.</p>
+          `),
+        });
+      }
+      break;
+    }
+
+    case 'lms': {
+      const student = await ctx.db.prepare(
+        `SELECT s.user_id, s.programme, p.uid
+         FROM students s
+         JOIN persons p ON s.user_id = (SELECT id FROM users WHERE person_id = p.id LIMIT 1)
+         WHERE p.uid = ?`
+      ).bind(uid).first<{ user_id: string; programme: string; uid: string }>();
+      if (!student) {
+        console.warn(`[provisioning] LMS: No student found for uid ${uid} — skipping`);
+        return;
+      }
+
+      const courses = await ctx.db.prepare(
+        `SELECT id FROM courses WHERE programme_id = (
+           SELECT programme_id FROM student_programmes WHERE uid = ? AND current_flag = 1 LIMIT 1
+         ) LIMIT 5`
+      ).bind(uid).all<{ id: string }>();
+
+      if (courses?.results?.length) {
+        for (const course of courses.results) {
+          try {
+            await ctx.lms.enrollStudent(student.user_id, course.id);
+          } catch (e) {
+            console.warn(`[provisioning] LMS enroll failed for course ${course.id}:`, e);
+          }
+        }
+      }
+
+      await ctx.db.prepare(
+        `INSERT OR IGNORE INTO lifecycle_events
+         (id, uid, application_id, stage, status, idempotency_key, notes)
+         VALUES (lower(hex(randomblob(16))), ?, NULL, 'lms_provisioned', 'completed', ?, ?)`
+      ).bind(uid, `lms:${uid}`, `Enrolled in ${courses?.results?.length || 0} course(s)`).run();
+      break;
+    }
+
+    case 'finance': {
+      const studentRow = await ctx.db.prepare(
+        `SELECT s.user_id, s.programme, p.uid
+         FROM students s
+         JOIN persons p ON s.user_id = (SELECT id FROM users WHERE person_id = p.id LIMIT 1)
+         WHERE p.uid = ?`
+      ).bind(uid).first<{ user_id: string; programme: string }>();
+      if (!studentRow) throw new Error('Student not found for finance provisioning');
+
+      await ctx.db.prepare(
+        `INSERT INTO invoices (id, user_id, amount, description, due_date, status, created_at)
+         VALUES (lower(hex(randomblob(16))), ?, 1000, ?, datetime('now', '+30 days'), 'pending', datetime('now'))`
+      ).bind(studentRow.user_id, `Tuition fee: ${studentRow.programme || 'Program'}`).run();
+      break;
+    }
+
+    case 'library': {
+      await ctx.db.prepare(
+        `INSERT OR IGNORE INTO library_members (uid, status, created_at)
+         VALUES (?, 'active', datetime('now'))`
+      ).bind(uid).run();
+      break;
+    }
+
+    case 'portal': {
+      await ctx.db.prepare(
+        `UPDATE provisioning_jobs SET status='completed', completed_at=datetime('now') WHERE id=?`
+      ).bind(job.id).run();
+      break;
+    }
+
+    case 'id_card': {
+      const info = await ctx.db.prepare(
+        `SELECT u.first_name, u.last_name, s.reg_no, s.programme, p.uid
+         FROM persons p
+         JOIN users u ON u.person_id = p.id
+         JOIN students s ON s.user_id = u.id
+         WHERE p.uid = ?`
+      ).bind(uid).first<{ first_name: string; last_name: string; reg_no: string; programme: string; uid: string }>();
+
+      if (info && ctx.document) {
+        await ctx.document.generateDocument({
+          type: 'id_card',
+          userId: uid,
+          metadata: {
+            name: `${info.first_name} ${info.last_name}`,
+            uid: info.uid,
+            regNo: info.reg_no,
+            program: info.programme,
+          },
+        });
+      }
+      break;
+    }
+
+    default:
+      throw new Error(`Unknown provisioning job type: ${job.job_type}`);
   }
 }
 
-/**
- * Process a single job with up to 3 retry attempts and exponential backoff.
- * Non-throwing — handles all internal state updates.
- */
 export async function processProvisioningJob(env: Env, job: ProvisioningJob): Promise<void> {
-  const delays = [1000, 4000, 16000]; // ms
-  
-  // Mark as processing
+  const delays = [1000, 4000, 16000];
+
   await env.PLATFORM_CONTEXT!.db.prepare(`UPDATE provisioning_jobs SET status='processing' WHERE id=?`)
     .bind(job.id).run();
 
@@ -99,8 +211,7 @@ export async function processProvisioningJob(env: Env, job: ProvisioningJob): Pr
     let lastError = '';
     try {
       await executeJob(env, job);
-      
-      // Success
+
       await env.PLATFORM_CONTEXT!.db.prepare(
         `UPDATE provisioning_jobs SET status='completed', attempts=?, completed_at=datetime('now') WHERE id=?`
       ).bind(attempt + 1, job.id).run();
@@ -109,7 +220,6 @@ export async function processProvisioningJob(env: Env, job: ProvisioningJob): Pr
       lastError = err instanceof Error ? err.message : String(err);
     }
 
-    // Update attempts
     await env.PLATFORM_CONTEXT!.db.prepare(
       `UPDATE provisioning_jobs SET attempts=?, last_error=?, status='failed' WHERE id=?`
     ).bind(attempt + 1, lastError, job.id).run().catch(() => {});
@@ -120,16 +230,11 @@ export async function processProvisioningJob(env: Env, job: ProvisioningJob): Pr
   }
 }
 
-/**
- * Dispatch all pending jobs asynchronously in the background.
- * Safe to call via ctx.waitUntil().
- */
 export async function dispatchPendingJobs(env: Env): Promise<void> {
   const { results } = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT * FROM provisioning_jobs WHERE status IN ('pending', 'failed') AND attempts < 3 LIMIT 20`
   ).all<ProvisioningJob>();
 
-  // Process concurrently in the background
   const promises = results.map(job => processProvisioningJob(env, job));
   await Promise.allSettled(promises);
 }

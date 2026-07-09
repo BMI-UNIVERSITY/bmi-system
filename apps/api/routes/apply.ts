@@ -409,6 +409,7 @@ export async function handleUpdateStatus(
 
   const oldStatus = app.status;
   let pipelineResult: { uid: string | null; registration_number: string | null } | null = null;
+  let admissionCode: string | undefined;
 
   const sanitizedNotes = notes ? notes.replace(/<[^>]*>/g, '').substring(0, 2000) : null;
 
@@ -433,8 +434,14 @@ export async function handleUpdateStatus(
   await logAdminAction(env, adminId, 'update_application_status', 'application', appId, { old_status: oldStatus, new_status: status, notes: sanitizedNotes }, request);
 
   if (status === 'accepted') {
+    // Generate admission code for account claim
+    admissionCode = crypto.randomUUID().split('-')[0].toUpperCase() + crypto.randomUUID().split('-')[0].toUpperCase();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
     await executeWithMonitoring(
-      env.PLATFORM_CONTEXT!.db.prepare(`UPDATE users SET role = 'student', updated_at = datetime('now') WHERE id = ?`).bind(app.user_id),
+      env.PLATFORM_CONTEXT!.db.prepare(
+        `UPDATE users SET role = 'student', admission_code = ?, admission_code_expires_at = ?, updated_at = datetime('now') WHERE id = ?`
+      ).bind(admissionCode, expiresAt, app.user_id),
       'promote_user_to_student'
     );
 
@@ -447,7 +454,7 @@ export async function handleUpdateStatus(
             userId: app.user_id,
             actorId: adminId,
             program: app.program,
-          });
+          }, env.PLATFORM_CONTEXT!.document);
           await dispatchPendingJobs(env);
         })().catch(e => console.error('[lifecycle] Admission pipeline background error:', e)));
       } else {
@@ -456,7 +463,7 @@ export async function handleUpdateStatus(
           userId: app.user_id,
           actorId: adminId,
           program: app.program,
-        });
+        }, env.PLATFORM_CONTEXT!.document);
         pipelineResult = { uid: result.uid, registration_number: result.regNo };
         await dispatchPendingJobs(env);
       }
@@ -471,7 +478,7 @@ export async function handleUpdateStatus(
       sendEmail(env, {
         to: app.email,
         subject: `BMI University — Application Update`,
-        html: statusUpdateEmail(app.first_name, status, app.program),
+        html: statusUpdateEmail(app.first_name, status, app.program, sanitizedNotes || undefined, admissionCode),
       })
     );
   }

@@ -6,7 +6,7 @@ import {
   handleListRecommendations,
 } from './recommendations';
 
-vi.mock('../lib/email', () => ({ sendEmail: vi.fn().mockResolvedValue(undefined) }));
+vi.mock('../lib/email', () => ({ sendEmail: vi.fn().mockResolvedValue(undefined), buildEmailLayout: vi.fn().mockReturnValue('<html></html>') }));
 vi.mock('../lib/config', () => ({ getPortalUrl: vi.fn().mockReturnValue('https://portal.test') }));
 
 function makeDB(sequence: Array<any>) {

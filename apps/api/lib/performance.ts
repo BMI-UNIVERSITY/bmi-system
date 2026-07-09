@@ -1,4 +1,4 @@
-import type { IDatabase, IPreparedStatement } from '@bmi/ports';
+import type { IDatabase, IPreparedStatement, IDocumentGenerator } from '@bmi/ports';
 /**
  * Performance Monitoring and Database Optimization Utilities
  * Provides query performance tracking, batch operations, and monitoring
@@ -308,7 +308,8 @@ export async function executeAdmissionPipelineOptimized(
     userId: string;
     actorId: string;
     program: string;
-  }
+  },
+  document?: IDocumentGenerator
 ): Promise<{ uid: string | null; regNo: string | null }> {
   const { applicationId, userId, actorId, program } = context;
 
@@ -418,6 +419,24 @@ export async function executeAdmissionPipelineOptimized(
   } catch (e) {
     console.error('Error generating reg_no:', e);
   }
+
+  // Step 5: Generate admission documents (non-blocking)
+  if (document && uid) {
+    const fullName = user ? `${user.first_name} ${user.last_name}` : uid;
+    const effectiveRegNo = regNo || 'PENDING';
+    const meta = { name: fullName, program, regNo: effectiveRegNo, uid };
+
+    Promise.all([
+      document.generateDocument({ type: 'admission_letter', userId, metadata: meta }).catch(e =>
+        console.error('[doc] Admission letter generation failed:', e)
+      ),
+      document.generateDocument({ type: 'id_card', userId, metadata: meta }).catch(e =>
+        console.error('[doc] ID card generation failed:', e)
+      ),
+    ]).catch(() => {});
+  }
+
+  return { uid, regNo };
 }
 
 export function getPerformanceReport(): {

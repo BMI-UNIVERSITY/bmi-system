@@ -1,6 +1,7 @@
 import { Env, ok, error, typedJson } from '../lib/types';
 import { ExecutionContext } from '@cloudflare/workers-types';
 import { validatePasswordStrength, isCommonPassword, hashPassword } from '../lib/jwt';
+import { sendEmail, buildEmailLayout } from '../lib/email';
 
 interface ClaimBody {
   admissionCode?: string;
@@ -16,7 +17,7 @@ export async function handleClaimAccount(req: Request, env: Env, ctx: ExecutionC
   }
 
   const strength = validatePasswordStrength(password);
-  if (!strength.isValid) return error(strength.error!);
+  if (!strength.valid) return error(strength.errors[0]);
   if (isCommonPassword(password)) return error('This password is too common. Please choose a stronger password.');
 
   try {
@@ -28,11 +29,43 @@ export async function handleClaimAccount(req: Request, env: Env, ctx: ExecutionC
       return error('Invalid or expired admission code, or account already claimed.', 400);
     }
 
-    const hashedPassword = await hashPassword(password);
+    const hashedPassword = await hashPassword(password, env.PASSWORD_PEPPER);
+
+    const userInfo = await env.PLATFORM_CONTEXT!.db.prepare(
+      `SELECT first_name, email FROM users WHERE id = ?`
+    ).bind(user.id).first<{ first_name: string; email: string }>();
 
     await env.PLATFORM_CONTEXT!.db.prepare(
       `UPDATE users SET password_hash = ?, account_claimed = 1, admission_code = NULL, admission_code_expires_at = NULL WHERE id = ?`
     ).bind(hashedPassword, user.id).run();
+
+    if (userInfo && env.RESEND_API_KEY) {
+      ctx.waitUntil(sendEmail(env, {
+        to: userInfo.email,
+        subject: 'Welcome to BMI University — Complete Your Onboarding',
+        html: buildEmailLayout('Account Activated', `
+          <h2 style="color: #0f172a;">Welcome, ${userInfo.first_name}!</h2>
+          <p style="color: #475569; line-height: 1.6;">
+            Your account has been successfully claimed. You now have access to the BMI University Student Portal.
+          </p>
+          <div style="margin: 24px 0; padding: 20px 24px; background: #f8fafc; border-left: 4px solid #d4af37; border-radius: 4px;">
+            <p style="margin: 0 0 8px; color: #0f172a; font-weight: 700; font-size: 15px;">Your Next Steps:</p>
+            <ol style="color: #475569; line-height: 1.8; margin: 0; padding-left: 20px;">
+              <li><strong>Complete Registration</strong> — Log in and complete your online registration (personal details, address, programme, modules)</li>
+              <li><strong>Upload Documents</strong> — Upload your ID photo and any pending documents</li>
+              <li><strong>Pay Fees</strong> — Review your tuition fees and make payment through the portal</li>
+              <li><strong>Check Timetable</strong> — View your class schedule once modules are selected</li>
+            </ol>
+          </div>
+          <p style="color: #475569; line-height: 1.6;">
+            Log in now at the student portal to get started.
+          </p>
+          <p style="color: #475569; line-height: 1.6;">
+            If you have any questions, contact our admissions office at bmiuniversity8@gmail.com or call 704-607-5540.
+          </p>
+        `),
+      }).catch(e => console.error('[claim] Welcome email failed:', e)));
+    }
 
     return ok({ message: 'Account claimed successfully.' });
   } catch (e: unknown) {

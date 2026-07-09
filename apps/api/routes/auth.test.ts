@@ -21,6 +21,7 @@ vi.mock('../lib/jwt', () => ({
 
 vi.mock('../lib/email', () => ({
   sendEmail: vi.fn().mockResolvedValue(undefined),
+  buildEmailLayout: vi.fn().mockReturnValue('<html></html>'),
 }));
 
 vi.mock('../lib/totp', () => ({

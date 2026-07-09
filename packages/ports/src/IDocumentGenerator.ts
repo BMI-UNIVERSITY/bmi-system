@@ -1,5 +1,5 @@
 
-export type DocumentType = 'transcript' | 'certificate' | 'enrollment_letter' | 'good_standing';
+export type DocumentType = 'transcript' | 'certificate' | 'enrollment_letter' | 'good_standing' | 'admission_letter' | 'id_card';
 
 export interface Document {
   id: string;

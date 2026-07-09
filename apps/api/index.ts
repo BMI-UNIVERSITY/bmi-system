@@ -46,7 +46,7 @@ import { handleClaimAccount } from './routes/claim';
 import { handleGetOnboardingStatus, handleUploadStudentDocument } from './routes/onboarding';
 import { handleLmsCourses, handleLmsGrades } from './routes/lms';
 import { handleCreatePaymentIntent, handlePaymentWebhook } from './routes/payment';
-import { handleRegistrationStep } from './routes/registration';
+import { handleSaveRegistrationStep, handleGetRegistrationStatus, handleCompleteRegistration, handleGetAvailableModules } from './routes/registration';
 import { handleTransitionToAlumni } from './routes/alumni';
 
 const log = createLogger('bmi-api');
@@ -222,7 +222,10 @@ const ROUTES: Route[] = [
   { method: 'GET', path: /^\/api\/lms\/grades$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleLmsGrades(req, env, auth!.user.sub) },
   { method: 'POST', path: /^\/api\/payment\/create-intent$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleCreatePaymentIntent(req, env, auth!.user.sub) },
   { method: 'POST', path: /^\/api\/payment\/webhook$/, roles: undefined, handler: async (req, env, p, auth, ctx) => handlePaymentWebhook(req, env) },
-  { method: 'POST', path: /^\/api\/registration\/([^/]+)$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleRegistrationStep(req, env, auth!.user.sub, p[1]) },
+  { method: 'GET', path: /^\/api\/registration\/status$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleGetRegistrationStatus(req, env, auth!.user.sub) },
+  { method: 'POST', path: /^\/api\/registration\/complete$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleCompleteRegistration(req, env, auth!.user.sub, ctx) },
+  { method: 'GET', path: /^\/api\/registration\/modules$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleGetAvailableModules(req, env, auth!.user.sub) },
+  { method: 'POST', path: /^\/api\/registration\/([^/]+)$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleSaveRegistrationStep(req, env, auth!.user.sub, p[1]) },
   { method: 'POST', path: /^\/api\/alumni\/transition$/, roles: ['admin'], handler: async (req, env, p, auth, ctx) => handleTransitionToAlumni(req, env, auth!.user.sub) },
 ];
 
