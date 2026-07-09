@@ -1,1 +1,7 @@
-npx turbo run type-check --concurrency=100%
+# Skip type-check if env var SKIP_CI=true (pre-commit runs before commit exists,
+# so commit-message check is handled in pre-push instead)
+if [ "$SKIP_CI" = "true" ]; then
+  echo "⏩ Skipping type-check (SKIP_CI=true)"
+else
+  npx turbo run type-check --concurrency=100%
+fi

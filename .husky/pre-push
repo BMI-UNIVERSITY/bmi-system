@@ -1,1 +1,8 @@
-npm run ci:all
+# Skip full CI if commit message contains [direct] or env var SKIP_CI=true
+COMMIT_MSG=$(git log -1 --pretty=%B)
+if echo "$COMMIT_MSG" | grep -q "\[direct\]" || [ "$SKIP_CI" = "true" ]; then
+  echo "⏩ Skipping CI pipeline ([direct] flag or SKIP_CI=true)"
+  npx turbo run build --concurrency=100%
+else
+  npm run ci:all
+fi
