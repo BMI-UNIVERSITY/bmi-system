@@ -73,7 +73,7 @@ export default function Footer() {
           </p>
 
           <Link href="/accreditation" aria-label="QAHE Accreditation" style={{ display: "inline-block", marginTop: "4px" }}>
-            <div style={{
+            <span style={{
               background: "#ffffff",
               padding: "6px 10px",
               borderRadius: "6px",
@@ -95,7 +95,7 @@ export default function Footer() {
                   display: "block"
                 }} 
               />
-            </div>
+            </span>
           </Link>
 
           {/* Social icons */}

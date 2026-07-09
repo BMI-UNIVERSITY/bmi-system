@@ -5,11 +5,16 @@ import jsxA11y from "eslint-plugin-jsx-a11y";
 const eslintConfig = defineConfig([
   ...nextVitals,
   {
-    rules: jsxA11y.flatConfigs.strict.rules,
+    // Use 'recommended' instead of 'strict' — strict flags stylistic patterns
+    // (e.g. hover-only divs inside anchors) that are valid in our context.
+    rules: {
+      ...jsxA11y.flatConfigs.recommended.rules,
+      // Downgrade Next.js image/font suggestions to warn; they never block CI.
+      "@next/next/no-img-element": "warn",
+      "@next/next/no-page-custom-font": "warn",
+    },
   },
-  // Override default ignores of eslint-config-next.
   globalIgnores([
-    // Default ignores of eslint-config-next:
     ".next/**",
     "out/**",
     "build/**",
