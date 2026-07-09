@@ -4,7 +4,7 @@
  * These verify the audit finding #2 fix:
  *   "Review all console.log statements. Mask emails, student IDs, and names."
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createLogger, requestLogger } from './logger';
 
 describe('Logger — PII Redaction', () => {
@@ -12,6 +12,10 @@ describe('Logger — PII Redaction', () => {
 
   beforeEach(() => {
     consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('redacts email field from log context', () => {

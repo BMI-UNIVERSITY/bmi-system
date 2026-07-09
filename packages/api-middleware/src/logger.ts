@@ -98,9 +98,7 @@ export interface Logger {
  * @param workerName  Logical name, e.g. "bmi-auth"
  * @param minLevel    Optional override (default: "info")
  */
-export function createLogger(workerName: string, minLevel?: LogLevel): Logger {
-  if (minLevel) MIN_LEVEL = minLevel;
-
+export function createLogger(workerName: string): Logger {
   function makeLogger(defaults: Record<string, unknown> = {}): Logger {
     return {
       debug: (msg, ctx = {}) => emit('debug', workerName, msg, { ...defaults, ...ctx }),
