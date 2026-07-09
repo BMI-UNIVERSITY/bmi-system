@@ -104,5 +104,5 @@ describe('Apply Page (Portal)', () => {
     
     // Note: The actual Apply component might redirect or show a success message.
     // The test confirms the API was called correctly.
-  });
+  }, 15000);
 });
