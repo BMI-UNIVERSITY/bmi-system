@@ -412,6 +412,15 @@ export async function executeAdmissionPipelineOptimized(
            (id, uid, application_id, stage, status, idempotency_key, actor_id, notes)
            VALUES (lower(hex(randomblob(16))), ?, ?, 'registration_number_generated', 'completed', ?, ?, ?)`
         ).bind(uid, applicationId, `${applicationId}:registration_number_generated`, actorId, `Registration number: ${regNo}`)
+      ];
+      await executeBatch(db, updateOps);
+    }
+  } catch (e) {
+    console.error('Error generating reg_no:', e);
+  }
+}
+
+export function getPerformanceReport(): {
   recentQueries: QueryMetrics[];
   averageQueryTime: number;
   slowQueries: QueryMetrics[];

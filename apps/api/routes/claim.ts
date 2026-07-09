@@ -1,6 +1,6 @@
 import { Env, ok, error, typedJson } from '../lib/types';
 import { ExecutionContext } from '@cloudflare/workers-types';
-import { validatePasswordStrength, isCommonPassword, hashPassword } from './auth';
+import { validatePasswordStrength, isCommonPassword, hashPassword } from '../lib/jwt';
 
 interface ClaimBody {
   admissionCode?: string;
@@ -16,7 +16,7 @@ export async function handleClaimAccount(req: Request, env: Env, ctx: ExecutionC
   }
 
   const strength = validatePasswordStrength(password);
-  if (!strength.valid) return error(strength.errors.join('; '));
+  if (!strength.isValid) return error(strength.error!);
   if (isCommonPassword(password)) return error('This password is too common. Please choose a stronger password.');
 
   try {

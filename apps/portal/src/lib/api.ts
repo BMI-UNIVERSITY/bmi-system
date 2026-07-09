@@ -199,6 +199,20 @@ export const api = {
   },
 
   student: {
+    getOnboardingStatus: () => request<{ tasks: any[]; progress: number; isComplete: boolean }>('/student/onboarding'),
+    uploadDocument: (docType: string, file: File) => {
+      const fd = new FormData();
+      fd.append('file', file);
+      const csrfToken = getCsrfToken();
+      const headers: Record<string, string> = {};
+      if (csrfToken) headers['X-CSRF-Token'] = csrfToken;
+      return fetch(`${BASE}/student/documents/upload?doc_type=${encodeURIComponent(docType)}`, {
+        method: 'POST',
+        credentials: 'include',
+        headers,
+        body: fd,
+      }).then(r => r.json());
+    },
     getDashboard: () => request<any>('/student/dashboard'),
     getCourses: (term?: string) => {
       const qs = term ? `?term=${encodeURIComponent(term)}` : '';

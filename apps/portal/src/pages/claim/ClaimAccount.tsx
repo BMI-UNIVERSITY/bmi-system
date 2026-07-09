@@ -29,7 +29,7 @@ export default function ClaimAccount() {
         navigate('/login', { state: { message: 'Account claimed successfully! You can now log in.' } });
       } else {
         const data = await res.json().catch(() => ({}));
-        setErrorMsg(data?.error || 'Failed to claim account. Code may be invalid or expired.');
+        setErrorMsg((data as any)?.error || 'Failed to claim account. Code may be invalid or expired.');
       }
     } catch (err) {
       setErrorMsg('A network error occurred. Please try again.');

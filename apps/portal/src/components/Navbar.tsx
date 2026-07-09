@@ -47,7 +47,7 @@ export default function Navbar() {
                 <Link to="/student/academics" className={`navbar-link${location.pathname === '/student/academics' ? ' active' : ''}`}>Academics</Link>
                 <Link to="/student/finances" className={`navbar-link${location.pathname === '/student/finances' ? ' active' : ''}`}>Finances</Link>
                 <Link to="/registration" className={`navbar-link${location.pathname === '/registration' ? ' active' : ''}`}>Registration</Link>
-                <Link to="/documents" className={`navbar-link${location.pathname === '/documents' ? ' active' : ''}`}>Documents</Link>
+                <Link to="/student/documents" className={`navbar-link${location.pathname === '/student/documents' ? ' active' : ''}`}>Documents</Link>
                 <Link to="/status" className={`navbar-link${location.pathname === '/status' ? ' active' : ''}`}>My Application</Link>
               </>
             ) : user.role === 'alumni' ? (

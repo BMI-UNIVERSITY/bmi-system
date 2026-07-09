@@ -22,8 +22,8 @@ export async function handleRegister(request: Request, env: Env, ctx?: Execution
     Promise.resolve(isCommonPassword(password))
   ]);
 
-  if (!strengthCheck.valid) {
-    return error(strengthCheck.errors.join('; '));
+  if (!strengthCheck.isValid) {
+    return error(strengthCheck.error!);
   }
 
   if (commonPasswordCheck) {

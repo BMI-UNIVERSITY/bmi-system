@@ -43,6 +43,7 @@ import {
   handleVerifyCertificate, handleCertificateVerificationStats,
 } from './routes/ums-stats';
 import { handleClaimAccount } from './routes/claim';
+import { handleGetOnboardingStatus, handleUploadStudentDocument } from './routes/onboarding';
 import { handleLmsCourses, handleLmsGrades } from './routes/lms';
 import { handleCreatePaymentIntent, handlePaymentWebhook } from './routes/payment';
 import { handleRegistrationStep } from './routes/registration';
@@ -215,6 +216,8 @@ const ROUTES: Route[] = [
   { method: 'GET', path: /^\/api\/v1\/certificates\/verification\/stats$/, roles: ['admin', 'staff'], handler: async (req, env, p, auth, ctx) => handleCertificateVerificationStats(req, env) },
   // Multi-Agent Implementation Routes
   { method: 'POST', path: /^\/api\/auth\/claim$/, roles: undefined, handler: async (req, env, p, auth, ctx) => handleClaimAccount(req, env, ctx) },
+  { method: 'GET', path: /^\/api\/student\/onboarding$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleGetOnboardingStatus(req, env, auth!.user.sub) },
+  { method: 'POST', path: /^\/api\/student\/documents\/upload$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleUploadStudentDocument(req, env, auth!.user.sub) },
   { method: 'GET', path: /^\/api\/lms\/courses$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleLmsCourses(req, env, auth!.user.sub) },
   { method: 'GET', path: /^\/api\/lms\/grades$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleLmsGrades(req, env, auth!.user.sub) },
   { method: 'POST', path: /^\/api\/payment\/create-intent$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleCreatePaymentIntent(req, env, auth!.user.sub) },

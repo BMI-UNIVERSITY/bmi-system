@@ -4,11 +4,18 @@ import { api } from '../../lib/api';
 
 export default function Dashboard() {
   const [data, setData] = useState<any>(null);
+  const [onboarding, setOnboarding] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.student.getDashboard()
-      .then(setData)
+    Promise.all([
+      api.student.getDashboard(),
+      api.student.getOnboardingStatus()
+    ])
+      .then(([dashData, obData]) => {
+        setData(dashData);
+        setOnboarding(obData);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, []);
@@ -25,6 +32,44 @@ export default function Dashboard() {
     <div className="page" style={{ padding: '5rem 1.5rem 3rem', background: 'var(--bg)' }}>
       <div style={{ maxWidth: 1000, margin: '0 auto' }}>
         <h1 style={{ fontFamily: 'var(--font-heading)', fontSize: '2.5rem', marginBottom: '2rem' }}>Student Dashboard</h1>
+
+        {onboarding && !onboarding.isComplete && (
+          <div className="card" style={{ marginBottom: '2rem', border: '2px solid var(--primary)', background: 'linear-gradient(to right, rgba(234, 179, 8, 0.05), rgba(234, 179, 8, 0.15))' }}>
+            <h2 style={{ fontSize: '1.5rem', marginBottom: '0.5rem', color: 'var(--primary-dark)' }}>Getting Started</h2>
+            <p style={{ color: 'var(--slate)', marginBottom: '1.5rem' }}>Complete these required tasks to finalize your enrollment.</p>
+            
+            <div style={{ background: 'var(--surface)', borderRadius: '8px', padding: '1rem', border: '1px solid var(--border)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', marginBottom: '1rem', gap: '1rem' }}>
+                <div style={{ flex: 1, height: '8px', background: 'var(--border)', borderRadius: '4px', overflow: 'hidden' }}>
+                  <div style={{ width: `${onboarding.progress}%`, height: '100%', background: 'var(--primary)', transition: 'width 0.5s ease' }} />
+                </div>
+                <span style={{ fontWeight: 600, color: 'var(--text)' }}>{onboarding.progress}% Complete</span>
+              </div>
+              
+              <div style={{ display: 'grid', gap: '0.75rem' }}>
+                {onboarding.tasks.map((task: any) => (
+                  <div key={task.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '1rem', background: task.completed ? 'rgba(34, 197, 94, 0.1)' : 'var(--bg)', border: `1px solid ${task.completed ? 'var(--success)' : 'var(--border)'}`, borderRadius: '6px', opacity: task.locked ? 0.6 : 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      <div style={{ width: 24, height: 24, borderRadius: '50%', background: task.completed ? 'var(--success)' : 'var(--border)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.875rem' }}>
+                        {task.completed ? '✓' : (task.locked ? '🔒' : '•')}
+                      </div>
+                      <span style={{ fontWeight: task.completed ? 600 : 500, color: task.completed ? 'var(--success)' : 'var(--text)', textDecoration: task.completed ? 'line-through' : 'none' }}>
+                        {task.title}
+                      </span>
+                    </div>
+                    {!task.completed && (
+                      task.locked ? (
+                        <span style={{ fontSize: '0.875rem', color: 'var(--text-muted)' }}>Locked</span>
+                      ) : (
+                        <Link to={task.actionUrl} className="btn btn-primary btn-sm">Start</Link>
+                      )
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem' }}>
           

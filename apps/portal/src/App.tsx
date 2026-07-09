@@ -19,7 +19,7 @@ import Academics from './pages/student/Academics';
 import Finances from './pages/student/Finances';
 import Support from './pages/student/Support';
 import StudentSettings from './pages/student/Settings';
-
+import Documents from './pages/student/Documents';
 import ClaimAccount from './pages/claim/ClaimAccount';
 import RegistrationWizard from './pages/registration/RegistrationWizard';
 import DocumentRequest from './pages/documents/DocumentRequest';
@@ -77,6 +77,14 @@ export default function App() {
           element={
             <ProtectedRoute roles={['student']}>
               <Dashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/student/documents"
+          element={
+            <ProtectedRoute roles={['student']}>
+              <Documents />
             </ProtectedRoute>
           }
         />
