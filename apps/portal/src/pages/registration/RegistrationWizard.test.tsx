@@ -29,16 +29,17 @@ describe('RegistrationWizard Page', () => {
     });
   });
 
-  const renderPage = () => {
-    return render(
+  const renderPage = async () => {
+    render(
       <MemoryRouter>
         <RegistrationWizard />
       </MemoryRouter>
     );
+    await waitFor(() => {});
   };
 
-  it('renders all step labels', () => {
-    renderPage();
+  it('renders all step labels', async () => {
+    await renderPage();
     expect(screen.getAllByText('Personal Details').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Address').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Programme').length).toBeGreaterThan(0);
@@ -47,15 +48,15 @@ describe('RegistrationWizard Page', () => {
     expect(screen.getAllByText('Confirm').length).toBeGreaterThan(0);
   });
 
-  it('starts at step Personal Details', () => {
-    renderPage();
+  it('starts at step Personal Details', async () => {
+    await renderPage();
     expect(screen.getByText('Student Registration')).toBeInTheDocument();
     expect(screen.getByText('Save & Continue')).toBeInTheDocument();
     expect(screen.getByText('Previous')).toBeDisabled();
   });
 
   it('advances to next step on save & continue', async () => {
-    renderPage();
+    await renderPage();
     fireEvent.click(screen.getByText('Save & Continue'));
 
     await waitFor(() => {
@@ -69,14 +70,14 @@ describe('RegistrationWizard Page', () => {
   it('shows "Saving..." while saving step', async () => {
     vi.mocked(globalThis.fetch).mockImplementation(() => new Promise(() => {}));
 
-    renderPage();
+    await renderPage();
     fireEvent.click(screen.getByText('Save & Continue'));
 
     expect(screen.getByText('Saving...')).toBeInTheDocument();
   });
 
   it('shows "Complete Registration" button on last step', async () => {
-    renderPage();
+    await renderPage();
     const steps = 5;
     for (let i = 0; i < steps; i++) {
       fireEvent.click(screen.getByText('Save & Continue'));
@@ -89,7 +90,7 @@ describe('RegistrationWizard Page', () => {
   it('shows error message on fetch failure', async () => {
     vi.mocked(globalThis.fetch).mockRejectedValue(new Error('Network error'));
 
-    renderPage();
+    await renderPage();
     fireEvent.click(screen.getByText('Save & Continue'));
 
     await waitFor(() => {
@@ -98,7 +99,7 @@ describe('RegistrationWizard Page', () => {
   });
 
   it('shows Previous button and it works', async () => {
-    renderPage();
+    await renderPage();
     fireEvent.click(screen.getByText('Save & Continue'));
     await waitFor(() => {});
 
@@ -109,13 +110,13 @@ describe('RegistrationWizard Page', () => {
     expect(screen.getAllByText('Personal Details').length).toBeGreaterThan(0);
   });
 
-  it('shows first step initially', () => {
-    renderPage();
+  it('shows first step initially', async () => {
+    await renderPage();
     expect(screen.getByText('1')).toBeInTheDocument();
   });
 
-  it('renders personal details form fields', () => {
-    renderPage();
+  it('renders personal details form fields', async () => {
+    await renderPage();
     expect(screen.getByText('First Name')).toBeInTheDocument();
     expect(screen.getByText('Last Name')).toBeInTheDocument();
     expect(screen.getByText('Date of Birth')).toBeInTheDocument();
@@ -132,7 +133,7 @@ describe('RegistrationWizard Page', () => {
       return Promise.resolve(createMockResponse({ success: true }));
     });
 
-    renderPage();
+    await renderPage();
     await waitFor(() => {
       expect(screen.getByText('Registration Complete!')).toBeInTheDocument();
     });
@@ -140,7 +141,7 @@ describe('RegistrationWizard Page', () => {
   });
 
   it('saves each step endpoint correctly', async () => {
-    renderPage();
+    await renderPage();
     const stepKeys = ['personal_details', 'address', 'programme', 'modules', 'fees'];
 
     for (const key of stepKeys) {
@@ -155,7 +156,7 @@ describe('RegistrationWizard Page', () => {
   });
 
   it('calls complete endpoint on final submission', async () => {
-    renderPage();
+    await renderPage();
     for (let i = 0; i < 5; i++) {
       fireEvent.click(screen.getByText('Save & Continue'));
       await waitFor(() => {});
@@ -171,7 +172,7 @@ describe('RegistrationWizard Page', () => {
   });
 
   it('fetches registration status and modules on mount', async () => {
-    renderPage();
+    await renderPage();
     await waitFor(() => {
       expect(globalThis.fetch).toHaveBeenCalledWith('/api/registration/status');
       expect(globalThis.fetch).toHaveBeenCalledWith('/api/registration/modules');
