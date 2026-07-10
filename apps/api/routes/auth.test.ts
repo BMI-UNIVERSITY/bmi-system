@@ -220,7 +220,7 @@ describe('handleLogin', () => {
     env.PLATFORM_CONTEXT.db.first = vi.fn().mockResolvedValue({
       id: 'u1', email: 'x@x.com', password_hash: 'hash',
       first_name: 'A', last_name: 'B', role: 'applicant',
-      is_verified: 0, mfa_secret: null, mfa_enabled: 0,
+      is_verified: 0, account_claimed: 0, mfa_secret: null, mfa_enabled: 0,
       session_version: 1,
       failed_login_attempts: 0, locked_until: null,
     });
@@ -235,7 +235,7 @@ describe('handleLogin', () => {
     const mockUser = {
       id: 'u1', email: 'verified@example.com', password_hash: 'hash',
       first_name: 'Jane', last_name: 'Doe', role: 'student',
-      is_verified: 1, mfa_secret: null, mfa_enabled: 0,
+      is_verified: 1, account_claimed: 1, mfa_secret: null, mfa_enabled: 0,
       session_version: 1,
       failed_login_attempts: 0, locked_until: null,
     };
