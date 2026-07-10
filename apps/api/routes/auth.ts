@@ -205,9 +205,9 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
   const { email, password, mfa_token } = parsed;
 
   // Use optimized user lookup
-  interface UserRow { id: string; email: string; password_hash: string; first_name: string; last_name: string; role: string; is_verified: number; mfa_secret: string | null; mfa_enabled: number; session_version: number }
+  interface UserRow { id: string; email: string; password_hash: string; first_name: string; last_name: string; role: string; is_verified: number; account_claimed: number; mfa_secret: string | null; mfa_enabled: number; session_version: number }
   const user = await env.PLATFORM_CONTEXT!.db.prepare(
-    'SELECT id, email, password_hash, first_name, last_name, role, is_verified, mfa_secret, mfa_enabled, session_version FROM users WHERE email = ? LIMIT 1'
+    'SELECT id, email, password_hash, first_name, last_name, role, is_verified, account_claimed, mfa_secret, mfa_enabled, session_version FROM users WHERE email = ? LIMIT 1'
   ).bind(email.toLowerCase()).first<UserRow>();
 
   if (!user) {
@@ -223,6 +223,10 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
 
   if (!user.is_verified) {
     return error('Please verify your email address before logging in. Check your inbox for the verification link.', 403);
+  }
+
+  if (user.role === 'student' && !user.account_claimed) {
+    return error('Please claim your account first using the admission code sent to your email.', 403);
   }
 
   if (user.mfa_enabled && user.mfa_secret) {
