@@ -6,12 +6,10 @@ import type { Env } from '../lib/types';
 import { percentageToGrade } from '@bmi/shared';
 
 export async function handleGetDashboard(request: Request, env: Env, userId: string): Promise<Response> {
-  // Get upcoming invoices
   const { results: invoices } = await env.PLATFORM_CONTEXT!.db.prepare(
-    'SELECT id, amount, due_date, status FROM invoices WHERE student_id = ? AND status = "unpaid" ORDER BY due_date ASC'
+    'SELECT id, amount, due_date, status FROM invoices WHERE student_id = ? ORDER BY due_date DESC'
   ).bind(userId).all();
 
-  // Get current enrollments
   const { results: enrollments } = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT e.id, c.code, c.title, c.credits, c.term, e.grade, c.id as course_id 
      FROM enrollments e 
@@ -19,16 +17,23 @@ export async function handleGetDashboard(request: Request, env: Env, userId: str
      WHERE e.student_id = ? AND e.status = 'enrolled'`
   ).bind(userId).all();
 
-  // Compute total balance
-  const balance = invoices.reduce((sum: number, inv: Record<string, unknown>) => sum + (inv.amount as number), 0);
+  const balance = invoices.filter((i: Record<string, unknown>) => i.status === 'unpaid').reduce((sum: number, inv: Record<string, unknown>) => sum + (inv.amount as number), 0);
+
+  const { results: activeHolds } = await env.PLATFORM_CONTEXT!.db.prepare(
+    `SELECT hold_type, reason FROM student_holds WHERE student_id = ? AND is_active = 1 ORDER BY created_at ASC`
+  ).bind(userId).all();
+
+  const unpaidCount = invoices.filter((i: Record<string, unknown>) => i.status === 'unpaid').length;
 
   return ok({
     balance,
-    upcoming_invoices: invoices,
+    unpaid_invoices: unpaidCount,
+    upcoming_invoices: invoices.filter((i: Record<string, unknown>) => i.status === 'unpaid').slice(0, 5),
     current_classes: enrollments,
+    registration_holds: activeHolds,
+    has_registration_blocks: activeHolds.length > 0,
     announcements: [
-      { id: '1', title: 'Welcome to Fall 2026', date: '2026-08-15', content: 'Classes begin September 1st.' },
-      { id: '2', title: 'Course Registration Open', date: '2026-08-20', content: 'Enroll in your classes before the deadline.' }
+      { id: '1', title: 'Welcome to the New Academic Year', date: new Date().toISOString().split('T')[0], content: 'Complete your onboarding steps to register for courses.' },
     ]
   });
 }
@@ -54,19 +59,18 @@ export async function handleEnroll(request: Request, env: Env, userId: string): 
 
   if (!body.course_id) return error('course_id is required');
 
+  const activeHold = await env.PLATFORM_CONTEXT!.db.prepare(
+    `SELECT hold_type, reason FROM student_holds WHERE student_id = ? AND is_active = 1 LIMIT 1`
+  ).bind(userId).first<{ hold_type: string; reason: string }>();
+
+  if (activeHold) {
+    return error(`Cannot enroll: ${activeHold.reason} (${activeHold.hold_type} hold active).`, 403);
+  }
+
   try {
-    // Generate invoice for 1000 per class (mock logic)
-    const invoiceId = crypto.randomUUID();
-    
-    // Enroll the student
     await env.PLATFORM_CONTEXT!.db.prepare(
       'INSERT INTO enrollments (id, student_id, course_id, status) VALUES (?, ?, ?, ?)'
     ).bind(crypto.randomUUID(), userId, body.course_id, 'enrolled').run();
-    
-    // Create an invoice
-    await env.PLATFORM_CONTEXT!.db.prepare(
-      'INSERT INTO invoices (id, student_id, amount, status, due_date) VALUES (?, ?, ?, ?, ?)'
-    ).bind(invoiceId, userId, 1000, 'unpaid', '2026-09-15').run();
 
     return ok({ success: true, message: 'Enrolled successfully' });
   } catch (e: unknown) {
@@ -104,10 +108,14 @@ export async function handlePayInvoice(request: Request, env: Env, userId: strin
     metadata: { userId, invoiceId }
   });
 
-  // For now, simulate successful payment and mark invoice as paid
   await env.PLATFORM_CONTEXT!.db.prepare(
     'UPDATE invoices SET status = "paid" WHERE id = ? AND student_id = ?'
   ).bind(invoiceId, userId).run();
+
+  await env.PLATFORM_CONTEXT!.db.prepare(
+    `UPDATE student_holds SET is_active = 0, resolved_at = datetime('now')
+     WHERE student_id = ? AND hold_type = 'payment' AND is_active = 1`
+  ).bind(userId).run();
 
   return ok({ 
     success: true, 

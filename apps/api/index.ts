@@ -47,6 +47,19 @@ import { handleGetOnboardingStatus, handleUploadStudentDocument } from './routes
 import { handleLmsCourses, handleLmsGrades } from './routes/lms';
 import { handleCreatePaymentIntent, handlePaymentWebhook } from './routes/payment';
 import { handleSaveRegistrationStep, handleGetRegistrationStatus, handleCompleteRegistration, handleGetAvailableModules } from './routes/registration';
+import {
+  handleGetMyHolds,
+  handleGetProgramCurriculum,
+  handleAutoEnrollMandatory,
+  handleGetElectiveGroups,
+  handleSubmitElectives,
+  handleGetRegistrationProgress,
+  handleCompleteOrientation,
+  handleGenerateProgramInvoice,
+  handleAdminSyncCurriculum,
+  handleAdminSetProgramFee,
+  handleAdminResolveHold,
+} from './routes/enrollment';
 import { handleTransitionToAlumni } from './routes/alumni';
 
 const log = createLogger('bmi-api');
@@ -230,6 +243,20 @@ const ROUTES: Route[] = [
   { method: 'POST', path: /^\/api\/registration\/complete$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleCompleteRegistration(req, env, auth!.user.sub, ctx) },
   { method: 'GET', path: /^\/api\/registration\/modules$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleGetAvailableModules(req, env, auth!.user.sub) },
   { method: 'POST', path: /^\/api\/registration\/([^/]+)$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleSaveRegistrationStep(req, env, auth!.user.sub, p[1]) },
+  // Onboarding Flow Routes
+  { method: 'GET', path: /^\/api\/student\/holds$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleGetMyHolds(req, env, auth!.user.sub) },
+  { method: 'GET', path: /^\/api\/student\/registration-progress$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleGetRegistrationProgress(req, env, auth!.user.sub) },
+  { method: 'GET', path: /^\/api\/student\/curriculum$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleGetProgramCurriculum(req, env, auth!.user.sub) },
+  { method: 'POST', path: /^\/api\/student\/enroll\/mandatory$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleAutoEnrollMandatory(req, env, auth!.user.sub) },
+  { method: 'GET', path: /^\/api\/student\/electives$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleGetElectiveGroups(req, env, auth!.user.sub) },
+  { method: 'POST', path: /^\/api\/student\/electives\/submit$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleSubmitElectives(req, env, auth!.user.sub) },
+  { method: 'POST', path: /^\/api\/student\/orientation\/complete$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleCompleteOrientation(req, env, auth!.user.sub) },
+  { method: 'POST', path: /^\/api\/student\/invoice\/generate$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleGenerateProgramInvoice(req, env, auth!.user.sub) },
+  // Admin curriculum & fee management
+  { method: 'POST', path: /^\/api\/admin\/curriculum\/sync$/, roles: ['admin', 'staff'], handler: async (req, env, p, auth, ctx) => handleAdminSyncCurriculum(req, env) },
+  { method: 'POST', path: /^\/api\/admin\/program-fee$/, roles: ['admin', 'staff'], handler: async (req, env, p, auth, ctx) => handleAdminSetProgramFee(req, env) },
+  { method: 'POST', path: /^\/api\/admin\/students\/([^/]+)\/resolve-hold$/, roles: ['admin', 'staff'], handler: async (req, env, p, auth, ctx) => handleAdminResolveHold(req, env, p[1]) },
+  // Alumni
   { method: 'POST', path: /^\/api\/alumni\/transition$/, roles: ['admin'], handler: async (req, env, p, auth, ctx) => handleTransitionToAlumni(req, env, auth!.user.sub) },
 ];
 

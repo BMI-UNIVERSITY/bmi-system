@@ -39,6 +39,19 @@ export async function handleClaimAccount(req: Request, env: Env, ctx: ExecutionC
       `UPDATE users SET password_hash = ?, account_claimed = 1, admission_code = NULL, admission_code_expires_at = NULL WHERE id = ?`
     ).bind(hashedPassword, user.id).run();
 
+    const holdTypes = [
+      { hold_type: 'document', reason: 'Upload your student ID photo to verify your identity.' },
+      { hold_type: 'orientation', reason: 'Complete the online orientation to learn about campus policies and resources.' },
+      { hold_type: 'course_selection', reason: 'Complete course registration (mandatory auto-enrollment + elective selection).' },
+      { hold_type: 'payment', reason: 'Pay your programme tuition and fees to complete registration.' },
+    ];
+
+    for (const h of holdTypes) {
+      await env.PLATFORM_CONTEXT!.db.prepare(
+        `INSERT INTO student_holds (id, student_id, hold_type, reason) VALUES (?, ?, ?, ?)`
+      ).bind(crypto.randomUUID(), user.id, h.hold_type, h.reason).run();
+    }
+
     if (userInfo && env.RESEND_API_KEY) {
       ctx.waitUntil(sendEmail(env, {
         to: userInfo.email,
@@ -49,16 +62,16 @@ export async function handleClaimAccount(req: Request, env: Env, ctx: ExecutionC
             Your account has been successfully claimed. You now have access to the BMI University Student Portal.
           </p>
           <div style="margin: 24px 0; padding: 20px 24px; background: #f8fafc; border-left: 4px solid #d4af37; border-radius: 4px;">
-            <p style="margin: 0 0 8px; color: #0f172a; font-weight: 700; font-size: 15px;">Your Next Steps:</p>
+            <p style="margin: 0 0 8px; color: #0f172a; font-weight: 700; font-size: 15px;">Your Registration Steps:</p>
             <ol style="color: #475569; line-height: 1.8; margin: 0; padding-left: 20px;">
-              <li><strong>Complete Registration</strong> — Log in and complete your online registration (personal details, address, programme, modules)</li>
-              <li><strong>Upload Documents</strong> — Upload your ID photo and any pending documents</li>
-              <li><strong>Pay Fees</strong> — Review your tuition fees and make payment through the portal</li>
-              <li><strong>Check Timetable</strong> — View your class schedule once modules are selected</li>
+              <li><strong>Upload ID Photo</strong> — Upload your student ID photo for verification</li>
+              <li><strong>Complete Orientation</strong> — Complete the online orientation module</li>
+              <li><strong>Course Registration</strong> — Auto-enroll in mandatory courses and select your electives</li>
+              <li><strong>Pay Tuition</strong> — Pay your programme tuition fee to complete registration</li>
             </ol>
           </div>
           <p style="color: #475569; line-height: 1.6;">
-            Log in now at the student portal to get started.
+            Log in now at the student portal to begin your onboarding.
           </p>
           <p style="color: #475569; line-height: 1.6;">
             If you have any questions, contact our admissions office at bmiuniversity8@gmail.com or call 704-607-5540.

@@ -116,5 +116,12 @@ export async function handleUploadStudentDocument(request: Request, env: Env, us
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(docId, applicationId, userId, docType, safeFileName, r2Key, detectedMime, file.size).run();
 
+  if (docType === 'id_document') {
+    await env.PLATFORM_CONTEXT!.db.prepare(
+      `UPDATE student_holds SET is_active = 0, resolved_at = datetime('now')
+       WHERE student_id = ? AND hold_type = 'document' AND is_active = 1`
+    ).bind(userId).run();
+  }
+
   return ok({ document_id: docId, file_name: safeFileName, doc_type: docType });
 }

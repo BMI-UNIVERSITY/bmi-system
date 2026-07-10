@@ -31,7 +31,12 @@ describe('student routes', () => {
       const db = {
         prepare: vi.fn().mockReturnValue({
           bind: vi.fn().mockReturnValue({
-            all: vi.fn().mockResolvedValue({ results: [{ id: 'inv1', amount: 500 }, { id: 'inv2', amount: 750 }] }),
+            all: vi.fn().mockResolvedValue({ results: [
+              { id: 'inv1', amount: 500, status: 'unpaid' },
+              { id: 'inv2', amount: 750, status: 'unpaid' },
+            ]}),
+            first: vi.fn().mockResolvedValue(null),
+            run: vi.fn().mockResolvedValue({}),
           }),
         }),
       };
@@ -41,7 +46,8 @@ describe('student routes', () => {
 
       expect(res.status).toBe(200);
       expect(body.data.balance).toBe(1250);
-      expect(body.data.announcements).toHaveLength(2);
+      expect(body.data.unpaid_invoices).toBe(2);
+      expect(body.data.announcements).toHaveLength(1);
     });
   });
 
@@ -96,6 +102,7 @@ describe('student routes', () => {
       const db = {
         prepare: vi.fn().mockReturnValue({
           bind: vi.fn().mockReturnValue({
+            first: vi.fn().mockResolvedValue(null),
             run: vi.fn().mockRejectedValue(new Error('UNIQUE constraint failed')),
           }),
         }),
