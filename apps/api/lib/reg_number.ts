@@ -21,18 +21,18 @@ import type { IDatabase } from '@bmi/ports';
 
 export async function generateRegNo(
   db: IDatabase,
-  programmeId: string,
+  programId: string,
   programmeCode: string,
   admissionYear: number,
   career: string
 ): Promise<string> {
   const result = await db.prepare(
-    `INSERT INTO regno_counters (programme_id, admission_year, last_serial)
+    `INSERT INTO regno_counters (program_id, admission_year, last_serial)
      VALUES (?, ?, 1)
-     ON CONFLICT(programme_id, admission_year)
+     ON CONFLICT(program_id, admission_year)
      DO UPDATE SET last_serial = last_serial + 1
      RETURNING last_serial`
-  ).bind(programmeId, admissionYear).first<{ last_serial: number }>();
+  ).bind(programId, admissionYear).first<{ last_serial: number }>();
 
   if (!result || result.last_serial == null) {
     throw new Error('Failed to generate registration number: regno_counters may not be initialized');

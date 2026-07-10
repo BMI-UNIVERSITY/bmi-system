@@ -14,7 +14,7 @@ i18n
     debug: false,
     
     // Whitelist supported languages
-    supportedLngs: ['en', 'sw', 'es', 'fr', 'ar'],
+    supportedLngs: ['en', 'en-US', 'en-GB', 'sw', 'es', 'fr', 'ar'],
     
     interpolation: {
       escapeValue: false, // React already safes from xss

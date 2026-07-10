@@ -14,7 +14,7 @@ VALUES (
   'fac-theology-00000000000000000',
   'Faculty of Theology and Ministry',
   'FTM',
-  'BMI University core faculty offering undergraduate, graduate, and doctoral programmes in theology, ministry, and Christian studies.',
+  'BMI University core faculty offering undergraduate, graduate, and doctoral programs in theology, ministry, and Christian studies.',
   1
 );
 
@@ -26,13 +26,13 @@ VALUES (
   'Department of Theology and Ministry Studies',
   'DTMS',
   'fac-theology-00000000000000000',
-  'Houses all degree and certificate programmes offered by BMI University.',
+  'Houses all degree and certificate programs offered by BMI University.',
   1
 );
 
 -- ── Programs ─────────────────────────────────────────────────────────────────
 -- name      must match the `program` field stored in applications exactly
--- code      used as the programme prefix in registration numbers
+-- code      used as the program prefix in registration numbers
 -- level     must match VALID_LEVELS: undergraduate | graduate | doctorate | certificate
 -- degree_type  human-readable abbreviation (BA, MA, MDiv, etc.)
 

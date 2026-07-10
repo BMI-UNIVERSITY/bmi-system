@@ -137,7 +137,7 @@ describe('RegistrationWizard Page', () => {
 
   it('saves each step endpoint correctly', async () => {
     await renderPage();
-    const stepKeys = ['personal_details', 'address', 'programme', 'modules', 'fees'];
+    const stepKeys = ['personal_details', 'address', 'program', 'modules', 'fees'];
 
     for (const key of stepKeys) {
       fireEvent.click(screen.getByText('Save & Continue'));

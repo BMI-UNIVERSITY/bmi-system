@@ -11,6 +11,6 @@ CREATE TABLE IF NOT EXISTS metadata (
 
 ALTER TABLE courses ADD COLUMN name TEXT;
 ALTER TABLE courses ADD COLUMN level TEXT;
-ALTER TABLE courses ADD COLUMN programme_id TEXT REFERENCES programs(id);
+ALTER TABLE courses ADD COLUMN program_id TEXT REFERENCES programs(id);
 
 UPDATE courses SET name = title WHERE name IS NULL;

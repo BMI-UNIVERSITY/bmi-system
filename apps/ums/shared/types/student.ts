@@ -12,7 +12,7 @@ export interface Student {
   phone: string;
   admission_no?: string;
   admission_date: string;
-  programme: string;
+  program: string;
   program_code?: string;
   status: "Active" | "Inactive" | "Graduated" | "Suspended" | "Applicant";
   avatar_color: string;
@@ -45,6 +45,6 @@ export interface StudentCreateInput {
   firstName: string;
   lastName: string;
   email: string;
-  programme: string;
+  program: string;
   yearOfStudy: number;
 }

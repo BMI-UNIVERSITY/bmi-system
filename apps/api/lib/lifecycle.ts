@@ -18,7 +18,7 @@ import type { IDatabase } from '@bmi/ports';
  *   application_accepted          ← admission decision — triggers pipeline below
  *   uid_generated                 ← Phase 1: persons row + UID
  *   student_record_created        ← Phase 1/2: students row linked
- *   programme_enrolled            ← Phase 3: student_programmes row
+ *   program_enrolled            ← Phase 3: student_programs row
  *   registration_number_generated ← Phase 4: reg_no assigned
  *   provisioning_queued           ← Phase 6: downstream jobs dispatched
  *   student_active
@@ -41,7 +41,7 @@ export const STAGES = {
   APPLICATION_ACCEPTED:             'application_accepted',
   UID_GENERATED:                    'uid_generated',
   STUDENT_RECORD_CREATED:           'student_record_created',
-  PROGRAMME_ENROLLED:               'programme_enrolled',
+  PROGRAM_ENROLLED:               'program_enrolled',
   REGISTRATION_NUMBER_GENERATED:    'registration_number_generated',
   DOCUMENTS_GENERATED:              'documents_generated',
   PROVISIONING_QUEUED:              'provisioning_queued',
@@ -128,7 +128,7 @@ export interface AdmissionContext {
   applicationId: string;
   userId: string;      // the applicant's user row id
   actorId: string;     // the admin performing the acceptance
-  program: string;     // free-text programme name from applications table
+  program: string;     // free-text program name from applications table
 }
 
 /**
@@ -237,7 +237,7 @@ export async function runAdmissionPipeline(
         const placeholderRegNo = `PENDING-${userId.slice(0, 8).toUpperCase()}`;
 
         await db.prepare(
-          `INSERT INTO students (user_id, reg_no, admission_date, programme, status, created_at, updated_at)
+          `INSERT INTO students (user_id, reg_no, admission_date, program, status, created_at, updated_at)
            VALUES (?, ?, ?, ?, 'Active', ?, ?)`
         ).bind(userId, placeholderRegNo, now.split('T')[0], program, now, now).run();
       }
@@ -264,8 +264,8 @@ export async function runAdmissionPipeline(
     }
   }
 
-  // ─── Step 4: Link programme (best-effort match) ──────────────────────────
-  const progKey = `${base}:programme_enrolled`;
+  // ─── Step 4: Link program (best-effort match) ──────────────────────────
+  const progKey = `${base}:program_enrolled`;
   if (uid && !(await isStageComplete(db, progKey))) {
     try {
       // Attempt to match the application's program string to programs table
@@ -283,47 +283,47 @@ export async function runAdmissionPipeline(
 
         // Only insert if no current row exists for this uid
         const existingEnroll = await db.prepare(
-          `SELECT id FROM student_programmes WHERE uid = ? AND current_flag = 1`
+          `SELECT id FROM student_programs WHERE uid = ? AND current_flag = 1`
         ).bind(uid).first();
 
         if (!existingEnroll) {
           await db.transaction(async (tx) => {
             await tx.prepare(
-              `INSERT OR IGNORE INTO student_programmes
-                 (id, uid, programme_id, admission_year, enrollment_date, status, current_flag, created_at, updated_at)
+              `INSERT OR IGNORE INTO student_programs
+                 (id, uid, program_id, admission_year, enrollment_date, status, current_flag, created_at, updated_at)
                VALUES (?, ?, ?, ?, ?, 'active', 1, ?, ?)`
             ).bind(rowId, uid, matchedProg.id, year, now.split('T')[0], now, now).run();
             await tx.prepare(
-              `UPDATE students SET programme_id = ?, updated_at = ? WHERE user_id = ?`
+              `UPDATE students SET program_id = ?, updated_at = ? WHERE user_id = ?`
             ).bind(matchedProg.id, now, userId).run();
           });
         }
 
         await appendLifecycleEvent(db, {
           idempotencyKey: progKey,
-          stage: STAGES.PROGRAMME_ENROLLED,
+          stage: STAGES.PROGRAM_ENROLLED,
           status: 'completed',
           uid,
           applicationId,
           actorId,
-          notes: `Linked to programme: ${matchedProg.code}`,
+          notes: `Linked to program: ${matchedProg.code}`,
         });
       } else {
         // No confident match — skip gracefully, ops will resolve via backfill
         await appendLifecycleEvent(db, {
           idempotencyKey: progKey,
-          stage: STAGES.PROGRAMME_ENROLLED,
+          stage: STAGES.PROGRAM_ENROLLED,
           status: 'skipped',
           uid,
           applicationId,
           actorId,
-          notes: `No confident programme match for: "${program}" — run backfill_student_programmes.sql`,
+          notes: `No confident program match for: "${program}" — run backfill_student_programs.sql`,
         });
       }
     } catch (e) {
       await appendLifecycleEvent(db, {
         idempotencyKey: progKey,
-        stage: STAGES.PROGRAMME_ENROLLED,
+        stage: STAGES.PROGRAM_ENROLLED,
         status: 'failed',
         uid,
         applicationId,
@@ -338,17 +338,17 @@ export async function runAdmissionPipeline(
   const regKey = `${base}:registration_number_generated`;
   if (uid && !(await isStageComplete(db, regKey))) {
     try {
-      // Fetch programme linkage for RegNo generation
+      // Fetch program linkage for RegNo generation
       const progInfo = await db.prepare(
-        `SELECT sp.programme_id, pr.code, pr.level
-         FROM student_programmes sp
-         JOIN programs pr ON sp.programme_id = pr.id
+        `SELECT sp.program_id, pr.code, pr.level
+         FROM student_programs sp
+         JOIN programs pr ON sp.program_id = pr.id
          WHERE sp.uid = ? AND sp.current_flag = 1`
-      ).bind(uid).first<{ programme_id: string; code: string; level: string }>();
+      ).bind(uid).first<{ program_id: string; code: string; level: string }>();
 
       if (progInfo) {
         const year = new Date().getUTCFullYear();
-        regNo = await generateRegNo(db, progInfo.programme_id, progInfo.code, year, progInfo.level);
+        regNo = await generateRegNo(db, progInfo.program_id, progInfo.code, year, progInfo.level);
         const now = new Date().toISOString();
 
         await db.transaction(async (tx) => {
@@ -357,7 +357,7 @@ export async function runAdmissionPipeline(
              WHERE user_id = ? AND (reg_no IS NULL OR reg_no NOT LIKE 'BMI/%')`
           ).bind(regNo, now, userId).run();
           await tx.prepare(
-            `UPDATE student_programmes
+            `UPDATE student_programs
              SET registration_number = ?, updated_at = ?
              WHERE uid = ? AND current_flag = 1 AND registration_number IS NULL`
           ).bind(regNo, now, uid).run();
@@ -380,7 +380,7 @@ export async function runAdmissionPipeline(
           uid,
           applicationId,
           actorId,
-          notes: 'No programme linked yet — RegNo deferred to enrollment',
+          notes: 'No program linked yet — RegNo deferred to enrollment',
         });
       }
     } catch (e) {

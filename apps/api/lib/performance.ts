@@ -354,12 +354,13 @@ export async function executeAdmissionPipelineOptimized(
   if (!existingStudent) {
     const now = new Date().toISOString();
     const placeholderRegNo = `PENDING-${userId.slice(0, 8).toUpperCase()}`;
+    const studentId = crypto.randomUUID(); // Generate stable student_id
     
     studentOps.push(
       db.prepare(
-        `INSERT INTO students (user_id, reg_no, admission_date, programme, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, 'Active', ?, ?)`
-      ).bind(userId, placeholderRegNo, now.split('T')[0], program, now, now)
+        `INSERT INTO students (user_id, student_id, reg_no, admission_date, program, status, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, 'Active', ?, ?)`
+      ).bind(userId, studentId, placeholderRegNo, now.split('T')[0], program, now, now)
     );
   }
 
@@ -386,7 +387,7 @@ export async function executeAdmissionPipelineOptimized(
   try {
     const { generateRegNo } = await import('./reg_number');
     
-    // Try to match programme for RegNo generation
+    // Try to match program for RegNo generation
     const progInfo = await db.prepare(
       `SELECT id, code, level FROM programs WHERE lower(trim(name)) = lower(trim(?)) OR lower(trim(code)) = lower(trim(?)) LIMIT 1`
     ).bind(program, program).first<{ id: string; code: string; level: string }>();

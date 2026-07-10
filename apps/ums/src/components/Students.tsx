@@ -32,6 +32,7 @@ import { postStudentBatch } from "../services/batchService";
 import { getAllStudyCenters, StudyCenter } from "../services/studyCenterService";
 import { StudyCenterSelector } from "./StudyCenterSelector";
 import StudentEnrollmentForm from "./StudentEnrollmentForm";
+import { useTranslation } from "react-i18next";
 
 import { useDataStore } from "../stores/dataStore";
 import { usePagination } from "../hooks/usePagination";
@@ -48,6 +49,7 @@ interface StudentsProps {
 }
 
 const Students: React.FC<StudentsProps> = (props) => {
+  const { t } = useTranslation();
   const storeStudents = useDataStore((s) => s.students);
   const storeSetStudents = useDataStore((s) => s.setStudents);
   const storeCourses = useDataStore((s) => s.courses);
@@ -111,7 +113,7 @@ const Students: React.FC<StudentsProps> = (props) => {
     search: searchTerm,
     status: statusFilter !== "All Status" ? statusFilter : undefined,
     study_center_id: campusFilter !== "All Study Centers" ? campusFilter : undefined,
-    programme: programFilter !== "All Programs" ? programFilter : undefined,
+    program: programFilter !== "All Programs" ? programFilter : undefined,
   });
 
   const pagedStudents = useMemo(
@@ -181,12 +183,12 @@ const Students: React.FC<StudentsProps> = (props) => {
           .toLowerCase()
           .includes(searchTerm.toLowerCase());
       const matchesProgram =
-        programFilter === "All Programs" || student.programme === programFilter;
+        programFilter === "All Programs" || student.program === programFilter;
       const matchesStatus =
         statusFilter === "All Status" || student.status === statusFilter;
       const matchesLevel =
         academicLevelFilter === "All Levels" ||
-        student.programme === academicLevelFilter;
+        student.program === academicLevelFilter;
       const matchesCampus =
         campusFilter === "All Study Centers" || student.study_center_id === campusFilter;
       return (
@@ -489,7 +491,7 @@ const Students: React.FC<StudentsProps> = (props) => {
             className="px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-[10px] font-black uppercase outline-none cursor-pointer dark:text-white max-w-[220px]"
             title="Filter by program (from catalog)"
           >
-            <option value="All Programs">All Programs</option>
+            <option value="All Programs">All {t('academic.programs')}</option>
             {programRows.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.label}
@@ -584,7 +586,7 @@ const Students: React.FC<StudentsProps> = (props) => {
                     {student.reg_no}
                   </p>
                   <p className="text-[10px] font-black text-[#4B0082] dark:text-purple-300 uppercase tracking-widest mt-2">
-                    {student.programme}
+                    {student.program}
                   </p>
                 </div>
 
@@ -611,7 +613,7 @@ const Students: React.FC<StudentsProps> = (props) => {
                       Student Identity
                     </th>
                     <th className="px-6 py-4 sticky top-0 bg-gray-900 z-10">
-                      Academic Program
+                      Academic {t('academic.program')}
                     </th>
                     <th className="px-6 py-4 sticky top-0 bg-gray-900 z-10">
                       Contact Node

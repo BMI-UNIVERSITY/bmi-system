@@ -327,7 +327,7 @@ CREATE VIEW IF NOT EXISTS v_student_with_application AS
 SELECT
   s.id              AS student_id,
   s.reg_no,
-  s.programme,
+  s.program,
   s.status          AS student_status,
   u.first_name,
   u.last_name,
@@ -348,7 +348,7 @@ CREATE VIEW IF NOT EXISTS v_student_dashboard AS
 SELECT
   s.user_id,
   s.reg_no,
-  s.programme,
+  s.program,
   COUNT(DISTINCT e.id)  AS enrolled_courses,
   COUNT(DISTINCT g.id)  AS graded_courses,
   ROUND(AVG(g.score), 2) AS gpa,
@@ -357,7 +357,7 @@ FROM students s
 LEFT JOIN enrollments e  ON e.student_id = s.id
 LEFT JOIN grades g       ON g.student_id = s.id
 LEFT JOIN invoices inv   ON inv.student_id = s.id
-GROUP BY s.user_id, s.reg_no, s.programme;
+GROUP BY s.user_id, s.reg_no, s.program;
 
 CREATE VIEW IF NOT EXISTS v_admin_user_overview AS
 SELECT
@@ -369,7 +369,7 @@ SELECT
   u.is_verified,
   u.created_at,
   s.reg_no,
-  s.programme,
+  s.program,
   sess.expires_at AS session_expires_at
 FROM users u
 LEFT JOIN students s    ON s.user_id = u.id

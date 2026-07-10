@@ -246,6 +246,9 @@ export const api = {
   registration: {
     getStatus: () => request<any>('/registration/status'),
     getModules: () => request<any[]>('/registration/modules'),
+    getPrograms: () => 
+      request<{ items: { id: string; name: string; code: string; level: string; degree_type: string }[]; total: number }>('/v1/programs')
+        .then(r => r.items ?? []),
     saveStep: (stepKey: string, data: any) => 
       request<any>(`/registration/${stepKey}`, {
         method: 'POST',

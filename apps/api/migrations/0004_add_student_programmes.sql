@@ -1,15 +1,15 @@
 -- Migration number: 0004 	 2026-07-01
 -- Phase 3: Programme linkage + StudentProgramme history
 
--- student_programmes: Full history of every programme a student has been enrolled in.
--- One row per programme entry; current_flag = 1 marks the active programme.
+-- student_programs: Full history of every program a student has been enrolled in.
+-- One row per program entry; current_flag = 1 marks the active program.
 -- registration_number is nullable here -- populated by Phase 4 RegNo generator.
-CREATE TABLE IF NOT EXISTS student_programmes (
+CREATE TABLE IF NOT EXISTS student_programs (
   id                  TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
   -- Link to the persons UID (stable across role changes)
   uid                 TEXT NOT NULL REFERENCES persons(uid) ON DELETE CASCADE,
   registration_number TEXT,
-  programme_id        TEXT NOT NULL REFERENCES programs(id) ON DELETE RESTRICT,
+  program_id        TEXT NOT NULL REFERENCES programs(id) ON DELETE RESTRICT,
   admission_year      INTEGER NOT NULL,
   enrollment_date     TEXT NOT NULL,
   completion_date     TEXT,
@@ -22,14 +22,14 @@ CREATE TABLE IF NOT EXISTS student_programmes (
   updated_at          TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
-CREATE INDEX IF NOT EXISTS idx_student_progs_uid         ON student_programmes(uid);
-CREATE INDEX IF NOT EXISTS idx_student_progs_programme   ON student_programmes(programme_id);
-CREATE INDEX IF NOT EXISTS idx_student_progs_current     ON student_programmes(uid, current_flag);
+CREATE INDEX IF NOT EXISTS idx_student_progs_uid         ON student_programs(uid);
+CREATE INDEX IF NOT EXISTS idx_student_progs_programme   ON student_programs(program_id);
+CREATE INDEX IF NOT EXISTS idx_student_progs_current     ON student_programs(uid, current_flag);
 
--- Partial unique index: only one active programme per student at a time
+-- Partial unique index: only one active program per student at a time
 CREATE UNIQUE INDEX IF NOT EXISTS idx_student_progs_one_current
-  ON student_programmes(uid)
+  ON student_programs(uid)
   WHERE current_flag = 1;
 
--- Link students back to their current programme via a proper FK (nullable until backfill)
-ALTER TABLE students ADD COLUMN programme_id TEXT REFERENCES programs(id);
+-- Link students back to their current program via a proper FK (nullable until backfill)
+ALTER TABLE students ADD COLUMN program_id TEXT REFERENCES programs(id);

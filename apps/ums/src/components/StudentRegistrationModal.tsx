@@ -8,6 +8,7 @@ import { authFetch } from '../services/authService';
 import { getAllStudyCenters, StudyCenter } from "../services/studyCenterService";
 import { API_URL } from '../services/config';
 import { StudyCenterSelector } from './StudyCenterSelector';
+import { useTranslation } from "react-i18next";
 
 interface Program {
   id: string;
@@ -23,7 +24,13 @@ interface StudentRegistrationModalProps {
   initialData?: Student;
 }
 
-const StudentRegistrationModal: React.FC<StudentRegistrationModalProps> = ({ isOpen, onClose, onSuccess, initialData }) => {
+const StudentRegistrationModal: React.FC<StudentRegistrationModalProps> = ({
+  isOpen,
+  onClose,
+  onSuccess,
+  initialData
+}) => {
+  const { t } = useTranslation();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [campuses, setCampuses] = useState<StudyCenter[]>([]);
   const [loadingPrograms, setLoadingPrograms] = useState(false);
@@ -305,7 +312,7 @@ const StudentRegistrationModal: React.FC<StudentRegistrationModalProps> = ({ isO
               <h4 className="text-[10px] font-black uppercase text-[#4B0082] dark:text-purple-300 tracking-[0.25em]">Academic Placement</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                  <div className="space-y-1 md:col-span-2">
-                    <label className="text-[9px] font-bold uppercase text-gray-500 tracking-widest">Program *</label>
+                    <label className="text-[9px] font-bold uppercase text-gray-500 tracking-widest">{t('academic.program')} *</label>
                     {loadingPrograms ? (
                       <div className="w-full p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 flex items-center gap-2 text-xs text-gray-400">
                         <Loader2 size={14} className="animate-spin" /> Loading programs...
@@ -316,7 +323,7 @@ const StudentRegistrationModal: React.FC<StudentRegistrationModalProps> = ({ isO
                         onChange={(e) => handleChange('program_code', e.target.value)}
                         className="w-full p-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 outline-none font-bold text-xs uppercase cursor-pointer"
                       >
-                         <option value="">— Select Program —</option>
+                         <option value="">— Select {t('academic.program')} —</option>
                          {programs.map(p => (
                            <option key={p.id} value={p.id}>
                              {p.name} ({p.program_code}) — {p.degree_level}

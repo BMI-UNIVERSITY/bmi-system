@@ -14,7 +14,7 @@ The master SIS prompt was written stack-agnostic (and defaulted to PostgreSQL). 
 | Permanent UID | **No.** No UID column anywhere. | full schema scan |
 | Application Number | **No.** `applications.id` is a random blob, not a formatted, sequential, human-facing number. | `applications` DDL |
 | Registration Number | **Partially.** `students.reg_no` exists (`UNIQUE NOT NULL`) but generation logic/format wasn't reviewed here and needs auditing — treat as unverified, not confirmed-correct. | `students` DDL |
-| StudentProgramme history | **No.** `students.programme` is a free-text column, not an FK, and there is no history table — a programme transfer today would just overwrite this field with no historical record. | `students` DDL |
+| StudentProgramme history | **No.** `students.program` is a free-text column, not an FK, and there is no history table — a program transfer today would just overwrite this field with no historical record. | `students` DDL |
 | Programme/Faculty/Department/Term structure | **Yes, already built.** `faculties`, `departments`, `programs`, `academic_terms`, `courses.department_id` all exist and are reasonably normalized. | `schema.sql` "Phase 5" section |
 | Finance account | **Partially.** `invoices` table exists, tied directly to `users.id` — functionally a finance record, just not modeled as a separately-provisioned "account." | `invoices` DDL |
 | Library / LMS / Portal / Email provisioning | **No.** No tables, no provisioning jobs. | full schema scan |
@@ -100,26 +100,26 @@ Reference limits (June 2026, verified against Cloudflare docs — see optimizati
 ---
 
 ### Phase 3 — Programme linkage + StudentProgramme history
-**Goal:** stop `students.programme` from being a dead-end free-text field; preserve full programme history per student.
+**Goal:** stop `students.program` from being a dead-end free-text field; preserve full program history per student.
 
 - Migration:
-  - `ALTER TABLE students ADD COLUMN programme_id TEXT REFERENCES programs(id)` (nullable initially).
-  - `CREATE TABLE student_programmes (id TEXT PRIMARY KEY, uid TEXT NOT NULL REFERENCES persons(uid), registration_number TEXT, programme_id TEXT NOT NULL REFERENCES programs(id), admission_year INTEGER NOT NULL, enrollment_date TEXT NOT NULL, completion_date TEXT, status TEXT NOT NULL, current_flag INTEGER NOT NULL DEFAULT 1, graduated_flag INTEGER NOT NULL DEFAULT 0, cgpa REAL, classification TEXT)`.
-- **Backfill:** for every existing `students` row, attempt a best-effort match of the free-text `programme` value against `programs.name`/`programs.code`; where no confident match exists, leave `programme_id` NULL and flag the row in a short report rather than guessing — this is exactly the kind of silent-data-corruption risk the earlier audits have repeatedly caught elsewhere in this codebase, don't repeat it here.
-- Programme transfer logic (new, in `routes/ums-*.ts` or a new `routes/programmes.ts`): never updates `students.programme_id` directly for a transfer — always inserts a new `student_programmes` row, sets the old row's `current_flag = 0`, and only then updates the convenience pointer on `students`.
+  - `ALTER TABLE students ADD COLUMN program_id TEXT REFERENCES programs(id)` (nullable initially).
+  - `CREATE TABLE student_programs (id TEXT PRIMARY KEY, uid TEXT NOT NULL REFERENCES persons(uid), registration_number TEXT, program_id TEXT NOT NULL REFERENCES programs(id), admission_year INTEGER NOT NULL, enrollment_date TEXT NOT NULL, completion_date TEXT, status TEXT NOT NULL, current_flag INTEGER NOT NULL DEFAULT 1, graduated_flag INTEGER NOT NULL DEFAULT 0, cgpa REAL, classification TEXT)`.
+- **Backfill:** for every existing `students` row, attempt a best-effort match of the free-text `program` value against `programs.name`/`programs.code`; where no confident match exists, leave `program_id` NULL and flag the row in a short report rather than guessing — this is exactly the kind of silent-data-corruption risk the earlier audits have repeatedly caught elsewhere in this codebase, don't repeat it here.
+- Programme transfer logic (new, in `routes/ums-*.ts` or a new `routes/programmes.ts`): never updates `students.program_id` directly for a transfer — always inserts a new `student_programs` row, sets the old row's `current_flag = 0`, and only then updates the convenience pointer on `students`.
 
-**D1 impact:** negligible; one row per programme enrollment/transfer event.
-**Acceptance:** a simulated programme transfer preserves the original `student_programmes` row unchanged and adds a new one; `students.programme_id` always matches the current-flagged row.
+**D1 impact:** negligible; one row per program enrollment/transfer event.
+**Acceptance:** a simulated program transfer preserves the original `student_programs` row unchanged and adds a new one; `students.program_id` always matches the current-flagged row.
 
 ---
 
 ### Phase 4 — Registration Number generator (the highest-risk piece, per its own §)
 **Goal:** implement `BMI/{Career}/{ProgrammeCode}/{AdmissionYear}/{Serial}` with real concurrency safety on D1.
 
-- `CREATE TABLE regno_counters (programme_id TEXT NOT NULL, admission_year INTEGER NOT NULL, last_serial INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (programme_id, admission_year))`.
-- Generator: `INSERT INTO regno_counters (programme_id, admission_year, last_serial) VALUES (?, ?, 1) ON CONFLICT(programme_id, admission_year) DO UPDATE SET last_serial = last_serial + 1 RETURNING last_serial` — single atomic statement, handles both first-ever and subsequent calls for a given programme/year without a separate existence check.
-- Wire this into the enrollment step of the pipeline (Phase 5), not directly into `students` creation — Registration Number is generated *after* programme enrollment, per the spec's lifecycle order.
-- **Load-test this specifically** before relying on it: simulate a registration-period burst (e.g. 50 concurrent enrollment requests for the same programme/year) against a staging D1 instance and confirm zero duplicate or skipped serials.
+- `CREATE TABLE regno_counters (program_id TEXT NOT NULL, admission_year INTEGER NOT NULL, last_serial INTEGER NOT NULL DEFAULT 0, PRIMARY KEY (program_id, admission_year))`.
+- Generator: `INSERT INTO regno_counters (program_id, admission_year, last_serial) VALUES (?, ?, 1) ON CONFLICT(program_id, admission_year) DO UPDATE SET last_serial = last_serial + 1 RETURNING last_serial` — single atomic statement, handles both first-ever and subsequent calls for a given program/year without a separate existence check.
+- Wire this into the enrollment step of the pipeline (Phase 5), not directly into `students` creation — Registration Number is generated *after* program enrollment, per the spec's lifecycle order.
+- **Load-test this specifically** before relying on it: simulate a registration-period burst (e.g. 50 concurrent enrollment requests for the same program/year) against a staging D1 instance and confirm zero duplicate or skipped serials.
 
 **D1 impact:** negligible write volume; this phase is about correctness under concurrency, not budget.
 **Acceptance:** the load test above passes with zero collisions.
@@ -131,7 +131,7 @@ Reference limits (June 2026, verified against Cloudflare docs — see optimizati
 
 - `CREATE TABLE lifecycle_events (id TEXT PRIMARY KEY, uid TEXT REFERENCES persons(uid), application_id TEXT REFERENCES applications(id), stage TEXT NOT NULL, status TEXT NOT NULL CHECK(status IN ('pending','in_progress','completed','failed','skipped')), idempotency_key TEXT UNIQUE, actor_id TEXT REFERENCES users(id), notes TEXT, created_at TEXT NOT NULL DEFAULT (datetime('now')))`.
 - Stages match the master lifecycle exactly (application_submitted → application_number_generated → ... → alumni). Each stage transition is one row, never an update to a prior row — this *is* the audit trail, consistent with the existing "nothing overwritten" principle already used elsewhere in this schema.
-- Admission acceptance becomes the trigger point that: creates/links the `persons` row + UID (Phase 1) → creates the `students` row → creates the `student_programmes` row (Phase 3) → generates the Registration Number (Phase 4) → enqueues downstream provisioning (Phase 6). Each of these sub-steps writes its own `lifecycle_events` row with its own `idempotency_key`, so a partial failure can be resumed without repeating completed sub-steps.
+- Admission acceptance becomes the trigger point that: creates/links the `persons` row + UID (Phase 1) → creates the `students` row → creates the `student_programs` row (Phase 3) → generates the Registration Number (Phase 4) → enqueues downstream provisioning (Phase 6). Each of these sub-steps writes its own `lifecycle_events` row with its own `idempotency_key`, so a partial failure can be resumed without repeating completed sub-steps.
 - **Retention:** add this table to the same archival job pattern recommended for `admin_audit_logs`/`sync_event_log` in the optimization report — export-then-purge rows older than the retention window, don't let it grow unbounded like those tables currently do.
 
 **D1 impact:** ~5-8 small writes per admitted student, one time — trivially within budget even at hundreds of admissions/day.
@@ -153,7 +153,7 @@ Reference limits (June 2026, verified against Cloudflare docs — see optimizati
 ---
 
 ### Phase 7 — RBAC, retention policy, and testing
-- Extend the existing per-route `requireAuth(request, env, [roles])` pattern (already consistent across the codebase) to cover new routes for programme transfers, lifecycle event queries, and provisioning job status — no new RBAC mechanism needed, reuse what's there.
+- Extend the existing per-route `requireAuth(request, env, [roles])` pattern (already consistent across the codebase) to cover new routes for program transfers, lifecycle event queries, and provisioning job status — no new RBAC mechanism needed, reuse what's there.
 - Add the missing **External Verifier** role (read-only, scoped to certificate/registration-number verification only) — directly useful given the accreditation and dual-domain concerns already flagged in the website audit.
 - Write the retention/archival job once (export-to-R2-then-purge, per optimization report §4.2) and apply it uniformly to `admin_audit_logs`, `sync_event_log`, `lifecycle_events`, and `provisioning_jobs` — don't solve this per-table.
 - Backfill unit tests for the new route handlers as they're written (not after) — this avoids repeating the existing 0%-coverage-on-business-logic problem found in `apps/api/routes/*` (Comprehensive Audit §2.5) rather than adding another 2,000+ untested lines to that same pile.
@@ -167,7 +167,7 @@ Reference limits (June 2026, verified against Cloudflare docs — see optimizati
 Phase 0 (stabilize)  →  must complete first, unblocks everything else safely
 Phase 1 (Person/UID) →  Phase 2 (App Number)  →  can run in parallel with each other
         ↓
-Phase 3 (StudentProgramme) → Phase 4 (RegNo generator)  →  sequential, RegNo depends on programme link existing
+Phase 3 (StudentProgramme) → Phase 4 (RegNo generator)  →  sequential, RegNo depends on program link existing
         ↓
 Phase 5 (Lifecycle engine) →  wires 1-4 together into one auditable pipeline
         ↓

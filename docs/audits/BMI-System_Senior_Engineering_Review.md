@@ -243,7 +243,7 @@ If this was disabled intentionally for a demo/staging period, it needs a tracked
 
 | App | Test files | Rough source files | Coverage signal |
 |---|---|---|---|
-| `apps/api` | 4 (`jwt.test.ts`, `jwt.contract.test.ts`, `openapi.snapshot.test.ts`, `student.test.ts`) | ~41 | **Thin** — one route module (`student.ts`) has a test; the other ~24 route modules (auth, admin, documents, all UMS collections, CMS, webhooks, recommendations, programmes) have none |
+| `apps/api` | 4 (`jwt.test.ts`, `jwt.contract.test.ts`, `openapi.snapshot.test.ts`, `student.test.ts`) | ~41 | **Thin** — one route module (`student.ts`) has a test; the other ~24 route modules (auth, admin, documents, all UMS collections, CMS, webhooks, recommendations, programs) have none |
 | `apps/ums` | 22 (unit + Playwright E2E) | ~129 | **Reasonable** — includes E2E, coverage script exists (`test:coverage`) |
 | `apps/portal` | 6, including a dedicated `api.integration.test.ts` asserting security properties (no token in localStorage) | ~31 | **Good for what it covers** — small but high-value, security-property tests are the right instinct |
 | `bmi-university` | 3 | — | Light, acceptable for a mostly-static marketing site |

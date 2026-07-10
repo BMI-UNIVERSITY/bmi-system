@@ -18,6 +18,7 @@
  */
 
 import React, { useState, useEffect, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ShieldCheck,
   ShieldX,
@@ -113,8 +114,8 @@ function ConfidencePill({
   );
 }
 
-// ─── Component ────────────────────────────────────────────────────────────────
 const VerificationPage: React.FC<VerificationPageProps> = ({ logo }) => {
+  const { t } = useTranslation();
   const [serial, setSerial] = useState("");
   const [isVerifying, setIsVerifying] = useState(false);
   const [result, setResult] = useState<DocumentVerifyResult | null>(null);
@@ -556,7 +557,7 @@ const VerificationPage: React.FC<VerificationPageProps> = ({ logo }) => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 border-b border-gray-100">
                     {[
                       {
-                        label: result.documentType === "transcript" ? "Academic Programme" : "Qualification Title",
+                        label: result.documentType === "transcript" ? `Academic ${t('academic.program')}` : "Qualification Title",
                         value: doc.credential,
                         icon: <Scroll className="text-[#4B0082]" size={15} />,
                       },

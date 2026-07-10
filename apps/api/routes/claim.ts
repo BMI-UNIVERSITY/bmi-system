@@ -43,7 +43,7 @@ export async function handleClaimAccount(req: Request, env: Env, ctx: ExecutionC
       { hold_type: 'document', reason: 'Upload your student ID photo to verify your identity.' },
       { hold_type: 'orientation', reason: 'Complete the online orientation to learn about campus policies and resources.' },
       { hold_type: 'course_selection', reason: 'Complete course registration (mandatory auto-enrollment + elective selection).' },
-      { hold_type: 'payment', reason: 'Pay your programme tuition and fees to complete registration.' },
+      { hold_type: 'payment', reason: 'Pay your program tuition and fees to complete registration.' },
     ];
 
     for (const h of holdTypes) {
@@ -67,7 +67,7 @@ export async function handleClaimAccount(req: Request, env: Env, ctx: ExecutionC
               <li><strong>Upload ID Photo</strong> — Upload your student ID photo for verification</li>
               <li><strong>Complete Orientation</strong> — Complete the online orientation module</li>
               <li><strong>Course Registration</strong> — Auto-enroll in mandatory courses and select your electives</li>
-              <li><strong>Pay Tuition</strong> — Pay your programme tuition fee to complete registration</li>
+              <li><strong>Pay Tuition</strong> — Pay your program tuition fee to complete registration</li>
             </ol>
           </div>
           <p style="color: #475569; line-height: 1.6;">

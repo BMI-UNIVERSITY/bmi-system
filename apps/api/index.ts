@@ -23,7 +23,7 @@ import { handleListStudents, handleGetStudent, handleCreateStudent, handleUpdate
 import { handleListGrades, handleCreateGrade, handleUpdateGrade } from './routes/ums-grades';
 import { handleListUmsCourses, handleCreateCourse, handleUpdateCourse, handleDeleteCourse, handleListPrograms, handleListFaculties, handleListDepartments, handleListTerms, handleListEnrollments, handleCreateEnrollment } from './routes/ums-courses';
 import { handleListStaff, handleGetStaff, handleCreateStaff, handleUpdateStaff } from './routes/ums-staff';
-import { handleGetStudentProgrammes, handleProgrammeTransfer } from './routes/programmes';
+import { handleGetStudentPrograms, handleProgramTransfer } from './routes/programs';
 import { handleListTransactions } from './routes/ums-finance';
 import { handleGetRevenueTrend } from './routes/ums-dashboard';
 import {
@@ -61,6 +61,13 @@ import {
   handleAdminResolveHold,
 } from './routes/enrollment';
 import { handleTransitionToAlumni } from './routes/alumni';
+import {
+  handleGetStudentStanding,
+  handleGetCurrentStanding,
+  handleAdminListStanding,
+  handleComputeStanding,
+  handleListStandingRules,
+} from './routes/academic_standing';
 
 const log = createLogger('bmi-api');
 
@@ -171,8 +178,8 @@ const ROUTES: Route[] = [
   { method: 'GET', path: /^\/api\/v1\/students\/([^/]+)$/, roles: ['admin', 'staff', 'student'], handler: async (req, env, p, auth, ctx) => handleGetStudent(req, env, p[1], auth!.user.sub, auth!.user.role) },
   { method: ['PUT', 'PATCH'], path: /^\/api\/v1\/students\/([^/]+)$/, roles: ['admin', 'staff'], handler: async (req, env, p, auth, ctx) => handleUpdateStudent(req, env, p[1]) },
   { method: 'DELETE', path: /^\/api\/v1\/students\/([^/]+)$/, roles: ['admin'], handler: async (req, env, p, auth, ctx) => handleDeleteStudent(req, env, p[1]) },
-  { method: 'GET', path: /^\/api\/v1\/students\/([^/]+)\/programmes$/, roles: ['admin', 'staff'], handler: async (req, env, p, auth, ctx) => handleGetStudentProgrammes(req, env, p[1]) },
-  { method: 'POST', path: /^\/api\/v1\/students\/([^/]+)\/transfer$/, roles: ['admin', 'staff'], handler: async (req, env, p, auth, ctx) => handleProgrammeTransfer(req, env, p[1], auth!.user.sub) },
+  { method: 'GET', path: /^\/api\/v1\/students\/([^/]+)\/programs$/, roles: ['admin', 'staff'], handler: async (req, env, p, auth, ctx) => handleGetStudentPrograms(req, env, p[1]) },
+  { method: 'POST', path: /^\/api\/v1\/students\/([^/]+)\/transfer$/, roles: ['admin', 'staff'], handler: async (req, env, p, auth, ctx) => handleProgramTransfer(req, env, p[1], auth!.user.sub) },
   { method: 'GET', path: /^\/api\/v1\/grades$/, roles: ['admin', 'staff', 'student'], handler: async (req, env, p, auth, ctx) => handleListGrades(req, env, auth!.user.sub, auth!.user.role) },
   { method: 'POST', path: /^\/api\/v1\/grades$/, roles: ['admin', 'staff'], handler: async (req, env, p, auth, ctx) => handleCreateGrade(req, env, auth!.user.sub) },
   { method: ['PUT', 'PATCH'], path: /^\/api\/v1\/grades\/([^/]+)$/, roles: ['admin', 'staff'], handler: async (req, env, p, auth, ctx) => handleUpdateGrade(req, env, p[1]) },
@@ -258,6 +265,12 @@ const ROUTES: Route[] = [
   { method: 'POST', path: /^\/api\/admin\/students\/([^/]+)\/resolve-hold$/, roles: ['admin', 'staff'], handler: async (req, env, p, auth, ctx) => handleAdminResolveHold(req, env, p[1]) },
   // Alumni
   { method: 'POST', path: /^\/api\/alumni\/transition$/, roles: ['admin'], handler: async (req, env, p, auth, ctx) => handleTransitionToAlumni(req, env, auth!.user.sub) },
+  // Academic Standing
+  { method: 'GET', path: /^\/api\/v1\/students\/([^/]+)\/standing\/current$/, roles: ['admin', 'staff', 'student'], handler: async (req, env, p, auth, ctx) => handleGetCurrentStanding(req, env, p[1], auth!.user.sub, auth!.user.role) },
+  { method: 'GET', path: /^\/api\/v1\/students\/([^/]+)\/standing$/, roles: ['admin', 'staff', 'student'], handler: async (req, env, p, auth, ctx) => handleGetStudentStanding(req, env, p[1], auth!.user.sub, auth!.user.role) },
+  { method: 'GET', path: /^\/api\/v1\/admin\/standing\/rules$/, roles: ['admin', 'staff'], handler: async (req, env, p, auth, ctx) => handleListStandingRules(req, env) },
+  { method: 'GET', path: /^\/api\/v1\/admin\/standing$/, roles: ['admin', 'staff'], handler: async (req, env, p, auth, ctx) => handleAdminListStanding(req, env) },
+  { method: 'POST', path: /^\/api\/v1\/admin\/standing\/compute$/, roles: ['admin'], handler: async (req, env, p, auth, ctx) => handleComputeStanding(req, env) },
 ];
 
 import { bootstrap } from '@bmi/bootstrap';

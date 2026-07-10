@@ -9,13 +9,13 @@
  *
  * Prerequisites:
  *   - wrangler local D1 running (or use --persist-to flag)
- *   - A test programme_id and admission_year in regno_counters
+ *   - A test program_id and admission_year in regno_counters
  */
 
 const CONCURRENCY = 50;
-const PROGRAMME_ID = 'test-programme-001';
+const PROGRAM_ID = 'test-program-001';
 const ADMISSION_YEAR = 2026;
-const PROGRAMME_CODE = 'CS';
+const PROGRAM_CODE = 'CS';
 const CAREER = 'UG';
 
 async function runTest() {
@@ -56,7 +56,7 @@ async function runTest() {
   console.log(`   Unique RegNos:              ${unique.size}`);
 
   const hasDuplicates = unique.size < results.length;
-  const expectedFormat = new RegExp(`^BMI/${CAREER}-${PROGRAMME_CODE}/2${String(ADMISSION_YEAR).slice(2)}/\\d{3}$`);
+  const expectedFormat = new RegExp(`^BMI/${CAREER}-${PROGRAM_CODE}/2${String(ADMISSION_YEAR).slice(2)}/\\d{3}$`);
   const allCorrectFormat = results.every(r => expectedFormat.test(r));
 
   if (hasDuplicates) {
@@ -69,7 +69,7 @@ async function runTest() {
 
   if (!allCorrectFormat) {
     console.error(`\n❌ FAIL: Some registration numbers have incorrect format!`);
-    console.error(`   Expected format: BMI/${CAREER}-${PROGRAMME_CODE}/${ADMISSION_YEAR % 1000 + (ADMISSION_YEAR > 2000 ? 200 : 0)}/NNN`);
+    console.error(`   Expected format: BMI/${CAREER}-${PROGRAM_CODE}/${ADMISSION_YEAR % 1000 + (ADMISSION_YEAR > 2000 ? 200 : 0)}/NNN`);
     console.error(`   Got:`, results.filter(r => !expectedFormat.test(r)));
     process.exit(1);
   }

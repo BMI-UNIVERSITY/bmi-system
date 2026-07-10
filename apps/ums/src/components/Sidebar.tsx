@@ -86,7 +86,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { i18n } = useTranslation();
+  const { t, i18n } = useTranslation();
   const openAIModal = useUIStore((s) => s.openAIModal);
   const user = useAuthStore((s) => s.user);
 
@@ -111,7 +111,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     { id: "timetable", label: "Timetable", icon: Calendar },
     { id: "finance", label: "Finance", icon: CreditCard },
     { id: "courses", label: "Courses", icon: MonitorPlay },
-    { id: "programs", label: "Degree Programs", icon: GraduationCap },
+    { id: "programs", label: `Degree ${t('academic.programs')}`, icon: GraduationCap },
     { id: "exams", label: "Exams & Grading", icon: FileSpreadsheet },
     { id: "grades", label: "Grade Management", icon: FileSpreadsheet },
     { id: "rubrics", label: "Marking Rubrics", icon: FileText },

@@ -82,7 +82,7 @@ describe('handleCreateStudent', () => {
       last_name: 'Doe',
       reg_no: 'REG123',
       admission_date: '2026-09-01',
-      programme: 'Computer Science',
+      program: 'Computer Science',
     });
 
     const res = await handleCreateStudent(req, env as any);

@@ -131,7 +131,7 @@ describe('Enrollment Flow', () => {
       const db = makeChainDB(
         [
           { id: 'hold-1' },
-          { programme_id: 'prog-1' },
+          { program_id: 'prog-1' },
           { id: 'curr-1' },
           null,
           null,
@@ -181,7 +181,7 @@ describe('Enrollment Flow', () => {
   });
 
   describe('handleGetProgramCurriculum', () => {
-    it('returns 404 when student has no programme', async () => {
+    it('returns 404 when student has no program', async () => {
       const db = makeChainDB([null]);
       const env = makeEnv(db);
       const req = new Request('http://localhost/api/student/curriculum');

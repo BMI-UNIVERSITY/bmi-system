@@ -51,14 +51,14 @@ export async function handleGetProgramCurriculum(req: Request, env: Env, userId:
   const termId = url.searchParams.get('term_id');
 
   const studentProg = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT sp.programme_id, p.name as program_name, p.code as program_code
-     FROM student_programmes sp
-     JOIN programs p ON p.id = sp.programme_id
+    `SELECT sp.program_id, p.name as program_name, p.code as program_code
+     FROM student_programs sp
+     JOIN programs p ON p.id = sp.program_id
      WHERE sp.uid = (SELECT uid FROM persons WHERE id = (SELECT person_id FROM users WHERE id = ?))
      AND sp.current_flag = 1`
-  ).bind(userId).first<{ programme_id: string; program_name: string; program_code: string }>();
+  ).bind(userId).first<{ program_id: string; program_name: string; program_code: string }>();
 
-  if (!studentProg) return error('No active programme found. Please contact admissions.', 404);
+  if (!studentProg) return error('No active program found. Please contact admissions.', 404);
 
   let curriculumRows;
   if (termId) {
@@ -68,7 +68,7 @@ export async function handleGetProgramCurriculum(req: Request, env: Env, userId:
        JOIN academic_terms at ON at.id = pc.term_id
        WHERE pc.program_id = ? AND pc.term_id = ?
        ORDER BY pc.term_number ASC`
-    ).bind(studentProg.programme_id, termId).all<CurriculumTerm>();
+    ).bind(studentProg.program_id, termId).all<CurriculumTerm>();
     curriculumRows = curResult.results;
   } else {
     const curResult = await env.PLATFORM_CONTEXT!.db.prepare(
@@ -77,11 +77,11 @@ export async function handleGetProgramCurriculum(req: Request, env: Env, userId:
        JOIN academic_terms at ON at.id = pc.term_id
        WHERE pc.program_id = ?
        ORDER BY pc.term_number ASC`
-    ).bind(studentProg.programme_id).all<CurriculumTerm>();
+    ).bind(studentProg.program_id).all<CurriculumTerm>();
     curriculumRows = curResult.results;
   }
 
-  if (curriculumRows.length === 0) return error('No curriculum defined for this programme.', 404);
+  if (curriculumRows.length === 0) return error('No curriculum defined for this program.', 404);
 
   const curriculumWithCourses = await Promise.all(curriculumRows.map(async (term) => {
     const { results: courses } = await env.PLATFORM_CONTEXT!.db.prepare(
@@ -96,7 +96,7 @@ export async function handleGetProgramCurriculum(req: Request, env: Env, userId:
   }));
 
   return ok({
-    programme_id: studentProg.programme_id,
+    program_id: studentProg.program_id,
     program_name: studentProg.program_name,
     program_code: studentProg.program_code,
     terms: curriculumWithCourses,
@@ -113,13 +113,13 @@ export async function handleAutoEnrollMandatory(req: Request, env: Env, userId: 
   if (!hold) return error('Course selection hold is already resolved.', 400);
 
   const studentProg = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT sp.programme_id
-     FROM student_programmes sp
+    `SELECT sp.program_id
+     FROM student_programs sp
      WHERE sp.uid = (SELECT uid FROM persons WHERE id = (SELECT person_id FROM users WHERE id = ?))
      AND sp.current_flag = 1`
-  ).bind(userId).first<{ programme_id: string }>();
+  ).bind(userId).first<{ program_id: string }>();
 
-  if (!studentProg) return error('No active programme found.', 404);
+  if (!studentProg) return error('No active program found.', 404);
 
   const now = new Date();
   const currentTerm = await env.PLATFORM_CONTEXT!.db.prepare(
@@ -133,7 +133,7 @@ export async function handleAutoEnrollMandatory(req: Request, env: Env, userId: 
   const curriculum = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT id FROM program_curriculum
      WHERE program_id = ? AND term_id = ?`
-  ).bind(studentProg.programme_id, currentTerm.id).first<{ id: string }>();
+  ).bind(studentProg.program_id, currentTerm.id).first<{ id: string }>();
 
   if (!curriculum) return error('No curriculum defined for current term.', 404);
 
@@ -185,13 +185,13 @@ export async function handleAutoEnrollMandatory(req: Request, env: Env, userId: 
 
 export async function handleGetElectiveGroups(req: Request, env: Env, userId: string): Promise<Response> {
   const studentProg = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT sp.programme_id
-     FROM student_programmes sp
+    `SELECT sp.program_id
+     FROM student_programs sp
      WHERE sp.uid = (SELECT uid FROM persons WHERE id = (SELECT person_id FROM users WHERE id = ?))
      AND sp.current_flag = 1`
-  ).bind(userId).first<{ programme_id: string }>();
+  ).bind(userId).first<{ program_id: string }>();
 
-  if (!studentProg) return error('No active programme found.', 404);
+  if (!studentProg) return error('No active program found.', 404);
 
   const currentTerm = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT id, name FROM academic_terms
@@ -203,7 +203,7 @@ export async function handleGetElectiveGroups(req: Request, env: Env, userId: st
 
   const curriculum = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT id FROM program_curriculum WHERE program_id = ? AND term_id = ?`
-  ).bind(studentProg.programme_id, currentTerm.id).first<{ id: string }>();
+  ).bind(studentProg.program_id, currentTerm.id).first<{ id: string }>();
 
   if (!curriculum) return error('No curriculum defined for current term.', 404);
 
@@ -442,14 +442,14 @@ export async function handleGenerateProgramInvoice(req: Request, env: Env, userI
   if (courseSelectionHold) return error('Complete course registration before generating invoice.', 400);
 
   const studentProg = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT sp.programme_id, p.name as program_name
-     FROM student_programmes sp
-     JOIN programs p ON p.id = sp.programme_id
+    `SELECT sp.program_id, p.name as program_name
+     FROM student_programs sp
+     JOIN programs p ON p.id = sp.program_id
      WHERE sp.uid = (SELECT uid FROM persons WHERE id = (SELECT person_id FROM users WHERE id = ?))
      AND sp.current_flag = 1`
-  ).bind(userId).first<{ programme_id: string; program_name: string }>();
+  ).bind(userId).first<{ program_id: string; program_name: string }>();
 
-  if (!studentProg) return error('No active programme found.', 404);
+  if (!studentProg) return error('No active program found.', 404);
 
   const currentTerm = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT id, name FROM academic_terms
@@ -461,9 +461,9 @@ export async function handleGenerateProgramInvoice(req: Request, env: Env, userI
 
   const fee = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT id, amount, description FROM program_fees WHERE program_id = ? AND term_id = ?`
-  ).bind(studentProg.programme_id, currentTerm.id).first<{ id: string; amount: number; description: string }>();
+  ).bind(studentProg.program_id, currentTerm.id).first<{ id: string; amount: number; description: string }>();
 
-  if (!fee) return error('No fee structure defined for this programme and term. Contact admin.', 404);
+  if (!fee) return error('No fee structure defined for this program and term. Contact admin.', 404);
 
   const existingInvoice = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT id, status FROM invoices WHERE student_id = ? AND status = 'unpaid'`

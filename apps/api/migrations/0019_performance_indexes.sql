@@ -34,8 +34,8 @@ CREATE INDEX IF NOT EXISTS idx_provisioning_created ON provisioning_jobs(created
 
 -- Student/Staff performance indexes
 CREATE INDEX IF NOT EXISTS idx_students_reg_status ON students(reg_no, status);
-CREATE INDEX IF NOT EXISTS idx_students_programme_status ON students(programme_id, status);
-CREATE INDEX IF NOT EXISTS idx_student_programmes_admission ON student_programmes(admission_year, status);
+CREATE INDEX IF NOT EXISTS idx_students_programme_status ON students(program_id, status);
+CREATE INDEX IF NOT EXISTS idx_student_programs_admission ON student_programs(admission_year, status);
 
 -- Composite indexes for common JOIN patterns
 CREATE INDEX IF NOT EXISTS idx_enrollments_student_course ON enrollments(student_id, course_id, status);

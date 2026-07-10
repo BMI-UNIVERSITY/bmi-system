@@ -103,19 +103,19 @@ async function executeJob(env: Env, job: ProvisioningJob): Promise<void> {
 
     case 'lms': {
       const student = await ctx.db.prepare(
-        `SELECT s.user_id, s.programme, p.uid
+        `SELECT s.user_id, s.program, p.uid
          FROM students s
          JOIN persons p ON s.user_id = (SELECT id FROM users WHERE person_id = p.id LIMIT 1)
          WHERE p.uid = ?`
-      ).bind(uid).first<{ user_id: string; programme: string; uid: string }>();
+      ).bind(uid).first<{ user_id: string; program: string; uid: string }>();
       if (!student) {
         console.warn(`[provisioning] LMS: No student found for uid ${uid} — skipping`);
         return;
       }
 
       const courses = await ctx.db.prepare(
-        `SELECT id FROM courses WHERE programme_id = (
-           SELECT programme_id FROM student_programmes WHERE uid = ? AND current_flag = 1 LIMIT 1
+        `SELECT id FROM courses WHERE program_id = (
+           SELECT program_id FROM student_programs WHERE uid = ? AND current_flag = 1 LIMIT 1
          ) LIMIT 5`
       ).bind(uid).all<{ id: string }>();
 
@@ -139,17 +139,17 @@ async function executeJob(env: Env, job: ProvisioningJob): Promise<void> {
 
     case 'finance': {
       const studentRow = await ctx.db.prepare(
-        `SELECT s.user_id, s.programme, p.uid
+        `SELECT s.user_id, s.program, p.uid
          FROM students s
          JOIN persons p ON s.user_id = (SELECT id FROM users WHERE person_id = p.id LIMIT 1)
          WHERE p.uid = ?`
-      ).bind(uid).first<{ user_id: string; programme: string }>();
+      ).bind(uid).first<{ user_id: string; program: string }>();
       if (!studentRow) throw new Error('Student not found for finance provisioning');
 
       await ctx.db.prepare(
         `INSERT INTO invoices (id, user_id, amount, description, due_date, status, created_at)
          VALUES (lower(hex(randomblob(16))), ?, 1000, ?, datetime('now', '+30 days'), 'pending', datetime('now'))`
-      ).bind(studentRow.user_id, `Tuition fee: ${studentRow.programme || 'Program'}`).run();
+      ).bind(studentRow.user_id, `Tuition fee: ${studentRow.program || 'Program'}`).run();
       break;
     }
 
@@ -170,12 +170,12 @@ async function executeJob(env: Env, job: ProvisioningJob): Promise<void> {
 
     case 'id_card': {
       const info = await ctx.db.prepare(
-        `SELECT u.first_name, u.last_name, s.reg_no, s.programme, p.uid
+        `SELECT u.first_name, u.last_name, s.reg_no, s.program, p.uid
          FROM persons p
          JOIN users u ON u.person_id = p.id
          JOIN students s ON s.user_id = u.id
          WHERE p.uid = ?`
-      ).bind(uid).first<{ first_name: string; last_name: string; reg_no: string; programme: string; uid: string }>();
+      ).bind(uid).first<{ first_name: string; last_name: string; reg_no: string; program: string; uid: string }>();
 
       if (info && ctx.document) {
         await ctx.document.generateDocument({
@@ -185,7 +185,7 @@ async function executeJob(env: Env, job: ProvisioningJob): Promise<void> {
             name: `${info.first_name} ${info.last_name}`,
             uid: info.uid,
             regNo: info.reg_no,
-            program: info.programme,
+            program: info.program,
           },
         });
       }

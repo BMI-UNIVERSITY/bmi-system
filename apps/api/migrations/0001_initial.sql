@@ -312,7 +312,7 @@ CREATE TABLE IF NOT EXISTS students (
   date_of_birth   TEXT,
   nationality     TEXT,
   admission_date  TEXT NOT NULL,
-  programme       TEXT NOT NULL,
+  program       TEXT NOT NULL,
   status          TEXT NOT NULL DEFAULT 'Active' CHECK(status IN ('Active', 'Inactive', 'Graduated', 'Suspended', 'Applicant')),
   avatar_color    TEXT,
   study_center_id TEXT,

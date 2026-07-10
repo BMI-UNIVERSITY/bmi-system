@@ -39,7 +39,7 @@ export function useStudentsQuery(params?: {
   search?: string;
   status?: string;
   study_center_id?: string;
-  programme?: string;
+  program?: string;
 }) {
   return useQuery({
     queryKey: QUERY_KEYS.students(params as Record<string, unknown> | undefined),

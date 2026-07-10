@@ -63,7 +63,7 @@ describe("useDataStore", () => {
         gender: "Male" as const,
         email: "john@test.com",
         phone: "123",
-        programme: "CS",
+        program: "CS",
         program_code: "CS",
         admission_date: "2024-01-01",
         status: "Active" as const,

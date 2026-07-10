@@ -25,6 +25,18 @@ export async function handleGetDashboard(request: Request, env: Env, userId: str
 
   const unpaidCount = invoices.filter((i: Record<string, unknown>) => i.status === 'unpaid').length;
 
+  // Current academic standing (latest pre-computed record)
+  const currentStanding = await env.PLATFORM_CONTEXT!.db.prepare(
+    `SELECT asr.standing, asr.term_gpa, asr.cumulative_gpa, asr.completion_rate,
+            at.name as term_name, sr.description as rule_description
+     FROM academic_standing_records asr
+     LEFT JOIN academic_terms at ON at.id = asr.term_id
+     LEFT JOIN standing_rules sr ON sr.id = asr.rule_id
+     WHERE asr.student_id = ?
+     ORDER BY asr.created_at DESC
+     LIMIT 1`
+  ).bind(userId).first();
+
   return ok({
     balance,
     unpaid_invoices: unpaidCount,
@@ -32,6 +44,7 @@ export async function handleGetDashboard(request: Request, env: Env, userId: str
     current_classes: enrollments,
     registration_holds: activeHolds,
     has_registration_blocks: activeHolds.length > 0,
+    academic_standing: currentStanding ?? { standing: 'good', message: 'No standing records yet — good standing by default.' },
     announcements: [
       { id: '1', title: 'Welcome to the New Academic Year', date: new Date().toISOString().split('T')[0], content: 'Complete your onboarding steps to register for courses.' },
     ]

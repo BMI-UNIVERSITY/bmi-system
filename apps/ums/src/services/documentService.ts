@@ -249,8 +249,8 @@ export class DocumentService {
           body: JSON.stringify({
             studentId,
             studentName,
-            programme: String(
-              contentData.programme ?? contentData.program_code ?? "Unknown",
+            program: String(
+              contentData.program ?? contentData.program_code ?? "Unknown",
             ),
             academicYear: String(
               contentData.academicYear ??

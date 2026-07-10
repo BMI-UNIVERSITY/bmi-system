@@ -34,8 +34,11 @@ interface Address {
   current_address: string; city: string; state: string; country: string;
   emergency_contact_name: string; emergency_contact_phone: string;
 }
-interface Programme {
-  programme_id: string; programme_name: string; level: string;
+interface DbProgram {
+  id: string; name: string; code: string; level: string; degree_type: string;
+}
+interface Program {
+  program_id: string; program_name: string; level: string;
   study_mode: 'full_time' | 'part_time' | 'distance';
 }
 interface ModuleItem {
@@ -55,7 +58,7 @@ interface Confirm {
 interface RegistrationData {
   personal_details?: PersonalDetails;
   address?: Address;
-  programme?: Programme;
+  program?: Programme;
   modules?: Modules;
   fees?: Fees;
   confirm?: Confirm;
@@ -69,11 +72,13 @@ export default function RegistrationWizard() {
   const [error, setError] = useState('');
   const [completed, setCompleted] = useState(false);
   const [availableModules, setAvailableModules] = useState<ModuleItem[]>([]);
+  const [availablePrograms, setAvailablePrograms] = useState<DbProgram[]>([]);
   const [data, setData] = useState<RegistrationData>({});
 
   useEffect(() => {
     fetchRegistrationStatus();
     fetchModules();
+    fetchPrograms();
   }, []);
 
   const fetchRegistrationStatus = async () => {
@@ -97,6 +102,13 @@ export default function RegistrationWizard() {
     } catch {}
   };
 
+  const fetchPrograms = async () => {
+    try {
+      const res = await api.registration.getPrograms();
+      if (Array.isArray(res)) setAvailablePrograms(res.filter(p => p.id && p.name));
+    } catch {}
+  };
+
   const updateField = (step: string, field: string, value: any) => {
     setData(prev => ({
       ...prev,
@@ -108,7 +120,8 @@ export default function RegistrationWizard() {
     setLoading(true);
     setError('');
     try {
-      const stepKey = STEP_LABELS[stepIdx].toLowerCase().replace(/ /g, '_');
+      let stepKey = STEP_LABELS[stepIdx].toLowerCase().replace(/ /g, '_');
+      if (stepKey === 'programme') stepKey = 'program';
       await api.registration.saveStep(stepKey, (data as any)[stepKey] || {});
       return true;
     } catch (err: any) {
@@ -280,29 +293,46 @@ export default function RegistrationWizard() {
   };
 
   const renderProgramme = () => {
-    const d = data.programme || {} as Programme;
+    const d = data.program || {} as Programme;
     const modes = [
       { value: 'full_time', label: 'Full Time', icon: '🏛️', desc: 'On-campus, standard academic schedule' },
       { value: 'part_time', label: 'Part Time', icon: '📅', desc: 'Flexible schedule for working students' },
       { value: 'distance', label: 'Distance Learning', icon: '🌐', desc: 'Online, study from anywhere' },
     ] as const;
+    // Group programs by level for a clean optgroup layout
+    const LEVEL_LABELS: Record<string, string> = {
+      undergraduate: 'Undergraduate',
+      graduate: 'Graduate',
+      doctorate: 'Doctorate',
+      certificate: 'Graduate Certificates',
+    };
+    const LEVEL_ORDER = ['undergraduate', 'graduate', 'doctorate', 'certificate'];
+    const grouped = LEVEL_ORDER.reduce<Record<string, DbProgram[]>>((acc, lvl) => {
+      const items = availablePrograms.filter(p => p.level === lvl);
+      if (items.length) acc[lvl] = items;
+      return acc;
+    }, {});
+
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <div className="form-group">
           <label className="form-label">Programme</label>
-          <select className="form-select" value={d.programme_id || ''} onChange={e => {
+          <select className="form-select" value={d.program_id || ''} onChange={e => {
             const opt = e.target.options[e.target.selectedIndex];
-            updateField('programme', 'programme_id', e.target.value);
-            updateField('programme', 'programme_name', opt.dataset.name || '');
-            updateField('programme', 'level', opt.dataset.level || '');
+            updateField('program', 'program_id', e.target.value);
+            updateField('program', 'program_name', opt.dataset.name || '');
+            updateField('program', 'level', opt.dataset.level || '');
           }}>
-            <option value="">Select a programme...</option>
-            <option value="bsc-cs" data-name="BSc Computer Science" data-level="undergraduate">BSc Computer Science</option>
-            <option value="bsc-ba" data-name="BSc Business Administration" data-level="undergraduate">BSc Business Administration</option>
-            <option value="bsc-nursing" data-name="BSc Nursing" data-level="undergraduate">BSc Nursing</option>
-            <option value="ms-cs" data-name="MSc Computer Science" data-level="graduate">MSc Computer Science</option>
-            <option value="ms-ed" data-name="MSc Education" data-level="graduate">MSc Education</option>
-            <option value="phd-theology" data-name="PhD Theology" data-level="doctorate">PhD Theology</option>
+            <option value="">{availablePrograms.length === 0 ? 'Loading programmes…' : 'Select a programme…'}</option>
+            {Object.entries(grouped).map(([lvl, progs]) => (
+              <optgroup key={lvl} label={LEVEL_LABELS[lvl] ?? lvl}>
+                {progs.map(p => (
+                  <option key={p.id} value={p.id} data-name={p.name} data-level={p.level}>
+                    {p.name}
+                  </option>
+                ))}
+              </optgroup>
+            ))}
           </select>
         </div>
         <div className="form-group">
@@ -317,7 +347,7 @@ export default function RegistrationWizard() {
                 cursor: 'pointer', transition: 'all 0.2s',
               }}>
                 <input type="radio" name="study_mode" value={mode.value} checked={d.study_mode === mode.value}
-                  onChange={e => updateField('programme', 'study_mode', e.target.value)}
+                  onChange={e => updateField('program', 'study_mode', e.target.value)}
                   style={{ accentColor: 'var(--gold)', width: 18, height: 18, flexShrink: 0 }} />
                 <span style={{ fontSize: '1.3rem' }}>{mode.icon}</span>
                 <div>
@@ -351,7 +381,7 @@ export default function RegistrationWizard() {
       return (
         <div style={{ textAlign: 'center', padding: '3rem 0', color: 'var(--slate)' }}>
           <div style={{ fontSize: '2.5rem', marginBottom: '0.75rem' }}>📚</div>
-          <p>No modules available yet. Please select a programme first.</p>
+          <p>No modules available yet. Please select a program first.</p>
         </div>
       );
     }
@@ -401,7 +431,7 @@ export default function RegistrationWizard() {
         <div className="alert alert-warning">
           <strong>💰 Tuition &amp; Fees</strong><br />
           <span style={{ fontSize: '0.9rem', marginTop: '0.4rem', display: 'block' }}>
-            Tuition fees vary by programme and study mode. A detailed invoice will be generated after registration.
+            Tuition fees vary by program and study mode. A detailed invoice will be generated after registration.
             You agree to pay all applicable fees as outlined in the university fee schedule.
           </span>
         </div>
@@ -454,7 +484,7 @@ export default function RegistrationWizard() {
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
             {data.personal_details && <div><strong style={{ color: 'var(--navy)' }}>Name:</strong> {data.personal_details.first_name} {data.personal_details.last_name}</div>}
-            {data.programme && <div><strong style={{ color: 'var(--navy)' }}>Programme:</strong> {data.programme.programme_name} ({data.programme.study_mode.replace('_', ' ')})</div>}
+            {data.program && <div><strong style={{ color: 'var(--navy)' }}>Programme:</strong> {data.program.program_name} ({data.program.study_mode.replace('_', ' ')})</div>}
             {data.modules && <div><strong style={{ color: 'var(--navy)' }}>Modules Selected:</strong> {data.modules.selected_course_ids.length} ({data.modules.total_credits} credits)</div>}
             {data.address && <div><strong style={{ color: 'var(--navy)' }}>Location:</strong> {data.address.city}, {data.address.country}</div>}
           </div>

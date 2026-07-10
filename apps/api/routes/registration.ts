@@ -4,7 +4,7 @@ import { sendEmail, buildEmailLayout } from '../lib/email';
 import { generateRegNo } from '../lib/reg_number';
 import { enqueueProvisioningJobs } from '../lib/provisioning';
 
-export type RegStep = 'personal_details' | 'address' | 'programme' | 'modules' | 'fees' | 'confirm';
+export type RegStep = 'personal_details' | 'address' | 'program' | 'modules' | 'fees' | 'confirm';
 
 export interface RegistrationData {
   personal_details?: {
@@ -23,9 +23,9 @@ export interface RegistrationData {
     emergency_contact_name: string;
     emergency_contact_phone: string;
   };
-  programme?: {
-    programme_id: string;
-    programme_name: string;
+  program?: {
+    program_id: string;
+    program_name: string;
     level: string;
     study_mode: 'full_time' | 'part_time' | 'distance';
   };
@@ -47,7 +47,7 @@ export interface RegistrationData {
   };
 }
 
-const STEP_ORDER: RegStep[] = ['personal_details', 'address', 'programme', 'modules', 'fees', 'confirm'];
+const STEP_ORDER: RegStep[] = ['personal_details', 'address', 'program', 'modules', 'fees', 'confirm'];
 
 function validateStep(step: RegStep, data: Record<string, unknown>): string | null {
   switch (step) {
@@ -63,8 +63,8 @@ function validateStep(step: RegStep, data: Record<string, unknown>): string | nu
       if (!data.emergency_contact_name) return 'Emergency contact name is required';
       if (!data.emergency_contact_phone) return 'Emergency contact phone is required';
       return null;
-    case 'programme':
-      if (!data.programme_id) return 'Programme selection is required';
+    case 'program':
+      if (!data.program_id) return 'Programme selection is required';
       if (!data.study_mode) return 'Study mode is required';
       return null;
     case 'modules':
@@ -168,38 +168,38 @@ export async function handleCompleteRegistration(req: Request, env: Env, userId:
     if (!uid) return error('User lacks UID. Please contact support.', 400);
 
     const now = new Date().toISOString();
-    const programmeId = currentData.programme?.programme_id;
+    const programId = currentData.program?.program_id;
     let finalRegNo = userRow.reg_no;
 
     await db.transaction(async (tx) => {
-      // 1. Update students programme text
+      // 1. Update students program text
       await tx.prepare(
-        `UPDATE students SET programme = ?, updated_at = ? WHERE user_id = ?`
-      ).bind(currentData.programme?.programme_name || '', now, userId).run();
+        `UPDATE students SET program = ?, updated_at = ? WHERE user_id = ?`
+      ).bind(currentData.program?.program_name || '', now, userId).run();
 
-      // 2. Link student_programmes and generate Reg No if needed
-      if (programmeId) {
+      // 2. Link student_programs and generate Reg No if needed
+      if (programId) {
         const year = new Date().getUTCFullYear();
         const rowId = crypto.randomUUID().replace(/-/g, '');
         
         await tx.prepare(
-          `INSERT OR IGNORE INTO student_programmes
-             (id, uid, programme_id, admission_year, enrollment_date, status, current_flag, created_at, updated_at)
+          `INSERT OR IGNORE INTO student_programs
+             (id, uid, program_id, admission_year, enrollment_date, status, current_flag, created_at, updated_at)
            VALUES (?, ?, ?, ?, ?, 'active', 1, ?, ?)`
-        ).bind(rowId, uid, programmeId, year, now.split('T')[0], now, now).run();
+        ).bind(rowId, uid, programId, year, now.split('T')[0], now, now).run();
         
         if (!finalRegNo || finalRegNo.startsWith('PENDING')) {
           const progInfo = await tx.prepare(
             `SELECT code, level FROM programs WHERE id = ?`
-          ).bind(programmeId).first<{ code: string; level: string }>();
+          ).bind(programId).first<{ code: string; level: string }>();
           
           if (progInfo) {
-            finalRegNo = await generateRegNo(tx, programmeId, progInfo.code, year, progInfo.level);
+            finalRegNo = await generateRegNo(tx, programId, progInfo.code, year, progInfo.level);
             await tx.prepare(
               `UPDATE students SET reg_no = ?, updated_at = ? WHERE user_id = ?`
             ).bind(finalRegNo, now, userId).run();
             await tx.prepare(
-              `UPDATE student_programmes SET registration_number = ?, updated_at = ? WHERE uid = ? AND current_flag = 1`
+              `UPDATE student_programs SET registration_number = ?, updated_at = ? WHERE uid = ? AND current_flag = 1`
             ).bind(finalRegNo, now, uid).run();
           }
         }
@@ -233,7 +233,7 @@ export async function handleCompleteRegistration(req: Request, env: Env, userId:
           </p>
           <div style="background:#f8fafc;border-left:4px solid #d4af37;padding:16px;margin:20px 0;border-radius:4px;">
             <p><strong>Registration Number:</strong> ${finalRegNo || 'Pending'}</p>
-            <p><strong>Programme:</strong> ${currentData.programme?.programme_name || 'N/A'}</p>
+            <p><strong>Programme:</strong> ${currentData.program?.program_name || 'N/A'}</p>
           </div>
           <p style="color: #475569; line-height: 1.6;">
             Our systems are currently provisioning your student email, ID card, and enrolling you into the LMS. You will receive separate emails as these become available.
@@ -258,17 +258,17 @@ export async function handleGetAvailableModules(req: Request, env: Env, userId: 
       `SELECT value FROM metadata WHERE id = ? AND key = 'registration_data'`
     ).bind(userId).first<{ value: string }>();
 
-    let programmeId: string | null = null;
+    let programId: string | null = null;
     if (progMeta) {
       const data: RegistrationData = JSON.parse(progMeta.value);
-      programmeId = data.programme?.programme_id || null;
+      programId = data.program?.program_id || null;
     }
 
     const { results } = await env.PLATFORM_CONTEXT!.db.prepare(
-      programmeId
-        ? `SELECT c.id, c.code, c.name, c.credits, c.level FROM courses c JOIN programmes p ON c.programme_id = p.id WHERE p.id = ? ORDER BY c.code`
+      programId
+        ? `SELECT c.id, c.code, c.name, c.credits, c.level FROM courses c JOIN programs p ON c.program_id = p.id WHERE p.id = ? ORDER BY c.code`
         : `SELECT c.id, c.code, c.name, c.credits, c.level FROM courses c ORDER BY c.code`
-    ).bind(...(programmeId ? [programmeId] : [])).all();
+    ).bind(...(programId ? [programId] : [])).all();
 
     return ok(results || []);
   } catch {

@@ -179,23 +179,23 @@ export async function handleCreateEnrollment(request: Request, env: Env): Promis
 
   if (!student_id || !course_id) return error('student_id and course_id are required');
 
-  // ── Resolve student → programme → career for RegNo generation ──────────────
+  // ── Resolve student → program → career for RegNo generation ──────────────
   const studentInfo = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT s.user_id, s.programme_id, s.reg_no,
+    `SELECT s.user_id, s.program_id, s.reg_no,
             u.person_id, p.uid,
-            pr.code as programme_code, pr.level as career
+            pr.code as program_code, pr.level as career
      FROM students s
      JOIN users u ON s.user_id = u.id
      LEFT JOIN persons p ON u.person_id = p.id
-     LEFT JOIN programs pr ON s.programme_id = pr.id
+     LEFT JOIN programs pr ON s.program_id = pr.id
      WHERE s.user_id = ?`
   ).bind(student_id).first<{
     user_id: string;
-    programme_id: string | null;
+    program_id: string | null;
     reg_no: string | null;
     person_id: string | null;
     uid: string | null;
-    programme_code: string | null;
+    program_code: string | null;
     career: string | null;
   }>();
 
@@ -215,7 +215,7 @@ export async function handleCreateEnrollment(request: Request, env: Env): Promis
     }
   }
 
-  // ── Generate Registration Number if student has a programme and no reg_no yet ─
+  // ── Generate Registration Number if student has a program and no reg_no yet ─
   let regNo: string | null = studentInfo.reg_no;
   const batchOps: { sql: string; params: unknown[] }[] = [
     {
@@ -226,16 +226,16 @@ export async function handleCreateEnrollment(request: Request, env: Env): Promis
 
   if (
     !regNo &&
-    studentInfo.programme_id &&
-    studentInfo.programme_code &&
+    studentInfo.program_id &&
+    studentInfo.program_code &&
     studentInfo.career &&
     studentInfo.uid
   ) {
     try {
       regNo = await generateRegNo(
         env.PLATFORM_CONTEXT!.db,
-        studentInfo.programme_id,
-        studentInfo.programme_code,
+        studentInfo.program_id,
+        studentInfo.program_code,
         admissionYear,
         studentInfo.career
       );
@@ -247,7 +247,7 @@ export async function handleCreateEnrollment(request: Request, env: Env): Promis
       });
 
       batchOps.push({
-        sql: `UPDATE student_programmes
+        sql: `UPDATE student_programs
               SET registration_number = ?, updated_at = datetime('now')
               WHERE uid = ? AND current_flag = 1 AND registration_number IS NULL`,
         params: [regNo, studentInfo.uid]

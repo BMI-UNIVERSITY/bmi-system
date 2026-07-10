@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { X, Save, User, BookOpen, Hash } from 'lucide-react';
 import { createEnrollment, getPrograms, getAcademicTerms, getProgramById } from '../services/programService';
 import { Program, AcademicTerm } from '../types';
+import { useTranslation } from "react-i18next";
 
 // Local types
 interface Student {
@@ -30,6 +31,7 @@ interface StudentEnrollmentFormProps {
 }
 
 const StudentEnrollmentForm: React.FC<StudentEnrollmentFormProps> = ({ isOpen, onClose, onSuccess, students }) => {
+  const { t } = useTranslation();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [terms, setTerms] = useState<AcademicTerm[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
@@ -132,13 +134,13 @@ const StudentEnrollmentForm: React.FC<StudentEnrollmentFormProps> = ({ isOpen, o
           {/* Program */}
           <div className="space-y-1">
             <label className="flex items-center gap-2 text-xs font-bold uppercase text-gray-600 dark:text-gray-400">
-              <BookOpen size={14} className="text-purple-600" /> Program *</label>
+              <BookOpen size={14} className="text-purple-600" /> {t('academic.program')} *</label>
             <select
               value={form.program_id}
               onChange={e => set('program_id', e.target.value)}
               className={`w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border-2 rounded-lg text-sm outline-none focus:border-purple-500 ${errors.program_id ? 'border-red-400' : 'border-gray-200 dark:border-gray-600'}`}
             >
-              <option value="">— Select Program —</option>
+              <option value="">— Select {t('academic.program')} —</option>
               {programs.map(p => (
                 <option key={p.id} value={p.id}>{p.code} · {p.name}</option>
               ))}

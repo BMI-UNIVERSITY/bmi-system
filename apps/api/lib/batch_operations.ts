@@ -182,7 +182,7 @@ async function executeSimplifiedAdmissionPipeline(
     const placeholderRegNo = `PENDING-${userId.slice(0, 8).toUpperCase()}`;
 
     await db.prepare(
-      "INSERT INTO students (user_id, reg_no, admission_date, programme, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'Active', ?, ?)"
+      "INSERT INTO students (user_id, reg_no, admission_date, program, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'Active', ?, ?)"
     ).bind(userId, placeholderRegNo, now.split('T')[0], program, now, now).run();
   }
 

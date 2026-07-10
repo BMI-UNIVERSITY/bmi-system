@@ -82,9 +82,9 @@ describe('Registration routes — handleSaveRegistrationStep', () => {
     const req = new Request('http://localhost/api/registration/programme', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ programme_id: '', study_mode: '' }),
+      body: JSON.stringify({ program_id: '', study_mode: '' }),
     });
-    const res = await handleSaveRegistrationStep(req, env, 'user-123', 'programme');
+    const res = await handleSaveRegistrationStep(req, env, 'user-123', 'program');
     const body = await res.json();
 
     expect(res.status).toBe(400);
@@ -263,7 +263,7 @@ describe('Registration routes — handleCompleteRegistration', () => {
     const allSteps = {
       personal_details: { first_name: 'Jane', last_name: 'Doe', date_of_birth: '2000-01-01', gender: 'female', nationality: 'Liberian' },
       address: { current_address: '123 St', city: 'Monrovia', state: 'Montserrado', country: 'Liberia', emergency_contact_name: 'Mom', emergency_contact_phone: '+231' },
-      programme: { programme_id: 'bsc-cs', programme_name: 'BSc Computer Science', level: 'undergraduate', study_mode: 'full_time' },
+      program: { program_id: 'bsc-cs', program_name: 'BSc Computer Science', level: 'undergraduate', study_mode: 'full_time' },
       modules: { selected_course_ids: ['c1', 'c2'], total_credits: 30 },
       fees: { accepted_fee_structure: true, payment_method: 'bank_transfer', scholarship_claimed: false },
       confirm: { accepted_terms: true, data_accuracy_confirmed: true, signed_name: 'Jane Doe', signed_date: new Date().toISOString() },
@@ -293,7 +293,7 @@ describe('Registration routes — handleGetAvailableModules', () => {
     env = makeEnv();
   });
 
-  it('returns all modules when no programme selected', async () => {
+  it('returns all modules when no program selected', async () => {
     const courses = [
       { id: 'c1', code: 'CS101', name: 'Intro to CS', credits: 3, level: '100' },
       { id: 'c2', code: 'MATH101', name: 'Calculus I', credits: 4, level: '100' },
@@ -308,10 +308,10 @@ describe('Registration routes — handleGetAvailableModules', () => {
     expect(body.data).toHaveLength(2);
   });
 
-  it('returns programme-filtered modules when programme is selected', async () => {
+  it('returns program-filtered modules when program is selected', async () => {
     const courses = [{ id: 'c1', code: 'CS101', name: 'Intro to CS', credits: 3, level: '100' }];
     const db = makeChainDB(
-      [{ value: JSON.stringify({ programme: { programme_id: 'bsc-cs' } }) }],
+      [{ value: JSON.stringify({ program: { program_id: 'bsc-cs' } }) }],
       [courses],
     );
     const localEnv = makeEnv(db);

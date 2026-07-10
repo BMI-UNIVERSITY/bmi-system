@@ -25,6 +25,7 @@ import {
 } from "../services/academicRecordsService";
 import { getPrograms } from "../services/catalogService";
 import { getHtml2Pdf } from "../services/pdfService";
+import { useTranslation } from "react-i18next";
 import { DocumentService } from "../services/documentService";
 import type { DocumentSecurityFeatures } from "../types/documents";
 import { useDataStore } from "../stores/dataStore";
@@ -236,6 +237,7 @@ const CopyLayoutButton: React.FC<{ templateLayout: TranscriptTemplateLayout }> =
 };
 
 export const Transcripts: React.FC<TranscriptsProps> = (props) => {
+  const { t } = useTranslation();
   // Source data from TanStack Query
   const { data: studentsRes, isLoading: isLoadingStudents } = useStudentsQuery({
     page: 1,
@@ -475,8 +477,8 @@ export const Transcripts: React.FC<TranscriptsProps> = (props) => {
             studentName:
               `${selectedStudent.first_name} ${selectedStudent.last_name}`.trim() ||
               selectedStudent.full_name,
-            programme:
-              selectedStudent.programme ||
+            program:
+              selectedStudent.program ||
               selectedStudent.program_code ||
               "Unknown",
             academicYear: `${new Date().getFullYear()}-${
@@ -813,7 +815,7 @@ export const Transcripts: React.FC<TranscriptsProps> = (props) => {
       .filter((r) => r.score < 40)
       .map((r) => r.courseCode);
 
-    const programName = (selectedStudent.programme || selectedStudent.program_code || "DIPLOMA IN CHRISTIAN MINISTRY AND THEOLOGY").toUpperCase();
+    const programName = (selectedStudent.program || selectedStudent.program_code || "DIPLOMA IN CHRISTIAN MINISTRY AND THEOLOGY").toUpperCase();
     const isDegree =
       programName.includes("DEGREE") || programName.includes("BACHELOR");
     const isMasters = programName.includes("MASTER");
@@ -1759,7 +1761,7 @@ export const Transcripts: React.FC<TranscriptsProps> = (props) => {
                               }),
                               new TextRun({
                                 text: (
-                                  selectedStudent.programme ||
+                                  selectedStudent.program ||
                                   selectedStudent.program_code ||
                                   ""
                                 ).toUpperCase(),
@@ -2531,8 +2533,8 @@ export const Transcripts: React.FC<TranscriptsProps> = (props) => {
   <line x1="60" y1="375" x2="350" y2="375" stroke="#E5E7EB" stroke-width="0.5"/>
 
   <!-- Right Column -->
-  <text x="400" y="320" font-family="Arial, sans-serif" font-size="9" fill="#6B7280">Program:</text>
-  <text x="470" y="320" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000">${(selectedStudent.programme || selectedStudent.program_code || "").substring(0, 45).toUpperCase()}</text>
+  <text x="400" y="320" font-family="Arial, sans-serif" font-size="9" fill="#6B7280">{t('academic.program')}:</text>
+  <text x="470" y="320" font-family="Arial, sans-serif" font-size="10" font-weight="bold" fill="#000000">${(selectedStudent.program || selectedStudent.program_code || "").substring(0, 45).toUpperCase()}</text>
   <line x1="400" y1="325" x2="730" y2="325" stroke="#E5E7EB" stroke-width="0.5"/>
 
   <text x="400" y="345" font-family="Arial, sans-serif" font-size="9" fill="#6B7280">Student ID:</text>
@@ -2797,14 +2799,14 @@ export const Transcripts: React.FC<TranscriptsProps> = (props) => {
               <div className="space-y-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase text-gray-400 tracking-widest">
-                    Target Program
+                    {t('academic.program')}
                   </label>
                   <select
                     value={programFilter}
                     onChange={(e) => setProgramFilter(e.target.value)}
                     className="w-full px-4 py-3 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-none text-[10px] font-black uppercase outline-none focus:ring-1 focus:ring-[#4B0082] cursor-pointer dark:text-gray-200"
                   >
-                    <option value="All Programs">All Programs</option>
+                    <option value="All Programs">All {t('academic.programs')}</option>
                     {programOptions.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.label}
@@ -3640,7 +3642,7 @@ export const Transcripts: React.FC<TranscriptsProps> = (props) => {
                         PROGRAM:
                       </span>
                       <span className="uppercase text-gray-950 font-montserrat font-bold tracking-wide">
-                        {selectedStudent.programme || "DIPLOMA IN CHRISTIAN MINISTRY AND THEOLOGY"}
+                        {selectedStudent.program || "DIPLOMA IN CHRISTIAN MINISTRY AND THEOLOGY"}
                       </span>
                     </div>
                     <div className="flex justify-between border-b border-gray-100 pb-0.5">
@@ -3676,9 +3678,9 @@ export const Transcripts: React.FC<TranscriptsProps> = (props) => {
                       </span>
                       <span className="uppercase text-gray-950 font-montserrat font-bold tracking-wide">
                         {(() => {
-                          const isSeminary = selectedStudent.programme?.toLowerCase().includes("diploma") || 
-                                             selectedStudent.programme?.toLowerCase().includes("ministry") || 
-                                             selectedStudent.programme?.toLowerCase().includes("theology");
+                          const isSeminary = selectedStudent.program?.toLowerCase().includes("diploma") || 
+                                             selectedStudent.program?.toLowerCase().includes("ministry") || 
+                                             selectedStudent.program?.toLowerCase().includes("theology");
                           return (selectedStudent.mode_of_study === "Part-Time" && isSeminary)
                             ? "PART-TIME (SEMINARY MODE)"
                             : (selectedStudent.mode_of_study || "FULL-TIME").toUpperCase();
