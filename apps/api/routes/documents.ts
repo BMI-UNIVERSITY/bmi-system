@@ -2,6 +2,12 @@ import { ok, error, logAdminAction } from '../lib/types';
 import type { Env } from '../lib/types';
 import { parseDocumentUploadQuery } from '../lib/schemas';
 
+function paginate(url: URL) {
+  const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
+  const perPage = Math.min(100, parseInt(url.searchParams.get('perPage') || '20'));
+  return { page, perPage, offset: (page - 1) * perPage };
+}
+
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const MAX_FILES_PER_APP = 20;
 
@@ -189,4 +195,54 @@ export async function handleDeleteDocument(
   await logAdminAction(env, adminId, 'delete_document', 'document', docId, { file_name: doc.file_name }, request);
 
   return ok({ deleted: true });
+}
+
+export async function handleListDocuments(
+  request: Request,
+  env: Env
+): Promise<Response> {
+  const url = new URL(request.url);
+  const { page, perPage, offset } = paginate(url);
+
+  const userId = url.searchParams.get('user_id');
+  const applicationId = url.searchParams.get('application_id');
+  const docType = url.searchParams.get('doc_type');
+
+  const whereClauses: string[] = [];
+  const bindings: unknown[] = [];
+
+  if (userId) {
+    whereClauses.push('d.user_id = ?');
+    bindings.push(userId);
+  }
+  if (applicationId) {
+    whereClauses.push('d.application_id = ?');
+    bindings.push(applicationId);
+  }
+  if (docType) {
+    whereClauses.push('d.doc_type = ?');
+    bindings.push(docType);
+  }
+
+  const where = whereClauses.length ? `WHERE ${whereClauses.join(' AND ')}` : '';
+
+  const countRow = await env.PLATFORM_CONTEXT!.db.prepare(
+    `SELECT COUNT(*) as total FROM documents d ${where}`
+  ).bind(...bindings).first<{ total: number }>();
+
+  const docs = await env.PLATFORM_CONTEXT!.db.prepare(
+    `SELECT d.*, u.email as user_email, u.first_name, u.last_name
+     FROM documents d
+     JOIN users u ON d.user_id = u.id
+     ${where}
+     ORDER BY d.uploaded_at DESC
+     LIMIT ? OFFSET ?`
+  ).bind(...bindings, perPage, offset).all();
+
+  return ok({
+    items: docs.results,
+    page,
+    perPage,
+    total: countRow?.total ?? 0
+  });
 }

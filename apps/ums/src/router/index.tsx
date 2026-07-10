@@ -48,6 +48,7 @@ const ProgramDetail = lazy(() => import("../components/ProgramDetail"));
 const Timetable = lazy(() => import("../components/Timetable"));
 const RubricBuilder = lazy(() => import("../components/grading/RubricBuilder"));
 const SystemHealth = lazy(() => import("../components/SystemHealth"));
+const AdminDocuments = lazy(() => import("../components/AdminDocuments"));
 
 // Page-level loading fallback
 function PageLoader() {
@@ -247,6 +248,14 @@ export function AppRoutes() {
           element={
             <RoleGuard allowedRoles={["registrar", "faculty", "staff"]}>
               <Settings />
+            </RoleGuard>
+          }
+        />
+        <Route
+          path="/documents"
+          element={
+            <RoleGuard allowedRoles={["registrar", "staff"]}>
+              <AdminDocuments />
             </RoleGuard>
           }
         />
