@@ -1,11 +1,12 @@
 import type { Env } from './lib/types';
 
 const RETENTION_RULES = [
-  { table: 'admin_audit_logs', dateCol: 'timestamp', days: 90 },
+  { table: 'admin_audit_logs', dateCol: 'created_at', days: 90 },
   { table: 'sync_event_log', dateCol: 'created_at', days: 30 },
   { table: 'lifecycle_events', dateCol: 'created_at', days: 365 },
   { table: 'provisioning_jobs', dateCol: 'created_at', days: 30 },
   { table: 'webhook_dead_letters', dateCol: 'created_at', days: 90 },
+  { table: 'documents', dateCol: 'uploaded_at', days: 1825 }, // 5 years
 ];
 
 export async function runArchivalJob(env: Env) {
@@ -43,7 +44,13 @@ export async function runArchivalJob(env: Env) {
         continue;
       }
 
-      // 3. Purge from D1 using fetched IDs
+      // 3. Handle document files from R2 if it's the documents table
+      if (rule.table === 'documents') {
+        const r2Keys = (results as Array<Record<string, unknown>>).map(r => r.r2_key as string);
+        await Promise.all(r2Keys.map(key => env.PLATFORM_CONTEXT!.storage.delete(key)));
+      }
+
+      // 4. Purge from D1 using fetched IDs
       const ids = (results as Array<Record<string, unknown>>).map(r => r.id as string);
       
       // Use transaction for atomic deletes

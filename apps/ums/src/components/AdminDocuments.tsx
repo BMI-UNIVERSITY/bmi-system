@@ -10,10 +10,14 @@ import {
   ChevronRight,
   Filter,
   User,
+  Eye,
+  X,
 } from "lucide-react";
 import { listDocuments, downloadDocument, type Document } from "../services/adminDocumentService";
 import { usePagination } from "../hooks/usePagination";
 import { useTranslation } from "react-i18next";
+import { API_URL } from "../services/config";
+import { authFetch } from "../services/authService";
 
 const AdminDocuments: React.FC = () => {
   const { t } = useTranslation();
@@ -22,6 +26,8 @@ const AdminDocuments: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const { page, perPage, meta, setPage, setMeta } = usePagination(20);
   const [documents, setDocuments] = useState<Document[]>([]);
+  const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
+  const [viewingDocUrl, setViewingDocUrl] = useState<string | null>(null);
 
   const fetchDocuments = async () => {
     setIsLoading(true);
@@ -48,6 +54,29 @@ const AdminDocuments: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  const handleView = async (doc: Document) => {
+    try {
+      const url = `${API_URL.replace('/v1', '')}/documents/${doc.id}/download`;
+      const response = await authFetch(url);
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      setViewingDoc(doc);
+      setViewingDocUrl(objectUrl);
+    } catch (error) {
+      console.error("Failed to view document:", error);
+    }
+  };
+
+  // Cleanup blob URL when component unmounts or viewingDoc changes
+  useEffect(() => {
+    return () => {
+      if (viewingDocUrl) {
+        URL.revokeObjectURL(viewingDocUrl);
+        setViewingDocUrl(null);
+      }
+    };
+  }, [viewingDocUrl]);
 
   useEffect(() => {
     fetchDocuments();
@@ -191,7 +220,16 @@ const AdminDocuments: React.FC = () => {
                     <td className="px-6 py-5 text-[10px] font-bold text-gray-500 uppercase">
                       {new Date(doc.uploaded_at).toLocaleString()}
                     </td>
-                    <td className="px-6 py-5 text-center">
+                    <td className="px-6 py-5 text-center flex gap-1 justify-center">
+                      {['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(doc.mime_type) && (
+                        <button
+                          onClick={() => handleView(doc)}
+                          className="p-2 text-gray-400 hover:text-[#4B0082]"
+                          title="View"
+                        >
+                          <Eye size={16} />
+                        </button>
+                      )}
                       <button
                         onClick={() => handleDownload(doc.id)}
                         className="p-2 text-gray-400 hover:text-[#4B0082]"
@@ -250,6 +288,50 @@ const AdminDocuments: React.FC = () => {
               >
                 <ChevronRight size={12} />
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* Document Viewer Modal */}
+        {viewingDoc && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col">
+              <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{viewingDoc.file_name}</h3>
+                <button
+                  onClick={() => {
+                    setViewingDoc(null);
+                    if (viewingDocUrl) {
+                      URL.revokeObjectURL(viewingDocUrl);
+                      setViewingDocUrl(null);
+                    }
+                  }}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              <div className="flex-1 overflow-hidden">
+                {viewingDocUrl ? (
+                  viewingDoc.mime_type === 'application/pdf' ? (
+                    <iframe
+                      src={viewingDocUrl}
+                      className="w-full h-full"
+                      title={viewingDoc.file_name}
+                    />
+                  ) : (
+                    <img
+                      src={viewingDocUrl}
+                      alt={viewingDoc.file_name}
+                      className="w-full h-full object-contain"
+                    />
+                  )
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4B0082]"></div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         )}

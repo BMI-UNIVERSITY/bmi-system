@@ -161,12 +161,19 @@ export async function handleGetSystemHealth(request: Request, env: Env): Promise
     const healthChecks = await Promise.all([
       env.PLATFORM_CONTEXT!.db.prepare('SELECT COUNT(*) as count FROM users').first(),
       env.PLATFORM_CONTEXT!.db.prepare('SELECT COUNT(*) as count FROM applications').first(),
-      env.PLATFORM_CONTEXT!.db.prepare('SELECT COUNT(*) as count FROM sessions WHERE expires_at > datetime(\'now\')').first()
+      env.PLATFORM_CONTEXT!.db.prepare('SELECT COUNT(*) as count FROM sessions WHERE expires_at > datetime(\'now\')').first(),
+      env.PLATFORM_CONTEXT!.db.prepare('SELECT COUNT(*) as count, SUM(file_size_bytes) as total_size FROM documents WHERE archived_at IS NULL').first()
     ]);
     
     const metrics = getPerformanceMetrics();
     const recentErrors = metrics.recentQueries.filter(q => !q.success).slice(-5);
     
+    const documentStats = healthChecks[3] as { count?: number; total_size?: number } | null;
+    const totalDocs = documentStats?.count ?? 0;
+    const totalDocBytes = documentStats?.total_size ?? 0;
+    const r2LimitBytes = 10 * 1024 * 1024 * 1024; // 10 GB free tier limit
+    const r2UsagePercent = ((totalDocBytes / r2LimitBytes) * 100).toFixed(2);
+
     return ok({
       status: 'healthy',
       timestamp: new Date().toISOString(),
@@ -177,8 +184,17 @@ export async function handleGetSystemHealth(request: Request, env: Env): Promise
         counts: {
           users: (healthChecks[0] as { count?: number } | null)?.count ?? 0,
           applications: (healthChecks[1] as { count?: number } | null)?.count ?? 0,
-          active_sessions: (healthChecks[2] as { count?: number } | null)?.count ?? 0
+          active_sessions: (healthChecks[2] as { count?: number } | null)?.count ?? 0,
+          documents: totalDocs
         }
+      },
+      documents: {
+        total_documents: totalDocs,
+        total_storage_bytes: totalDocBytes,
+        total_storage_mb: (totalDocBytes / (1024 * 1024)).toFixed(2),
+        r2_usage_percent: parseFloat(r2UsagePercent),
+        free_tier_limit_bytes: r2LimitBytes,
+        is_over_limit: totalDocBytes > r2LimitBytes
       },
       performance: {
         avg_query_time_ms: metrics.averageQueryTime.toFixed(2),
@@ -189,7 +205,9 @@ export async function handleGetSystemHealth(request: Request, env: Env): Promise
       alerts: [
         ...(dbResponseTime > 1000 ? ['High database response time detected'] : []),
         ...(metrics.errorRate > 0.1 ? ['High error rate detected'] : []),
-        ...(metrics.averageQueryTime > 100 ? ['Slow average query time'] : [])
+        ...(metrics.averageQueryTime > 100 ? ['Slow average query time'] : []),
+        ...(parseFloat(r2UsagePercent) > 80 ? [`R2 storage usage high: ${r2UsagePercent}% of free tier limit`] : []),
+        ...(parseFloat(r2UsagePercent) > 90 ? [`CRITICAL: R2 storage almost full: ${r2UsagePercent}%`] : [])
       ]
     });
   } catch (e) {

@@ -261,10 +261,10 @@ export async function refreshAccessToken(): Promise<string | null> {
 export async function authFetch(url: string, options: RequestInit = {}, timeoutMs: number = 5000): Promise<Response> {
   const csrfToken = getToken();
   
-  const headers = {
-    'Content-Type': 'application/json',
+  const headers: Record<string, string> = {
+    ...(options.body ? { 'Content-Type': 'application/json' } : {}),
     ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
-    ...options.headers,
+    ...(options.headers as Record<string, string>),
   };
 
   // Use AbortController for timeout

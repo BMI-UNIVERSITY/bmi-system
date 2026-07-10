@@ -21,6 +21,8 @@
     "@bmi/shared": "file:../../packages/shared",
     "@sentry/cloudflare": "10.62.0",
     "better-sqlite3": "^12.11.1",
+    "jpeg-js": "^0.4.4",
+    "pngjs": "^5.0.0",
     "zod": "3.25.67"
   },
   "devDependencies": {

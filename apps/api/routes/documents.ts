@@ -1,6 +1,7 @@
 import { ok, error, logAdminAction } from '../lib/types';
 import type { Env } from '../lib/types';
 import { parseDocumentUploadQuery } from '../lib/schemas';
+import { compressImage } from '../lib/compress-image';
 
 function paginate(url: URL) {
   const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
@@ -60,12 +61,18 @@ export async function handleUploadDocument(request: Request, env: Env, userId: s
   if (file.size > MAX_FILE_SIZE) return error('File too large. Maximum size is 10 MB.');
   if (file.size === 0) return error('File is empty');
 
-  const fileBuffer = await file.arrayBuffer();
+  let fileBuffer = await file.arrayBuffer();
   const bytes = new Uint8Array(fileBuffer.slice(0, 12));
   const detectedMime = detectMimeType(bytes);
 
   if (!detectedMime) {
     return error('File type could not be verified. Please upload a PDF, JPEG, PNG, or Word document.', 400);
+  }
+
+  // Compress images to save Cloudflare R2 storage/bandwidth
+  let compressedBuffer = Buffer.from(fileBuffer);
+  if (['image/jpeg', 'image/png'].includes(detectedMime)) {
+    compressedBuffer = await compressImage(compressedBuffer, detectedMime);
   }
 
   const safeFileName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_').substring(0, 200);
@@ -80,7 +87,7 @@ export async function handleUploadDocument(request: Request, env: Env, userId: s
 
   await env.PLATFORM_CONTEXT!.storage.upload({
     key: r2Key,
-    data: Buffer.from(fileBuffer),
+    data: compressedBuffer,
     mimeType: detectedMime,
     metadata: { userId, applicationId, docType, originalName: safeFileName },
   });
@@ -89,7 +96,7 @@ export async function handleUploadDocument(request: Request, env: Env, userId: s
   await env.PLATFORM_CONTEXT!.db.prepare(
     `INSERT INTO documents (id, application_id, user_id, doc_type, file_name, r2_key, mime_type, file_size_bytes)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  ).bind(docId, applicationId, userId, docType, safeFileName, r2Key, detectedMime, file.size).run();
+  ).bind(docId, applicationId, userId, docType, safeFileName, r2Key, detectedMime, compressedBuffer.length).run();
 
   return ok({ document_id: docId, file_name: safeFileName, doc_type: docType });
 }
@@ -146,6 +153,12 @@ export async function handleDownloadDocument(
   const disposition = INLINE_TYPES.has(doc.mime_type)
     ? `inline; filename="${doc.file_name}"`          // opens in browser tab
     : `attachment; filename="${doc.file_name}"`;      // forces download
+
+  // Increment document view count
+  // Fire-and-forget
+  env.PLATFORM_CONTEXT!.db.prepare(
+    `UPDATE documents SET view_count = view_count + 1 WHERE id = ?`
+  ).bind(docId).run().catch(e => console.error('View count increment failed:', e));
 
   // Audit: log every document access for GDPR compliance trail
   // Fire-and-forget — don't await so it doesn't slow the response
