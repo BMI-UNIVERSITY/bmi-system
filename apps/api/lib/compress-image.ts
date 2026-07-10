@@ -1,6 +1,5 @@
 
 import * as jpeg from 'jpeg-js';
-import * as png from 'pngjs';
 
 /**
  * Compresses an image to reduce file size for Cloudflare R2 free tier optimization
@@ -27,20 +26,16 @@ export async function compressImage(
       const rawImage = jpeg.decode(buffer, { useTArray: true });
 
       // Resize if needed
-      let { width, height, data } = rawImage;
-      if (width > maxWidth) {
-        const ratio = maxWidth / width;
-        width = maxWidth;
-        height = Math.floor(height * ratio);
-        // Simple bilinear resize would be better, but let's do a basic one for now
-        // For simplicity, we'll skip resizing here but still compress quality
+      const { width: originalWidth, height: originalHeight, data } = rawImage;
+      if (originalWidth > maxWidth) {
+        // TODO: Implement actual resizing in future
       }
 
       // Encode back to JPEG with lower quality
       const compressed = jpeg.encode({
         data: data as Uint8Array,
-        width: rawImage.width,
-        height: rawImage.height,
+        width: originalWidth,
+        height: originalHeight,
       }, quality);
 
       // Return compressed buffer if it's smaller, otherwise original

@@ -61,7 +61,7 @@ export async function handleUploadDocument(request: Request, env: Env, userId: s
   if (file.size > MAX_FILE_SIZE) return error('File too large. Maximum size is 10 MB.');
   if (file.size === 0) return error('File is empty');
 
-  let fileBuffer = await file.arrayBuffer();
+  const fileBuffer = await file.arrayBuffer();
   const bytes = new Uint8Array(fileBuffer.slice(0, 12));
   const detectedMime = detectMimeType(bytes);
 
