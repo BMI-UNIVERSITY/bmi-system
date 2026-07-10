@@ -105,6 +105,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     ...roleItems,
     { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
     { id: "admissions", label: "Admissions", icon: ClipboardList },
+    { id: "documents", label: "Documents", icon: FileText },
     { id: "students", label: "Students", icon: Users },
     { id: "staff", label: "Staff & Faculty", icon: Briefcase },
     { id: "attendance", label: "Attendance", icon: CalendarCheck },
@@ -161,6 +162,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         return [
           "dashboard",
           "admissions",
+          "documents",
           "students",
           "staff",
           "attendance",
@@ -180,6 +182,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         return [
           "dashboard",
           "admissions",
+          "documents",
           "students",
           "library",
           "hostels",
