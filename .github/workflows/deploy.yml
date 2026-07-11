@@ -86,20 +86,17 @@ jobs:
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
 
-      # Restore node_modules cache on exact lockfile match only — saves
-      # ~30-60 s by avoiding npm install on cache hits.  No restore-keys
-      # fallback: a stale fallback would silently skip npm ci and leave
-      # new/missing dependencies uninstalled.
+      # Populate node_modules from cache (speeds up npm ci by restoring
+      # previously-installed packages).  npm ci always runs — stale caches
+      # are repaired automatically.  The setup-node global npm cache makes
+      # subsequent npm ci runs fast even on a cold node_modules directory.
       - name: Restore node_modules cache
-        id: nm-cache
         uses: actions/cache@v4
         with:
           path: node_modules
           key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-          enableCrossOsArchive: true
 
       - name: Install dependencies
-        if: steps.nm-cache.outputs.cache-hit != 'true'
         run: npm ci --prefer-offline
 
       # Restore Turborepo local filesystem cache so already-built packages
@@ -140,14 +137,12 @@ jobs:
           cache-dependency-path: 'package-lock.json'
 
       - name: Restore node_modules cache
-        id: nm-cache
         uses: actions/cache@v4
         with:
           path: node_modules
           key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
 
       - name: Install dependencies
-        if: steps.nm-cache.outputs.cache-hit != 'true'
         run: npm ci --prefer-offline
 
       - name: Install Playwright Browsers
