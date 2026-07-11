@@ -104,8 +104,8 @@ function buildCloudflare(env: any): PlatformContext {
     : new MemoryEmailAdapter();
     
   // Storage provider: use R2 if bucket is available, else memory
-  const storageProvider = env.R2_BUCKET && env.R2_PUBLIC_URL
-    ? new CloudflareR2StorageAdapter(env.R2_BUCKET, env.R2_PUBLIC_URL)
+  const storageProvider = env.DOCUMENTS
+    ? new CloudflareR2StorageAdapter(env.DOCUMENTS, env.R2_PUBLIC_URL || 'https://pub-documents.hkmministries.org')
     : new MemoryStorageAdapter();
 
   const rateLimiter = env.RATE_LIMITER

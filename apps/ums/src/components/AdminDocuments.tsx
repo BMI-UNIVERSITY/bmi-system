@@ -190,7 +190,7 @@ const AdminDocuments: React.FC = () => {
         </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-none shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-          <div className="overflow-x-auto no-scrollbar">
+          <div className="overflow-x-auto">
             <table className="w-full text-left">
               <thead className="sticky top-0 z-20">
                 <tr className="bg-gray-900 text-gray-400 uppercase text-[9px] font-black tracking-[0.2em] shadow-md">

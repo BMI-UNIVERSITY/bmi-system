@@ -1,5 +1,6 @@
 
 import { IStorage, StoredFile, UploadFileInput } from '@bmi/ports';
+import { Buffer } from 'node:buffer';
 
 export class CloudflareR2StorageAdapter implements IStorage {
   private bucket: R2Bucket;
