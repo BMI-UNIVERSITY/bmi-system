@@ -142,6 +142,8 @@ const ROUTES: Route[] = [
   { method: 'PUT', path: /^\/api\/v1\/admin\/applications\/([^/]+)\/status$/, roles: ['staff', 'admin'], handler: async (req, env, p, auth, ctx) => handleUpdateStatus(req, env, p[1], auth!.user.sub, ctx) },
   { method: 'GET', path: /^\/api\/admin\/documents$/, roles: ['admin', 'staff'], handler: async (req, env, p, auth, ctx) => handleListDocuments(req, env) },
   { method: 'DELETE', path: /^\/api\/admin\/documents\/([^/]+)$/, roles: ['admin'], handler: async (req, env, p, auth, ctx) => handleDeleteDocument(req, env, p[1], auth!.user.sub) },
+  // v1 alias for document download
+  { method: 'GET', path: /^\/api\/v1\/documents\/([^/]+)\/download$/, roles: [], handler: async (req, env, p, auth, ctx) => handleDownloadDocument(req, env, p[1], auth!.user.sub, auth!.user.role) },
   { method: 'GET', path: /^\/api\/auth\/oauth\/(google|github|microsoft)$/, roles: undefined, handler: async (req, env, p, auth, ctx) => handleOAuthLogin(req, env, p[1] as 'google' | 'github' | 'microsoft') },
   { method: 'GET', path: /^\/api\/auth\/oauth\/(google|github|microsoft)\/callback$/, roles: undefined, handler: async (req, env, p, auth, ctx) => handleOAuthCallback(req, env, p[1] as 'google' | 'github' | 'microsoft') },
   { method: 'GET', path: /^\/api\/health$/, roles: undefined, handler: async (req, env, p, auth, ctx) => new Response(JSON.stringify({ status: 'ok', version: '1.3.0' }), { headers: { 'Content-Type': 'application/json' } }) },

@@ -57,8 +57,11 @@ const AdminDocuments: React.FC = () => {
 
   const handleView = async (doc: Document) => {
     try {
-      const url = `${API_URL.replace('/v1', '')}/documents/${doc.id}/download`;
+      const url = `${API_URL}/documents/${doc.id}/download`;
       const response = await authFetch(url);
+      if (!response.ok) {
+        throw new Error('Failed to fetch document');
+      }
       const blob = await response.blob();
       const objectUrl = URL.createObjectURL(blob);
       setViewingDoc(doc);
