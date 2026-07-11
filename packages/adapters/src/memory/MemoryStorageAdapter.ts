@@ -20,9 +20,9 @@ export class MemoryStorageAdapter implements IStorage {
     return file;
   }
 
-  async download(key: string): Promise<Buffer> {
+  async download(key: string): Promise<Buffer | null> {
     const file = this.files.get(key);
-    if (!file) throw new Error('File not found');
+    if (!file) return null;
     return file.data;
   }
 

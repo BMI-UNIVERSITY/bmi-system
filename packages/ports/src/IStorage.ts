@@ -18,7 +18,7 @@ export interface UploadFileInput {
 
 export interface IStorage {
   upload(input: UploadFileInput): Promise<StoredFile>;
-  download(key: string): Promise<Buffer>;
+  download(key: string): Promise<Buffer | null>;
   delete(key: string): Promise<void>;
   getUrl(key: string): Promise<string>;
 }

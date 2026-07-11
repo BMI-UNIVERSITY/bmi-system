@@ -33,10 +33,10 @@ export class CloudflareR2StorageAdapter implements IStorage {
     };
   }
 
-  async download(key: string): Promise<Buffer> {
+  async download(key: string): Promise<Buffer | null> {
     const object = await this.bucket.get(key);
     if (!object) {
-      throw new Error('File not found');
+      return null;
     }
     const arrayBuffer = await object.arrayBuffer();
     return Buffer.from(arrayBuffer);
