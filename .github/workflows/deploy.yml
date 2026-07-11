@@ -86,15 +86,17 @@ jobs:
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
 
-      # Restore node_modules cache — avoids re-downloading the entire npm
-      # registry on cache hits (saves ~30–60 s per job on cold runners)
+      # Restore node_modules cache on exact lockfile match only — saves
+      # ~30-60 s by avoiding npm install on cache hits.  No restore-keys
+      # fallback: a stale fallback would silently skip npm ci and leave
+      # new/missing dependencies uninstalled.
       - name: Restore node_modules cache
         id: nm-cache
         uses: actions/cache@v4
         with:
           path: node_modules
           key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-          restore-keys: nm-${{ runner.os }}-
+          enableCrossOsArchive: true
 
       - name: Install dependencies
         if: steps.nm-cache.outputs.cache-hit != 'true'
@@ -143,7 +145,6 @@ jobs:
         with:
           path: node_modules
           key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
-          restore-keys: nm-${{ runner.os }}-
 
       - name: Install dependencies
         if: steps.nm-cache.outputs.cache-hit != 'true'
@@ -182,7 +183,7 @@ jobs:
           key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
           restore-keys: nm-${{ runner.os }}-
 
-      - name: Install dependencies (only on cache miss)
+      - name: Install dependencies
         run: npm ci --prefer-offline
 
       # Restore Turborepo cache — build artifacts from ci-checks are replayed
@@ -235,7 +236,7 @@ jobs:
           key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
           restore-keys: nm-${{ runner.os }}-
 
-      - name: Install dependencies (only on cache miss)
+      - name: Install dependencies
         run: npm ci --prefer-offline
 
       - name: Restore Turborepo cache
@@ -284,7 +285,7 @@ jobs:
           key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
           restore-keys: nm-${{ runner.os }}-
 
-      - name: Install dependencies (only on cache miss)
+      - name: Install dependencies
         run: npm ci --prefer-offline
 
       - name: Restore Turborepo cache
@@ -333,7 +334,7 @@ jobs:
           key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
           restore-keys: nm-${{ runner.os }}-
 
-      - name: Install dependencies (only on cache miss)
+      - name: Install dependencies
         run: npm ci --prefer-offline
 
       - name: Restore Turborepo cache
