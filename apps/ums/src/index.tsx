@@ -12,6 +12,7 @@ Sentry.init({
   replaysSessionSampleRate: 0.1,
   replaysOnErrorSampleRate: 1.0,
 });
+import { registerSW } from 'virtual:pwa-register';
 import { createRoot } from 'react-dom/client';
 import './index.css';
 import App from './App';
@@ -113,6 +114,9 @@ const initializeInstitutionalStyles = () => {
 
 // Initialize system-wide styling protocols
 initializeInstitutionalStyles();
+
+// Register PWA service worker with auto-update handling
+registerSW({ immediate: true });
 
 const queryClient = new QueryClient({
   defaultOptions: {
