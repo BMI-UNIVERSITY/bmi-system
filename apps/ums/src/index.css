@@ -46,6 +46,37 @@
     animation: slideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
+/* ── Sidebar Animations ───────────────────────────────────────────── */
+
+@keyframes sidebarItemIn {
+  from { opacity: 0; transform: translateX(-8px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.sidebar-submenu-enter {
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: max-height 0.3s ease-out, opacity 0.25s ease-out;
+}
+
+.sidebar-submenu-enter-active {
+  max-height: 500px;
+  opacity: 1;
+}
+
+.sidebar-submenu-exit {
+  max-height: 500px;
+  opacity: 1;
+  overflow: hidden;
+  transition: max-height 0.2s ease-in, opacity 0.15s ease-in;
+}
+
+.sidebar-submenu-exit-active {
+  max-height: 0;
+  opacity: 0;
+}
+
 /* ── Accessibility Styles ──────────────────────────────────────────── */
 
 /* Screen reader only - visually hidden but available to assistive tech */

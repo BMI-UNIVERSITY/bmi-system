@@ -60,8 +60,13 @@ export async function listDocuments(params?: {
 
 export async function downloadDocument(docId: string): Promise<void> {
   try {
-    const url = `${API_URL.replace('/v1', '')}/documents/${docId}/download`;
+    const url = `${API_URL}/documents/${docId}/download`;
     const response = await authFetch(url, {}, 10000);
+    if (!response.ok) {
+      const errText = await response.text().catch(() => 'Unknown error');
+      console.error('Download failed:', response.status, errText);
+      return;
+    }
     const blob = await response.blob();
     const contentDisposition = response.headers.get('Content-Disposition');
     let fileName = 'download';

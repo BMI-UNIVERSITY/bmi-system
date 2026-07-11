@@ -1,6 +1,6 @@
 /* eslint-disable */
 /* eslint-disable */
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   FileText,
   Search,
@@ -12,12 +12,18 @@ import {
   User,
   Eye,
   X,
+  AlertCircle,
 } from "lucide-react";
 import { listDocuments, downloadDocument, type Document } from "../services/adminDocumentService";
 import { usePagination } from "../hooks/usePagination";
 import { useTranslation } from "react-i18next";
 import { API_URL } from "../services/config";
 import { authFetch } from "../services/authService";
+
+const PREVIEWABLE_TYPES = new Set([
+  'application/pdf',
+  'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+]);
 
 const AdminDocuments: React.FC = () => {
   const { t } = useTranslation();
@@ -28,6 +34,8 @@ const AdminDocuments: React.FC = () => {
   const [documents, setDocuments] = useState<Document[]>([]);
   const [viewingDoc, setViewingDoc] = useState<Document | null>(null);
   const [viewingDocUrl, setViewingDocUrl] = useState<string | null>(null);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
 
   const fetchDocuments = async () => {
     setIsLoading(true);
@@ -55,30 +63,46 @@ const AdminDocuments: React.FC = () => {
     }
   };
 
-  const handleView = async (doc: Document) => {
+  const handleView = useCallback(async (doc: Document) => {
+    setPreviewError(null);
+    setIsPreviewLoading(true);
+    setViewingDoc(doc);
+    setViewingDocUrl(null);
     try {
       const url = `${API_URL}/documents/${doc.id}/download`;
-      const response = await authFetch(url);
+      const response = await authFetch(url, {}, 15000);
       if (!response.ok) {
-        throw new Error('Failed to fetch document');
+        throw new Error(`Server returned ${response.status}`);
       }
       const blob = await response.blob();
       const objectUrl = URL.createObjectURL(blob);
-      setViewingDoc(doc);
       setViewingDocUrl(objectUrl);
     } catch (error) {
+      const msg = error instanceof Error ? error.message : 'Failed to load document';
+      setPreviewError(msg);
       console.error("Failed to view document:", error);
+    } finally {
+      setIsPreviewLoading(false);
     }
-  };
+  }, []);
 
-  // Cleanup blob URL when component unmounts or viewingDoc changes
+  // Cleanup blob URL when modal closes
   useEffect(() => {
     return () => {
       if (viewingDocUrl) {
         URL.revokeObjectURL(viewingDocUrl);
-        setViewingDocUrl(null);
       }
     };
+  }, [viewingDocUrl]);
+
+  const closePreview = useCallback(() => {
+    if (viewingDocUrl) {
+      URL.revokeObjectURL(viewingDocUrl);
+    }
+    setViewingDoc(null);
+    setViewingDocUrl(null);
+    setPreviewError(null);
+    setIsPreviewLoading(false);
   }, [viewingDocUrl]);
 
   useEffect(() => {
@@ -224,10 +248,11 @@ const AdminDocuments: React.FC = () => {
                       {new Date(doc.uploaded_at).toLocaleString()}
                     </td>
                     <td className="px-6 py-5 text-center flex gap-1 justify-center">
-                      {['application/pdf', 'image/jpeg', 'image/png', 'image/webp', 'image/gif'].includes(doc.mime_type) && (
+                      {PREVIEWABLE_TYPES.has(doc.mime_type) && (
                         <button
                           onClick={() => handleView(doc)}
-                          className="p-2 text-gray-400 hover:text-[#4B0082]"
+                          disabled={isPreviewLoading}
+                          className="p-2 text-gray-400 hover:text-[#4B0082] disabled:opacity-40"
                           title="View"
                         >
                           <Eye size={16} />
@@ -300,22 +325,36 @@ const AdminDocuments: React.FC = () => {
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white dark:bg-gray-900 rounded-lg shadow-2xl w-full max-w-5xl h-[80vh] flex flex-col">
               <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">{viewingDoc.file_name}</h3>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white truncate">{viewingDoc.file_name}</h3>
                 <button
-                  onClick={() => {
-                    setViewingDoc(null);
-                    if (viewingDocUrl) {
-                      URL.revokeObjectURL(viewingDocUrl);
-                      setViewingDocUrl(null);
-                    }
-                  }}
-                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors"
+                  onClick={closePreview}
+                  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full transition-colors ml-4 flex-shrink-0"
+                  aria-label="Close preview"
                 >
                   <X size={20} />
                 </button>
               </div>
-              <div className="flex-1 overflow-hidden">
-                {viewingDocUrl ? (
+              <div className="flex-1 overflow-hidden bg-gray-50 dark:bg-gray-950 relative">
+                {isPreviewLoading && !viewingDocUrl && (
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4B0082]"></div>
+                    <p className="text-sm text-gray-500">Loading document...</p>
+                  </div>
+                )}
+                {previewError && (
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-3 p-8">
+                    <AlertCircle className="text-red-400" size={48} />
+                    <p className="text-sm font-medium text-red-500">Failed to load preview</p>
+                    <p className="text-xs text-gray-400">{previewError}</p>
+                    <button
+                      onClick={() => handleView(viewingDoc)}
+                      className="mt-2 px-4 py-2 bg-[#4B0082] text-white text-xs font-bold uppercase rounded hover:bg-[#320064] transition-colors"
+                    >
+                      Retry
+                    </button>
+                  </div>
+                )}
+                {viewingDocUrl && (
                   viewingDoc.mime_type === 'application/pdf' ? (
                     <iframe
                       src={viewingDocUrl}
@@ -329,10 +368,6 @@ const AdminDocuments: React.FC = () => {
                       className="w-full h-full object-contain"
                     />
                   )
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#4B0082]"></div>
-                  </div>
                 )}
               </div>
             </div>

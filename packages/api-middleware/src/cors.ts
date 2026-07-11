@@ -33,6 +33,9 @@ export function withCors(response: Response, request: Request, allowedOriginsOve
   newHeaders.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   newHeaders.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   newHeaders.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
-  newHeaders.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://api.resend.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
+  // Only set default CSP if handler did not supply a more specific one
+  if (!response.headers.has('Content-Security-Policy')) {
+    newHeaders.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' https://api.resend.com; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
+  }
   return new Response(response.body, { status: response.status, headers: newHeaders });
 }

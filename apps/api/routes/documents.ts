@@ -178,6 +178,7 @@ export async function handleDownloadDocument(
     headers: {
       'Content-Type': doc.mime_type,
       'Content-Disposition': disposition,
+      'Content-Length': String(buffer.byteLength ?? buffer.length),
       // Private: browser may cache, CDN/proxies must not
       // 5-minute TTL keeps R2 reads low without staling the data
       'Cache-Control': 'private, max-age=300',
