@@ -154,11 +154,12 @@ export async function handleDownloadDocument(
     ? `inline; filename="${doc.file_name}"`          // opens in browser tab
     : `attachment; filename="${doc.file_name}"`;      // forces download
 
-  // Increment document view count
-  // Fire-and-forget
+  // Increment document view count (fire-and-forget, graceful if column missing)
   env.PLATFORM_CONTEXT!.db.prepare(
-    `UPDATE documents SET view_count = view_count + 1 WHERE id = ?`
-  ).bind(docId).run().catch(e => console.error('View count increment failed:', e));
+    `UPDATE documents SET view_count = COALESCE(view_count, 0) + 1 WHERE id = ?`
+  ).bind(docId).run().catch(() => {
+    // Silently ignore — view_count column may not exist if migration 0033 hasn't been applied.
+  });
 
   // Audit: log every document access for GDPR compliance trail
   // Fire-and-forget — don't await so it doesn't slow the response
