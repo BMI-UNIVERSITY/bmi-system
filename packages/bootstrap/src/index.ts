@@ -95,6 +95,18 @@ export function bootstrap(env: any): PlatformContext {
   }
 }
 
+function unimplemented<T extends object>(portName: string): T {
+  return new Proxy({} as T, {
+    get(_t, prop) {
+      throw new Error(
+        `[bootstrap] ${portName}.${String(prop)}() called, but no real adapter is ` +
+        `configured for the 'cloudflare' provider. Wire a real adapter or explicitly ` +
+        `handle this as "not yet available" in the caller.`
+      );
+    },
+  });
+}
+
 function buildCloudflare(env: any): PlatformContext {
   const tracer = new CloudflareTracerAdapter();
   
@@ -125,12 +137,12 @@ function buildCloudflare(env: any): PlatformContext {
     secrets: new EnvironmentSecretsAdapter(env),
     logger: new CloudflareLoggerAdapter(tracer.getRequestId()),
     tracer,
-    identity: new MemoryIdentityAdapter(), // TODO: replace with Keycloak/Okta adapter
-    lms: new MemoryLMSAdapter(), // TODO: replace with Moodle/Canvas adapter
+    identity: unimplemented<IIdentityProvider>('identity'),
+    lms: unimplemented<ILMSProvider>('lms'),
     email: emailProvider,
-    payment: new MemoryPaymentAdapter(), // TODO: replace with Stripe/PayPal adapter
+    payment: unimplemented<IPaymentProvider>('payment'),
     document: new PdfDocumentAdapter(),
-    notification: new MemoryNotificationAdapter(), // TODO: replace with Twilio/Slack adapter
+    notification: unimplemented<INotificationService>('notification'),
     storage: storageProvider,
   };
 }

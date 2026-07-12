@@ -32,7 +32,7 @@ vi.mock('../lib/types', async (importOriginal) => {
 });
 vi.mock('../lib/email', () => ({ sendEmail: vi.fn().mockResolvedValue(undefined) }));
 vi.mock('../lib/config', () => ({ getPortalUrl: vi.fn().mockReturnValue('https://portal.test') }));
-vi.mock('../lib/jwt', () => ({ hashPassword: vi.fn().mockResolvedValue('hashed-pw') }));
+vi.mock('@bmi/api-middleware', () => ({ hashPassword: vi.fn().mockResolvedValue('hashed-pw') }));
 
 function makeChainDB(firstVals: any[] = [], allVals: any[] = []) {
   let fi = 0, ai = 0;

@@ -2,6 +2,8 @@
 
 A unified, 100% serverless edge-native Student Information System (SIS) for BMI University, built on the **Cloudflare platform**.
 
+> **Architecture Note:** The system was originally designed with a split-worker topology (`apps/workers/{auth,ums,core,webhooks,public}`). That design was rolled back on 2026-07-09 in favor of a single API Worker monolith. See [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) for the current topology and the rationale.
+
 ## Documentation Hub
 
 - [**Architecture Overview**](./docs/ARCHITECTURE.md) — Domain workers, DNS routing, and the WriteQueue DO.
@@ -13,14 +15,16 @@ A unified, 100% serverless edge-native Student Information System (SIS) for BMI 
 ## Repository Structure
 
 ```text
-D:\BMI\
 ├── apps/
-│   ├── workers/    → Cloudflare Workers (auth, ums, core, webhooks, public)
+│   ├── api/        → Cloudflare Worker (single monolith, all /api/* routes)
 │   ├── portal/     → React + CF Pages   (Public Admissions Portal)
 │   └── ums/        → React + CF Pages   (Internal UMS for Staff & Students)
 ├── packages/
 │   ├── shared/     → @bmi/shared        (Types, constants, programs list)
-│   └── middleware/ → @bmi/api-middleware(Logger, Auth, Cache utils)
+│   ├── ports/      → @bmi/ports         (Hexagonal-architecture interfaces)
+│   ├── adapters/   → @bmi/adapters      (Implementations: Cloudflare, AWS, etc.)
+│   ├── bootstrap/  → @bmi/bootstrap     (DI factory wiring ports → adapters)
+│   └── api-middleware/ → @bmi/api-middleware (Auth, CORS, rate-limit, cache, logger)
 ├── bmi-university/ → Next.js + CF Pages (Marketing Website)
 └── docs/           → System documentation and runbooks
 ```
@@ -31,8 +35,8 @@ D:\BMI\
 # Install all workspace dependencies
 npm install
 
-# Start a specific worker locally (e.g., ums)
-cd apps/workers/ums && npm run dev
+# Start the API Worker locally
+cd apps/api && npm run dev
 
 # Run the portal or UMS frontends
 cd apps/portal && npm run dev

@@ -146,31 +146,28 @@ export async function handleAutoEnrollMandatory(req: Request, env: Env, userId: 
 
   if (mandatoryCourses.length === 0) return error('No mandatory courses defined for current term.', 404);
 
-  let enrolled = 0;
-  let skipped = 0;
+  const { results: existingRegs } = await env.PLATFORM_CONTEXT!.db.prepare(
+    `SELECT course_id FROM student_course_registrations WHERE student_id = ? AND term_id = ?`
+  ).bind(userId, currentTerm.id).all<{ course_id: string }>();
+  const already = new Set(existingRegs.map(r => r.course_id));
+  const toEnroll = mandatoryCourses.filter(c => !already.has(c.course_id));
 
-  for (const course of mandatoryCourses) {
-    const existing = await env.PLATFORM_CONTEXT!.db.prepare(
-      `SELECT id FROM student_course_registrations WHERE student_id = ? AND course_id = ? AND term_id = ?`
-    ).bind(userId, course.course_id, currentTerm.id).first();
-
-    if (existing) {
-      skipped++;
-      continue;
-    }
-
-    await env.PLATFORM_CONTEXT!.db.prepare(
-      `INSERT INTO student_course_registrations (id, student_id, course_id, term_id, registration_type, status)
-       VALUES (?, ?, ?, ?, 'auto', 'registered')`
-    ).bind(crypto.randomUUID(), userId, course.course_id, currentTerm.id).run();
-
-    await env.PLATFORM_CONTEXT!.db.prepare(
-      `INSERT OR IGNORE INTO enrollments (id, student_id, course_id, status)
-       VALUES (?, ?, ?, 'enrolled')`
-    ).bind(crypto.randomUUID(), userId, course.course_id).run();
-
-    enrolled++;
+  if (toEnroll.length) {
+    await env.PLATFORM_CONTEXT!.db.transaction(async (txDb) => {
+      for (const course of toEnroll) {
+        await txDb.prepare(
+          `INSERT INTO student_course_registrations (id, student_id, course_id, term_id, registration_type, status)
+           VALUES (?, ?, ?, ?, 'auto', 'registered')`
+        ).bind(crypto.randomUUID(), userId, course.course_id, currentTerm.id).run();
+        await txDb.prepare(
+          `INSERT OR IGNORE INTO enrollments (id, student_id, course_id, status)
+           VALUES (?, ?, ?, 'enrolled')`
+        ).bind(crypto.randomUUID(), userId, course.course_id).run();
+      }
+    });
   }
+  const enrolled = toEnroll.length;
+  const skipped = mandatoryCourses.length - toEnroll.length;
 
   return ok({
     message: `Enrolled in ${enrolled} mandatory course(s), ${skipped} already enrolled.`,

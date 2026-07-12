@@ -2,7 +2,7 @@
 // Usage: npx wrangler deploy --config wrangler-reset-admin.jsonc (then visit /__reset-admin)
 // IMPORTANT: Delete this script immediately after use.
 
-import { hashPassword } from './lib/jwt';
+import { hashPassword } from '@bmi/api-middleware';
 
 export default {
   async fetch(request: Request, env: Record<string, any>): Promise<Response> {

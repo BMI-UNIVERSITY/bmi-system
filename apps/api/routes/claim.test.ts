@@ -2,10 +2,13 @@ import { makeEnv, makeChainDB } from './test-helpers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handleClaimAccount } from './claim';
 
+vi.mock('@bmi/api-middleware', () => ({
+  hashPassword: vi.fn().mockResolvedValue('hashed_password'),
+}));
+
 vi.mock('../lib/jwt', () => ({
   validatePasswordStrength: vi.fn().mockReturnValue({ valid: true, errors: [] }),
   isCommonPassword: vi.fn().mockReturnValue(false),
-  hashPassword: vi.fn().mockResolvedValue('hashed_password'),
 }));
 
 vi.mock('../lib/email', () => ({

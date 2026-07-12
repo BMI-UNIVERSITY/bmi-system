@@ -6,12 +6,16 @@ interface TransitionBody {
 
 export async function handleTransitionToAlumni(req: Request, env: Env, userId: string): Promise<Response> {
   try {
-    await env.PLATFORM_CONTEXT!.identity.updateUser(userId, { roles: ['alumni'] });
+    await env.PLATFORM_CONTEXT!.db.prepare(
+      `UPDATE users SET role = 'alumni', updated_at = datetime('now') WHERE id = ?`
+    ).bind(userId).run();
 
     const body = await typedJson<TransitionBody>(req);
     if (body.forwardEmail) {
       const emailDomain = 'student.bmi.edu';
-      const user = await env.PLATFORM_CONTEXT!.identity.getUser(userId);
+      const user = await env.PLATFORM_CONTEXT!.db.prepare(
+        'SELECT email FROM users WHERE id = ?'
+      ).bind(userId).first<{ email: string }>();
       if (user) {
         const localPart = user.email.split('@')[0];
         await env.PLATFORM_CONTEXT!.email.createMailbox(userId, `${localPart}@${emailDomain}`, '');

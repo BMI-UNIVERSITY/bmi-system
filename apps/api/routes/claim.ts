@@ -1,6 +1,7 @@
 import { Env, ok, error, typedJson } from '../lib/types';
 import { ExecutionContext } from '@cloudflare/workers-types';
-import { validatePasswordStrength, isCommonPassword, hashPassword } from '../lib/jwt';
+import { hashPassword } from '@bmi/api-middleware';
+import { validatePasswordStrength, isCommonPassword } from '../lib/jwt';
 import { sendEmail, buildEmailLayout } from '../lib/email';
 
 interface ClaimBody {

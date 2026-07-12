@@ -133,14 +133,13 @@ describe('Enrollment Flow', () => {
           { id: 'hold-1' },
           { program_id: 'prog-1' },
           { id: 'curr-1' },
-          null,
-          null,
         ],
         [
           [
             { course_id: 'c1', code: 'CS101', title: 'Intro to CS' },
             { course_id: 'c2', code: 'MATH101', title: 'Calculus' },
           ],
+          [],
         ]
       );
       const env = makeEnv(db);

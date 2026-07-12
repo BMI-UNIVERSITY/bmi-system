@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { hashPassword, verifyPassword, validatePasswordStrength, isCommonPassword, signJWT, verifyJWT } from './jwt';
+import { hashPassword, verifyPassword } from '@bmi/api-middleware';
+import { validatePasswordStrength, isCommonPassword, signJWT, verifyJWT } from './jwt';
 
 describe('JWT and Password Utils', () => {
   describe('validatePasswordStrength', () => {

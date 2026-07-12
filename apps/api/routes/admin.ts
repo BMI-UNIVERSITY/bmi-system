@@ -40,7 +40,7 @@ export async function handleAdminSetup(request: Request, env: Env): Promise<Resp
     return error('A user with this email already exists', 409);
   }
 
-  const { hashPassword } = await import('../lib/jwt');
+  const { hashPassword } = await import('@bmi/api-middleware');
   const passwordHash = await hashPassword(body.password, env.PASSWORD_PEPPER);
   const userId = crypto.randomUUID();
 

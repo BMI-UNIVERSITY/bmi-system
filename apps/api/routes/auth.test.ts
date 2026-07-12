@@ -11,9 +11,12 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 // ─── Mock all heavy side-effect modules ────────────────────────────────────────
 
-vi.mock('../lib/jwt', () => ({
+vi.mock('@bmi/api-middleware', () => ({
   hashPassword: vi.fn().mockResolvedValue('hashed_password'),
   verifyPassword: vi.fn().mockResolvedValue(true),
+}));
+
+vi.mock('../lib/jwt', () => ({
   signJWT: vi.fn().mockResolvedValue('mock_jwt_token'),
   validatePasswordStrength: vi.fn().mockReturnValue({ valid: true, errors: [] }),
   isCommonPassword: vi.fn().mockReturnValue(false),

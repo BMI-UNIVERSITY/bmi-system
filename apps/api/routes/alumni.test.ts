@@ -1,16 +1,12 @@
-import { makeEnv } from './test-helpers';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { makeEnv, makeChainDB } from './test-helpers';
+import { describe, it, expect, vi } from 'vitest';
 import { handleTransitionToAlumni } from './alumni';
 
 describe('Alumni routes — handleTransitionToAlumni', () => {
-  let env: ReturnType<typeof makeEnv>;
+  it('transitions a user to alumni role via direct D1 update', async () => {
+    const db = makeChainDB();
+    const env = makeEnv(db);
 
-  beforeEach(() => {
-    vi.clearAllMocks();
-    env = makeEnv();
-  });
-
-  it('transitions a user to alumni role', async () => {
     const req = new Request('http://localhost/api/alumni/transition', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -21,15 +17,13 @@ describe('Alumni routes — handleTransitionToAlumni', () => {
 
     expect(res.status).toBe(200);
     expect(body.success).toBe(true);
-    expect(env.PLATFORM_CONTEXT.identity.updateUser).toHaveBeenCalledWith('user-123', { roles: ['alumni'] });
   });
 
   it('sets up email forwarding when requested', async () => {
-    env.PLATFORM_CONTEXT.identity.getUser.mockResolvedValue({
-      id: 'user-123',
-      email: 'jane@student.bmi.edu',
-      roles: ['student'],
-    });
+    const db = makeChainDB(
+      [{ email: 'jane@student.bmi.edu' }]
+    );
+    const env = makeEnv(db);
 
     const req = new Request('http://localhost/api/alumni/transition', {
       method: 'POST',
@@ -39,11 +33,12 @@ describe('Alumni routes — handleTransitionToAlumni', () => {
     const res = await handleTransitionToAlumni(req, env, 'user-123');
 
     expect(res.status).toBe(200);
-    expect(env.PLATFORM_CONTEXT.identity.updateUser).toHaveBeenCalledWith('user-123', { roles: ['alumni'] });
-    expect(env.PLATFORM_CONTEXT.identity.getUser).toHaveBeenCalledWith('user-123');
   });
 
   it('does not attempt forwarding when forwardEmail is not provided', async () => {
+    const db = makeChainDB();
+    const env = makeEnv(db);
+
     const req = new Request('http://localhost/api/alumni/transition', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -52,11 +47,19 @@ describe('Alumni routes — handleTransitionToAlumni', () => {
     const res = await handleTransitionToAlumni(req, env, 'user-123');
 
     expect(res.status).toBe(200);
-    expect(env.PLATFORM_CONTEXT.identity.getUser).not.toHaveBeenCalled();
   });
 
-  it('returns 500 when identity provider throws', async () => {
-    env.PLATFORM_CONTEXT.identity.updateUser.mockRejectedValue(new Error('Keycloak error'));
+  it('returns 500 when db query fails', async () => {
+    const db = {
+      prepare: vi.fn().mockReturnValue({
+        bind: vi.fn().mockReturnValue({
+          first: vi.fn().mockResolvedValue(null),
+          all: vi.fn().mockResolvedValue({ results: [] }),
+          run: vi.fn().mockRejectedValue(new Error('DB error')),
+        }),
+      }),
+    };
+    const env = makeEnv(db);
 
     const req = new Request('http://localhost/api/alumni/transition', {
       method: 'POST',

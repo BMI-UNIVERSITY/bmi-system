@@ -1,4 +1,5 @@
-import { hashPassword, verifyPassword, signJWT, validatePasswordStrength, isCommonPassword } from '../lib/jwt';
+import { hashPassword, verifyPassword } from '@bmi/api-middleware';
+import { signJWT, validatePasswordStrength, isCommonPassword } from '../lib/jwt';
 import { ok, error, generateCsrfToken } from '../lib/types';
 import { sendEmail } from '../lib/email';
 import { getPortalUrl, getUmsUrl } from '../lib/config';
@@ -205,20 +206,44 @@ export async function handleLogin(request: Request, env: Env): Promise<Response>
   const { email, password, mfa_token } = parsed;
 
   // Use optimized user lookup
-  interface UserRow { id: string; email: string; password_hash: string; first_name: string; last_name: string; role: string; is_verified: number; account_claimed: number; mfa_secret: string | null; mfa_enabled: number; session_version: number }
+  interface UserRow { id: string; email: string; password_hash: string; first_name: string; last_name: string; role: string; is_verified: number; account_claimed: number; mfa_secret: string | null; mfa_enabled: number; session_version: number; failed_login_attempts: number; locked_until: string | null }
   const user = await env.PLATFORM_CONTEXT!.db.prepare(
-    'SELECT id, email, password_hash, first_name, last_name, role, is_verified, account_claimed, mfa_secret, mfa_enabled, session_version FROM users WHERE email = ? LIMIT 1'
+    'SELECT id, email, password_hash, first_name, last_name, role, is_verified, account_claimed, mfa_secret, mfa_enabled, session_version, failed_login_attempts, locked_until FROM users WHERE email = ? LIMIT 1'
   ).bind(email.toLowerCase()).first<UserRow>();
 
   if (!user) {
     return error('Invalid email or password', 401);
   }
 
+  // Check if account is locked due to brute-force attempts
+  if (user.locked_until && new Date(user.locked_until) > new Date()) {
+    return error('Account is temporarily locked due to too many failed login attempts. Please try again later.', 429);
+  }
+
   // Verify password first — this prevents account enumeration via the
   // "please verify your email" response path (Medium finding #9).
   const valid = await verifyPassword(password, user.password_hash, env.PASSWORD_PEPPER);
   if (!valid) {
+    const MAX_FAILED_ATTEMPTS = 5;
+    const LOCKOUT_DURATION_MINUTES = 15;
+    const newAttempts = (user.failed_login_attempts || 0) + 1;
+    if (newAttempts >= MAX_FAILED_ATTEMPTS) {
+      await env.PLATFORM_CONTEXT!.db.prepare(
+        `UPDATE users SET failed_login_attempts = ?, locked_until = datetime('now', '+${LOCKOUT_DURATION_MINUTES} minutes'), updated_at = datetime('now') WHERE id = ?`
+      ).bind(newAttempts, user.id).run();
+    } else {
+      await env.PLATFORM_CONTEXT!.db.prepare(
+        `UPDATE users SET failed_login_attempts = ?, updated_at = datetime('now') WHERE id = ?`
+      ).bind(newAttempts, user.id).run();
+    }
     return error('Invalid email or password', 401);
+  }
+
+  // Reset brute-force counters on successful login
+  if (user.failed_login_attempts > 0 || user.locked_until) {
+    await env.PLATFORM_CONTEXT!.db.prepare(
+      `UPDATE users SET failed_login_attempts = 0, locked_until = NULL, updated_at = datetime('now') WHERE id = ?`
+    ).bind(user.id).run();
   }
 
   if (!user.is_verified) {

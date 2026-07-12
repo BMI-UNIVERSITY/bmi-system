@@ -18,14 +18,14 @@
   },
   "dependencies": {
     "@bmi/ports": "*",
-    "@bmi/adapters": "*"
-  },
-  "devDependencies": {
-    "typescript": "^5.8.2",
-    "@cloudflare/workers-types": "^4.20260701.1",
+    "@bmi/adapters": "*",
     "pg": "^8.11.0",
     "ioredis": "^5.3.0",
     "@aws-sdk/client-sqs": "^3.0.0",
     "@aws-sdk/client-secrets-manager": "^3.0.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2",
+    "@cloudflare/workers-types": "^4.20260701.1"
   }
 }
