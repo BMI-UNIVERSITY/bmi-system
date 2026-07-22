@@ -11,7 +11,7 @@
     "bmi-university"
   ],
   "scripts": {
-    "prepare": "husky && npm run build --workspace=@bmi/ports && npm run build --workspace=@bmi/adapters && npm run build --workspace=@bmi/bootstrap && npm run build --workspace=@bmi/shared && npm run build --workspace=@bmi/rate-limiter && npm run build --workspace=@bmi/api-middleware",
+    "prepare": "husky && npm run build --workspace=@bmi/ports && npm run build --workspace=@bmi/adapters && npm run build --workspace=@bmi/bootstrap && npm run build --workspace=@bmi/shared && npm run build --workspace=@bmi/api-middleware",
     "ci:build": "turbo run build --filter=./packages/*",
     "ci:typecheck": "turbo run type-check typecheck",
     "ci:test": "turbo run test",

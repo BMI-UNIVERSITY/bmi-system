@@ -113,28 +113,31 @@ export async function handlePayInvoice(request: Request, env: Env, userId: strin
   if (!invoice) return error('Invoice not found', 404);
   if (invoice.status === 'paid') return error('Invoice is already paid', 400);
 
-  // Create payment intent
-  const paymentIntent = await env.PLATFORM_CONTEXT!.payment.createPaymentIntent({
-    amount: invoice.amount,
-    currency: 'USD',
-    description: `Invoice ${invoice.id}`,
-    metadata: { userId, invoiceId }
-  });
+  try {
+    const paymentIntent = await env.PLATFORM_CONTEXT!.payment.createPaymentIntent({
+      amount: invoice.amount,
+      currency: 'USD',
+      description: `Invoice ${invoice.id}`,
+      metadata: { userId, invoiceId }
+    });
 
-  await env.PLATFORM_CONTEXT!.db.prepare(
-    'UPDATE invoices SET status = "paid" WHERE id = ? AND student_id = ?'
-  ).bind(invoiceId, userId).run();
+    await env.PLATFORM_CONTEXT!.db.prepare(
+      'UPDATE invoices SET status = "paid" WHERE id = ? AND student_id = ?'
+    ).bind(invoiceId, userId).run();
 
-  await env.PLATFORM_CONTEXT!.db.prepare(
-    `UPDATE student_holds SET is_active = 0, resolved_at = datetime('now')
-     WHERE student_id = ? AND hold_type = 'payment' AND is_active = 1`
-  ).bind(userId).run();
+    await env.PLATFORM_CONTEXT!.db.prepare(
+      `UPDATE student_holds SET is_active = 0, resolved_at = datetime('now')
+       WHERE student_id = ? AND hold_type = 'payment' AND is_active = 1`
+    ).bind(userId).run();
 
-  return ok({ 
-    success: true, 
-    message: 'Payment successful', 
-    paymentIntentId: paymentIntent.id 
-  });
+    return ok({ 
+      success: true, 
+      message: 'Payment successful', 
+      paymentIntentId: paymentIntent.id 
+    });
+  } catch {
+    return error('Payment processing is not yet available. Please try again later.', 501);
+  }
 }
 
 export async function handleDropCourse(request: Request, env: Env, userId: string, courseId: string): Promise<Response> {

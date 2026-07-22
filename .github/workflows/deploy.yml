@@ -193,11 +193,6 @@ jobs:
       - name: Build API (from Turbo cache)
         run: npx turbo run build --filter=@bmi/api --concurrency=100%
 
-      - name: Inject Cloudflare IDs
-        working-directory: apps/api
-        run: |
-          sed -i 's/${CLOUDFLARE_D1_ID}/${{ secrets.CLOUDFLARE_D1_ID }}/g' wrangler.jsonc
-
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v4
         with:

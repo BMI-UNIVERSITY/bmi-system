@@ -55,7 +55,20 @@ export async function verifyJWT(token: string, secret: string): Promise<Record<s
   }
 }
 
-export async function hashPassword(password: string, pepper: string): Promise<string> {
+const DEFAULT_PBKDF2_ITERATIONS = 40000;
+
+function resolveIterations(iterations?: number | string): number {
+  if (iterations === undefined || iterations === '') return DEFAULT_PBKDF2_ITERATIONS;
+  if (typeof iterations === 'string') {
+    const n = parseInt(iterations, 10);
+    if (isNaN(n) || n < 1000) return DEFAULT_PBKDF2_ITERATIONS;
+    return n;
+  }
+  if (iterations < 1000) return DEFAULT_PBKDF2_ITERATIONS;
+  return iterations;
+}
+
+export async function hashPassword(password: string, pepper: string, iterations?: number | string): Promise<string> {
   const salt = crypto.getRandomValues(new Uint8Array(16));
   
   const pepperKey = await crypto.subtle.importKey('raw', new TextEncoder().encode(pepper), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
@@ -68,15 +81,15 @@ export async function hashPassword(password: string, pepper: string): Promise<st
     false,
     ['deriveBits']
   );
-  const iterations = 100000;
+  const iter = resolveIterations(iterations);
   const hashBuffer = await crypto.subtle.deriveBits(
-    { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+    { name: 'PBKDF2', salt, iterations: iter, hash: 'SHA-256' },
     keyMaterial,
     256
   );
   const saltHex = Array.from(salt).map(b => b.toString(16).padStart(2, '0')).join('');
   const hashHex = Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2, '0')).join('');
-  return `pbkdf2:${iterations}:${saltHex}:${hashHex}`;
+  return `pbkdf2:${iter}:${saltHex}:${hashHex}`;
 }
 
 export async function verifyPassword(password: string, stored: string, pepper: string): Promise<boolean> {

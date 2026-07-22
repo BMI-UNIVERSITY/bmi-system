@@ -10,6 +10,7 @@ export default defineConfig({
       'packages/shared/vitest.config.ts',
       'packages/adapters/vitest.config.ts',
       'packages/api-middleware/vitest.config.ts',
+      'packages/bootstrap/vitest.config.ts',
     ],
   },
 });

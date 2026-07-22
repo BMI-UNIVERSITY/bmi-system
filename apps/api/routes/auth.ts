@@ -44,7 +44,7 @@ export async function handleRegister(request: Request, env: Env, ctx?: Execution
   const verificationId = crypto.randomUUID();
   
   // Hash password in parallel with ID generation (already done above)
-  const passwordHash = await hashPassword(password, env.PASSWORD_PEPPER);
+  const passwordHash = await hashPassword(password, env.PASSWORD_PEPPER, env.PBKDF2_ITERATIONS);
   
   // Use optimized batch operation for registration
   const registrationOps = [
@@ -459,7 +459,7 @@ export async function handleResetPassword(request: Request, env: Env): Promise<R
   if (new Date(resetToken.expires_at) < new Date()) return error('Reset token has expired', 410);
 
   // Update password
-  const passwordHash = await hashPassword(body.new_password, env.PASSWORD_PEPPER);
+  const passwordHash = await hashPassword(body.new_password, env.PASSWORD_PEPPER, env.PBKDF2_ITERATIONS);
   await env.PLATFORM_CONTEXT!.db.prepare(
     `UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?`
   ).bind(passwordHash, resetToken.user_id).run();
@@ -587,7 +587,7 @@ export async function handleOAuthCallback(request: Request, env: Env, provider: 
     } else {
       userId = crypto.randomUUID();
       const tempPassword = crypto.randomUUID();
-      const passwordHash = await hashPassword(tempPassword, env.PASSWORD_PEPPER);
+      const passwordHash = await hashPassword(tempPassword, env.PASSWORD_PEPPER, env.PBKDF2_ITERATIONS);
       
       await env.PLATFORM_CONTEXT!.db.prepare(
         `INSERT INTO users (id, email, password_hash, first_name, last_name, role, is_verified)

@@ -41,7 +41,7 @@ export async function handleAdminSetup(request: Request, env: Env): Promise<Resp
   }
 
   const { hashPassword } = await import('@bmi/api-middleware');
-  const passwordHash = await hashPassword(body.password, env.PASSWORD_PEPPER);
+  const passwordHash = await hashPassword(body.password, env.PASSWORD_PEPPER, env.PBKDF2_ITERATIONS);
   const userId = crypto.randomUUID();
 
   await env.PLATFORM_CONTEXT!.db.prepare(

@@ -38,6 +38,10 @@ export interface Env {
   WEBHOOK_URL?: string;
   /** HMAC-SHA256 signing key for outbound webhooks. */
   WEBHOOK_SECRET?: string;
+  /** Stripe secret key for payment processing. */
+  STRIPE_SECRET_KEY?: string;
+  /** PBKDF2 iteration count for password hashing (defaults to 40000 for Workers Free plan CPU budget). */
+  PBKDF2_ITERATIONS?: string;
   /** Email address for critical ops alerts via Resend. */
   OPS_ALERT_EMAIL?: string;
   /** Email domain for provisioned student emails (e.g., student.bmi.edu) */

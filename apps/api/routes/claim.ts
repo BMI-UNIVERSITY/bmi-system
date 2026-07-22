@@ -30,7 +30,7 @@ export async function handleClaimAccount(req: Request, env: Env, ctx: ExecutionC
       return error('Invalid or expired admission code, or account already claimed.', 400);
     }
 
-    const hashedPassword = await hashPassword(password, env.PASSWORD_PEPPER);
+    const hashedPassword = await hashPassword(password, env.PASSWORD_PEPPER, env.PBKDF2_ITERATIONS);
 
     const userInfo = await env.PLATFORM_CONTEXT!.db.prepare(
       `SELECT first_name, email FROM users WHERE id = ?`
