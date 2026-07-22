@@ -40,7 +40,7 @@ export class DocumentService {
     return DocumentService.instance;
   }
 
-  async generateContentHash(data: Record<string, any>): Promise<string> {
+  async generateContentHash(data: Record<string, unknown>): Promise<string> {
     return this.crypto.generateContentHash(data);
   }
 
@@ -75,7 +75,7 @@ export class DocumentService {
   async generateSecurityFeatures(
     type: DocumentType,
     studentId: string,
-    contentData: Record<string, any>,
+    contentData: Record<string, unknown>,
     options?: { expiresAt?: string; includeBlockchain?: boolean },
   ): Promise<DocumentSecurityFeatures> {
     const timestamp = new Date().toISOString();
@@ -106,15 +106,17 @@ export class DocumentService {
         if (res.ok) {
           const json = (await res.json()) as { success: boolean; data?: { serialNumber: string; issuedAt: string; verificationUrl: string; hiddenToken: string } };
           if (json.success && json.data) {
-            const { serialNumber, issuedAt, verificationUrl, hiddenToken } = json.data;
+            const { serialNumber, issuedAt, verificationUrl } = json.data;
             const qrCodeDataUrl = await this.crypto.generateQRCode(verificationUrl);
             const sealHash = await this.crypto.generateSealHash(contentHash, serialNumber, timestamp);
             return { contentHash, serialNumber, qrCodeDataUrl, verificationUrl, issuedAt, expiresAt: options?.expiresAt, sealHash, verificationCount: 0 };
           }
         }
       } catch {
+        // eslint-disable-next-line no-console
         console.warn("[DocumentService] Transcript server registration failed, falling back to client-side.");
       }
+      // eslint-disable-next-line no-console
       console.warn("[DocumentService] Using client-side transcript serial. QR will not verify cross-device.");
     }
 
@@ -228,14 +230,22 @@ export class DocumentService {
     if (!doc) return null;
     const elementId = `document-${documentId}`;
     const element = globalThis.document.getElementById(elementId);
-    if (!element) { console.error(`Document element not found: ${elementId}`); return null; }
+    if (!element) {
+      // eslint-disable-next-line no-console
+      console.error(`Document element not found: ${elementId}`);
+      return null;
+    }
     try {
       const html2pdf = await getHtml2Pdf();
       const qualityMap = { low: 1, medium: 1.5, high: 2, maximum: 3 };
-      const pdfBlob = await (html2pdf as any)().set({ margin: 0, filename: options.filename || `${doc.type}_${doc.security.serialNumber}.pdf`, image: { type: "jpeg", quality: 0.98 }, html2canvas: { scale: qualityMap[options.quality || "high"], useCORS: true, logging: false, letterRendering: true, backgroundColor: options.includeBackground !== false ? "#FFFFFF" : null }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" } }).from(element).output("blob");
+      const pdfBlob = await (html2pdf as (opts?: Record<string, unknown>) => { set: (opts: Record<string, unknown>) => { from: (el: HTMLElement) => { output: (type: string) => Promise<Blob> } } })().set({ margin: 0, filename: options.filename || `${doc.type}_${doc.security.serialNumber}.pdf`, image: { type: "jpeg", quality: 0.98 }, html2canvas: { scale: qualityMap[options.quality || "high"], useCORS: true, logging: false, letterRendering: true, backgroundColor: options.includeBackground !== false ? "#FFFFFF" : null }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" } }).from(element).output("blob");
       await this.logAuditEntry(doc.id, "downloaded", "user", { format: "pdf", quality: options.quality });
       return pdfBlob;
-    } catch (error) { console.error("PDF generation failed:", error); return null; }
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("PDF generation failed:", error);
+      return null;
+    }
   }
 
   async downloadPDF(documentId: string, filename?: string): Promise<boolean> {
@@ -374,7 +384,7 @@ export class DocumentService {
     documentId: string,
     action: DocumentAuditLog["action"],
     performedBy: string,
-    details?: Record<string, any>,
+    details?: Record<string, unknown>,
   ): Promise<void> {
     const logs = this.getAuditLogs();
     const entry: DocumentAuditLog = {
@@ -508,7 +518,7 @@ export class DocumentService {
    */
   async updateDocumentMetadata(
     documentId: string,
-    metadata: Record<string, any>,
+    metadata: Record<string, unknown>,
   ): Promise<boolean> {
     const document = await this.getDocumentById(documentId);
     if (!document) return false;
@@ -565,9 +575,11 @@ export class DocumentService {
 
       localStorage.setItem(this.STORAGE_KEY, JSON.stringify(merged));
       return documents.length;
-    } catch (error) { console.error("Import failed:", error);
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error("Import failed:", error);
       return 0;
-     }
+    }
   }
 }
 

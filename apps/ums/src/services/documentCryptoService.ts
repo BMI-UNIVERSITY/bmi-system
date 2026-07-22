@@ -1,21 +1,22 @@
 import QRCode from "qrcode";
-import type { DocumentType, DocumentSecurityFeatures } from "../types/documents";
+import type { DocumentType } from "../types/documents";
+
+const PREFIXES: Record<DocumentType, string> = {
+  certificate: "BMI-CERT",
+  transcript: "BMI-TRANS",
+  id_card: "BMI-ID",
+  admission_letter: "BMI-ADM",
+  good_standing: "BMI-GS",
+  registration_card: "BMI-REG",
+  library_card: "BMI-LIB",
+  attendance_record: "BMI-ATT",
+};
 
 function getDocumentPrefix(type: DocumentType): string {
-  const prefixes: Record<DocumentType, string> = {
-    certificate: "BMI-CERT",
-    transcript: "BMI-TRANS",
-    id_card: "BMI-ID",
-    admission_letter: "BMI-ADM",
-    good_standing: "BMI-GS",
-    registration_card: "BMI-REG",
-    library_card: "BMI-LIB",
-    attendance_record: "BMI-ATT",
-  };
-  return prefixes[type];
+  return PREFIXES[type];
 }
 
-async function generateContentHash(data: Record<string, any>): Promise<string> {
+async function generateContentHash(data: Record<string, unknown>): Promise<string> {
   const canonicalString = JSON.stringify(data, Object.keys(data).sort());
   const encoder = new TextEncoder();
   const dataBuffer = encoder.encode(canonicalString);
@@ -25,7 +26,7 @@ async function generateContentHash(data: Record<string, any>): Promise<string> {
 }
 
 export class DocumentCryptoService {
-  async generateContentHash(data: Record<string, any>): Promise<string> {
+  async generateContentHash(data: Record<string, unknown>): Promise<string> {
     return generateContentHash(data);
   }
 
@@ -77,7 +78,8 @@ export class DocumentCryptoService {
   }
 
   generateVerificationUrl(serialNumber: string, hiddenToken?: string): string {
-    const baseUrl = (import.meta as any).env?.VITE_VERIFY_URL ?? (typeof window !== 'undefined' ? window.location.origin : '');
+    const env = typeof import.meta !== 'undefined' ? (import.meta as unknown as Record<string, unknown>).env as Record<string, string | undefined> : undefined;
+    const baseUrl = env?.VITE_VERIFY_URL ?? (typeof window !== 'undefined' ? window.location.origin : '');
     if (hiddenToken) {
       return `${baseUrl}/verify?id=${encodeURIComponent(serialNumber)}&t=${encodeURIComponent(hiddenToken)}`;
     }
