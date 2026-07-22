@@ -36,8 +36,8 @@
     "@bmi/shared": "file:../../packages/shared",
     "@sentry/browser": "^10.62.0",
     "@sentry/react": "^10.62.0",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "react-router-dom": "^7.18.0",
     "zod": "^3.25.67"
   },
