@@ -12,9 +12,11 @@
   },
   "dependencies": {
     "@bmi/shared": "file:../packages/shared",
-    "next": "^16.2.10",
+    "next": "^16.2.11",
+    "postcss": "^8.4.31",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "sharp": "^0.35.2"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

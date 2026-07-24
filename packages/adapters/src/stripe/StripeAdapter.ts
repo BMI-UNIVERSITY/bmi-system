@@ -68,7 +68,7 @@ export class StripeAdapter implements IPaymentProvider {
       throw new Error(`Unhandled event type: ${event.type}`);
     }
 
-    const intent = event.data.object as Stripe.PaymentIntent;
+    const intent = event.data.object as { id: string; amount: number; currency: string; status: string };
     return {
       id: intent.id,
       amount: intent.amount / 100,
