@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useEffect, useCallback } from 'react';
 import { X, Save, User, BookOpen, Hash } from 'lucide-react';
 import { createEnrollment, getPrograms, getAcademicTerms, getProgramById } from '../services/programService';
@@ -26,7 +24,7 @@ interface EnrollmentData {
 interface StudentEnrollmentFormProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: (enrollment: any) => void;
+  onSuccess?: (enrollment: unknown) => void;
   students: Student[];
 }
 
@@ -34,7 +32,7 @@ const StudentEnrollmentForm: React.FC<StudentEnrollmentFormProps> = ({ isOpen, o
   const { t } = useTranslation();
   const [programs, setPrograms] = useState<Program[]>([]);
   const [terms, setTerms] = useState<AcademicTerm[]>([]);
-  const [courses, setCourses] = useState<any[]>([]);
+  const [courses, setCourses] = useState<unknown[]>([]);
   const [form, setForm] = useState<EnrollmentData>({
     student_id: '',
     course_id: '',
@@ -158,7 +156,7 @@ const StudentEnrollmentForm: React.FC<StudentEnrollmentFormProps> = ({ isOpen, o
                 className={`w-full px-3 py-2.5 bg-gray-50 dark:bg-gray-700 border-2 rounded-lg text-sm outline-none focus:border-purple-500 ${errors.course_id ? 'border-red-400' : 'border-gray-200 dark:border-gray-600'}`}
               >
                 <option value="">— Select Course —</option>
-                {courses.map(c => (
+                {(courses as any[]).map((c: any) => (
                   <option key={c.id} value={c.id}>{c.code} · {c.title}</option>
                 ))}
               </select>

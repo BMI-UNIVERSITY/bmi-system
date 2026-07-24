@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS — DocumentService Deterministic Hashing Tests
  *
@@ -19,7 +17,7 @@ import { describe, it, expect } from 'vitest';
 // ── Isolated hash function ────────────────────────────────────────────────────
 // We extract the hash logic from DocumentService rather than instantiating the
 // full singleton (which requires import.meta.env and QRCode).
-async function generateContentHash(data: Record<string, unknown>): Promise<string> {
+async function generateContentHash(data: any): Promise<string> {
   const canonicalString = JSON.stringify(data, Object.keys(data).sort());
   const encoder = new TextEncoder();
   const dataBuffer = encoder.encode(canonicalString);

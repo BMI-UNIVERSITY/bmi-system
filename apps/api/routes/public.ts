@@ -205,3 +205,91 @@ export async function handlePublicGetPage(
   if (!row) return error('Page not found', 404);
   return cachedOk(row);
 }
+
+/** POST /api/public/contact — store contact form submission from marketing site */
+export async function handlePublicContact(request: Request, env: Env): Promise<Response> {
+  let body: { name?: unknown; email?: unknown; subject?: unknown; message?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    return error('Invalid JSON', 400);
+  }
+
+  const { name, email, subject, message } = body;
+
+  // Basic validation
+  if (
+    typeof name !== 'string' || name.trim().length === 0 ||
+    typeof email !== 'string' || !email.includes('@') ||
+    typeof subject !== 'string' || subject.trim().length === 0 ||
+    typeof message !== 'string' || message.trim().length === 0
+  ) {
+    return error('Missing or invalid required fields: name, email, subject, message', 422);
+  }
+
+  if (name.trim().length > 200 || subject.trim().length > 500 || message.trim().length > 5000) {
+    return error('Field length exceeds maximum allowed', 422);
+  }
+
+  const ip = request.headers.get('CF-Connecting-IP') ?? request.headers.get('X-Forwarded-For') ?? null;
+  const userAgent = request.headers.get('User-Agent') ?? null;
+
+  try {
+    await env.PLATFORM_CONTEXT!.db.prepare(
+      `INSERT INTO contact_submissions (name, email, subject, message, ip_address, user_agent)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).bind(
+      name.trim(),
+      email.trim().toLowerCase(),
+      subject.trim(),
+      message.trim(),
+      ip,
+      userAgent,
+    ).run();
+  } catch (err) {
+    console.error('[contact] DB insert failed:', err);
+    return error('Failed to save your submission. Please try again.', 500);
+  }
+
+  return new Response(JSON.stringify({ success: true, message: 'Your message has been received. We will be in touch within 1–2 business days.' }), {
+    status: 201,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
+
+/** POST /api/public/newsletter — subscribe an email to the newsletter */
+export async function handlePublicNewsletter(request: Request, env: Env): Promise<Response> {
+  let body: { email?: unknown };
+  try {
+    body = await request.json();
+  } catch {
+    return error('Invalid JSON', 400);
+  }
+
+  const { email } = body;
+
+  if (typeof email !== 'string' || !email.includes('@') || email.length > 254) {
+    return error('A valid email address is required', 422);
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  try {
+    // UPSERT: if already subscribed, reactivate; otherwise insert
+    await env.PLATFORM_CONTEXT!.db.prepare(
+      `INSERT INTO newsletter_subscribers (email, source)
+       VALUES (?, 'website_footer')
+       ON CONFLICT(email) DO UPDATE SET
+         status = 'active',
+         unsubscribed_at = NULL`,
+    ).bind(normalizedEmail).run();
+  } catch (err) {
+    console.error('[newsletter] DB insert failed:', err);
+    return error('Failed to subscribe. Please try again.', 500);
+  }
+
+  return new Response(JSON.stringify({ success: true, message: 'You are now subscribed to BMI University news and updates.' }), {
+    status: 201,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}

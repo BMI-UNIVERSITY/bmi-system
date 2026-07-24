@@ -1,6 +1,5 @@
-/* eslint-disable */
-import React, { useState, useEffect } from "react";
-import { Search, Filter, ClipboardList, CheckCircle, XCircle, Clock, Eye, AlertCircle, FileText } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, ClipboardList, CheckCircle, XCircle, Clock, Eye, AlertCircle } from "lucide-react";
 import { admissionsService, Application, StatusLogEntry } from "../services/admissionsService";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -63,7 +62,7 @@ export default function Admissions() {
       ]);
       setAppDetails(details);
       setLogs(auditLogs);
-    } catch (err: unknown) {
+    } catch {
       setError("Failed to load full application details");
     }
   };

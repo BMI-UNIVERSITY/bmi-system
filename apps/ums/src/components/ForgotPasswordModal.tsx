@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState } from 'react';
 import { Mail, ArrowLeft, Loader2, CheckCircle, AlertCircle } from 'lucide-react';
 import { requestPasswordReset } from '../services/authService';

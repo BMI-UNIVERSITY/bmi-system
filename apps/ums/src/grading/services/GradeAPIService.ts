@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Grade API Service
  * Main API service for grade operations
@@ -152,14 +150,14 @@ export async function submitGradeAppeal(appealData: {
   gradeId: string;
   reason: string;
   explanation: string;
-}): Promise<APIResponse<any>> {
+}): Promise<APIResponse<unknown>> {
   try {
     const response = await authFetch(`${API_URL}/grade-appeals`, {
       method: 'POST',
       body: JSON.stringify(appealData),
     }, 10000);
 
-    const data: APIResponse<any> = await response.json();
+    const data: APIResponse<unknown> = await response.json();
     return data;
   } catch (error) { return {
       success: false,
@@ -175,14 +173,14 @@ export async function approveGradeAppeal(
   appealId: string,
   revisedGrade: string,
   notes: string
-): Promise<APIResponse<any>> {
+): Promise<APIResponse<unknown>> {
   try {
     const response = await authFetch(`${API_URL}/grade-appeals/${appealId}/approve`, {
       method: 'PATCH',
       body: JSON.stringify({ revisedGrade, notes }),
     }, 10000);
 
-    const data: APIResponse<any> = await response.json();
+    const data: APIResponse<unknown> = await response.json();
     return data;
   } catch (error) { return {
       success: false,
@@ -197,14 +195,14 @@ export async function approveGradeAppeal(
 export async function denyGradeAppeal(
   appealId: string,
   notes: string
-): Promise<APIResponse<any>> {
+): Promise<APIResponse<unknown>> {
   try {
     const response = await authFetch(`${API_URL}/grade-appeals/${appealId}/deny`, {
       method: 'PATCH',
       body: JSON.stringify({ notes }),
     }, 10000);
 
-    const data: APIResponse<any> = await response.json();
+    const data: APIResponse<unknown> = await response.json();
     return data;
   } catch (error) { return {
       success: false,
@@ -212,12 +210,5 @@ export async function denyGradeAppeal(
      };
   }
 }
-
-
-
-
-
-
-
 
 

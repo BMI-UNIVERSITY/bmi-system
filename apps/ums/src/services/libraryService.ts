@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import { authFetch } from './authService';
 import { LibraryItem } from '../types';
 

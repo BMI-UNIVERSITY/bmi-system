@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Course Grade Distribution Component
  * Displays grade distribution analytics with charts and statistics
@@ -31,7 +29,7 @@ const CourseGradeDistribution: React.FC<CourseGradeDistributionProps> = ({
   const [distribution, setDistribution] = useState<GradeDistribution | null>(
     null,
   );
-  const [grades, setGrades] = useState<Grade[]>([]);
+  const [, setGrades] = useState<Grade[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -59,7 +57,8 @@ const CourseGradeDistribution: React.FC<CourseGradeDistributionProps> = ({
         );
         setDistribution(dist);
       }
-    } catch (error) { console.error("Failed to load course grades:", error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error("Failed to load course grades:", error);
      } finally {
       setIsLoading(false);
     }

@@ -1,0 +1,87 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "bmi-api-ums",
+  "compatibility_date": "2025-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "main": "worker-ums.ts",
+
+  // ─── Cloudflare Account ───────────────────────────────────────────
+  // Set this to your account ID: npx wrangler whoami
+  "account_id": "2557f2f143734abc82bd4c80be750eb6",
+
+  // ─── D1 Database (Single Source of Truth) ─────────────────────────
+  // This is the existing bmi-portal-db — now extended to serve both Portal & UMS.
+  // Run: npx wrangler d1 execute bmi-portal-db --file=db/schema.sql
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "bmi-portal-db",
+      "database_id": "a5e26ad9-5d8e-4afa-9ad9-8cd55c1cbf1a"
+    }
+  ],
+  
+  "queues": {
+    "producers": [
+      {
+        "queue": "bmi-email-queue",
+        "binding": "EMAIL_QUEUE"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "bmi-email-queue",
+        "max_batch_size": 10,
+        "max_batch_timeout": 5,
+        "max_retries": 3
+      }
+    ]
+  },
+
+  // ─── R2 Object Storage (Documents & Backups) ──────────────────────
+  "r2_buckets": [
+    {
+      "binding": "DOCUMENTS",
+      "bucket_name": "bmi-portal-documents"
+    },
+    {
+      "binding": "BACKUP_BUCKET",
+      "bucket_name": "bmi-portal-backups"
+    }
+  ],
+
+  // ─── KV (Session Store & Rate Limiting) ───────────────────────────
+  // Note: Sessions and Rate Limits have been fully migrated to D1.
+
+  // ─── Public Environment Variables ─────────────────────────────────
+  // Secrets (JWT_SECRET, RESEND_API_KEY, etc.) must be set via:
+  //   npx wrangler secret put JWT_SECRET
+  //   npx wrangler secret put RESEND_API_KEY
+  //   npx wrangler secret put ADMIN_SETUP_KEY
+  "vars": {
+    "ENVIRONMENT": "production",
+    // Comma-separated list of all frontend origins that may call this API.
+    // Add your Cloudflare Pages URLs here after deployment.
+    "ALLOWED_ORIGINS_OVERRIDE": "https://bmi-portal.hkmministries.org,https://bmi-ums.hkmministries.org,https://bmi-portal.pages.dev,https://bmi-ums.pages.dev,https://main.bmi-university.pages.dev,https://portal.bmi-university.pages.dev,https://ums.bmi-university.pages.dev"
+  },
+
+  // ─── Cloudflare DNS Routes ──────────────────────────────────────────────────
+  // The monolith (bmi-api) retains only paths NOT owned by a domain worker:
+  //   /api/health           — liveliness probe
+  //   scheduled (cron)      — nightly backup job
+  // All other paths are handled by domain-worker routes below.
+  // Pattern: api.hkmministries.org/api/health* only.
+  // "routes": [
+  //   { "pattern": "api.hkmministries.org/api/health*", "zone_name": "hkmministries.org" }
+  // ],
+
+
+  "triggers": {
+    "crons": ["0 0 * * *"]
+  },
+
+  // ─── Observability ────────────────────────────────────────────────
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  }
+}

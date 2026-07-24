@@ -1,5 +1,5 @@
 
-import { IDocumentGenerator, Document, DocumentRequest, DocumentType } from '@bmi/ports';
+import { IDocumentGenerator, Document, DocumentRequest } from '@bmi/ports';
 
 export class MemoryDocumentAdapter implements IDocumentGenerator {
   private documents: Map<string, Document> = new Map();

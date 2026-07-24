@@ -32,7 +32,7 @@ interface ProgramCourse {
 
 // ─── Holds ──────────────────────────────────────────────────────────────────
 
-export async function handleGetMyHolds(req: Request, env: Env, userId: string): Promise<Response> {
+export async function handleGetMyHolds(_req: Request, env: Env, userId: string): Promise<Response> {
   const { results: holds } = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT id, hold_type, reason, is_active, created_at, resolved_at
      FROM student_holds WHERE student_id = ? ORDER BY created_at ASC`
@@ -105,7 +105,7 @@ export async function handleGetProgramCurriculum(req: Request, env: Env, userId:
 
 // ─── Auto-Enrollment (Mandatory Courses) ────────────────────────────────────
 
-export async function handleAutoEnrollMandatory(req: Request, env: Env, userId: string): Promise<Response> {
+export async function handleAutoEnrollMandatory(_req: Request, env: Env, userId: string): Promise<Response> {
   const hold = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT id FROM student_holds WHERE student_id = ? AND hold_type = 'course_selection' AND is_active = 1`
   ).bind(userId).first<{ id: string }>();
@@ -121,7 +121,7 @@ export async function handleAutoEnrollMandatory(req: Request, env: Env, userId: 
 
   if (!studentProg) return error('No active program found.', 404);
 
-  const now = new Date();
+
   const currentTerm = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT id, name, academic_year FROM academic_terms
      WHERE date(start_date) <= date('now') AND date(end_date) >= date('now')
@@ -180,7 +180,7 @@ export async function handleAutoEnrollMandatory(req: Request, env: Env, userId: 
 
 // ─── Elective Courses ──────────────────────────────────────────────────────
 
-export async function handleGetElectiveGroups(req: Request, env: Env, userId: string): Promise<Response> {
+export async function handleGetElectiveGroups(_req: Request, env: Env, userId: string): Promise<Response> {
   const studentProg = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT sp.program_id
      FROM student_programs sp
@@ -312,7 +312,7 @@ export async function handleSubmitElectives(req: Request, env: Env, userId: stri
 
 // ─── Onboarding Status ──────────────────────────────────────────────────────
 
-export async function handleGetRegistrationProgress(req: Request, env: Env, userId: string): Promise<Response> {
+export async function handleGetRegistrationProgress(_req: Request, env: Env, userId: string): Promise<Response> {
   const { results: holds } = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT id, hold_type, reason, is_active, created_at, resolved_at FROM student_holds WHERE student_id = ? ORDER BY created_at ASC`
   ).bind(userId).all<Hold>();
@@ -409,7 +409,7 @@ export async function handleGetRegistrationProgress(req: Request, env: Env, user
 
 // ─── Orientation ────────────────────────────────────────────────────────────
 
-export async function handleCompleteOrientation(req: Request, env: Env, userId: string): Promise<Response> {
+export async function handleCompleteOrientation(_req: Request, env: Env, userId: string): Promise<Response> {
   const hold = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT id FROM student_holds WHERE student_id = ? AND hold_type = 'orientation' AND is_active = 1`
   ).bind(userId).first<{ id: string }>();
@@ -425,7 +425,7 @@ export async function handleCompleteOrientation(req: Request, env: Env, userId: 
 
 // ─── Program Fee Invoice ────────────────────────────────────────────────────
 
-export async function handleGenerateProgramInvoice(req: Request, env: Env, userId: string): Promise<Response> {
+export async function handleGenerateProgramInvoice(_req: Request, env: Env, userId: string): Promise<Response> {
   const paymentHold = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT id FROM student_holds WHERE student_id = ? AND hold_type = 'payment' AND is_active = 1`
   ).bind(userId).first<{ id: string }>();

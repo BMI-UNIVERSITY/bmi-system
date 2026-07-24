@@ -1,12 +1,10 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useMemo, useEffect } from "react";
 import {
   Briefcase,
   Mail,
   Plus,
   Search,
-  Filter,
+  
   GraduationCap,
   Edit,
   Trash2,
@@ -25,14 +23,12 @@ import {
   CircleUser,
 } from "lucide-react";
 import { StaffMember } from "../types";
-import { getStaff } from "../services/staffService";
 import { requestPasswordReset } from "../services/authService";
 import { getAllStudyCenters, StudyCenter } from "../services/studyCenterService";
 import { StudyCenterSelector } from "./StudyCenterSelector";
 import { useDataStore } from "../stores/dataStore";
 import { usePagination } from "../hooks/usePagination";
 import { useStaffQuery } from "../hooks/useEntityQueries";
-import { useQueryClient } from "@tanstack/react-query";
 
 const departments = [
   "All Departments",
@@ -61,14 +57,14 @@ const Staff: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [deptFilter, setDeptFilter] = useState("All Departments");
   const [campusFilter, setCampusFilter] = useState("All Study Centers");
-  const [campuses, setCampuses] = useState<StudyCenter[]>([]);
+  const [, setCampuses] = useState<StudyCenter[]>([]);
   const [activeTab, setActiveTab] = useState<
     "All" | "Academic" | "Administrative" | "Management"
   >("All");
   const [viewMode, setViewMode] = useState<"grid" | "table">("table");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [newStaff, setNewStaff] = useState<Record<string, any>>({
+  const [newStaff, setNewStaff] = useState<any>({
     staff_number: "",
     first_name: "",
     last_name: "",
@@ -84,11 +80,11 @@ const Staff: React.FC = () => {
     specialization: "",
   });
   const { page, perPage, meta, setPage, setMeta } = usePagination(20);
-  const queryClient = useQueryClient();
+//   const _queryClient = useQueryClient();
 
   const {
     data: staffResponse,
-    isLoading,
+    
     isFetching,
   } = useStaffQuery({
     page,
@@ -121,7 +117,8 @@ const Staff: React.FC = () => {
       try {
         const data = await getAllStudyCenters();
         if (!cancelled) setCampuses(data);
-      } catch (error) { console.error("Failed to load campuses:", error);
+      } catch (error) { // eslint-disable-next-line no-console
+        console.error("Failed to load campuses:", error);
        }
     }
     loadStudyCenters();
@@ -182,6 +179,7 @@ const Staff: React.FC = () => {
     try {
       await requestPasswordReset(newStaff.email);
     } catch (err) {
+      // eslint-disable-next-line no-console
       console.error("Failed to send welcome email:", err);
     }
 
@@ -249,7 +247,7 @@ const Staff: React.FC = () => {
         {["All", "Academic", "Administrative", "Management"].map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab as any)}
+            onClick={() => setActiveTab(tab as "All" | "Academic" | "Administrative" | "Management")}
             className={`px-6 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
               activeTab === tab
                 ? "bg-[#4B0082] text-white shadow-lg shadow-purple-500/20 scale-105 border border-purple-500/50"
@@ -676,7 +674,7 @@ const Staff: React.FC = () => {
                         onChange={(e) =>
                           setNewStaff({
                             ...newStaff,
-                            category: e.target.value as any,
+                            category: e.target.value as "Academic" | "Administrative" | "Management",
                           })
                         }
                         className="w-full px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-100 dark:border-gray-600 rounded-none outline-none focus:ring-1 focus:ring-[#4B0082] dark:text-white font-bold text-xs uppercase"

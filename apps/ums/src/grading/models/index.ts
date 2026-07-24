@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Grading System Models
  * Barrel export for all domain models

@@ -266,3 +266,49 @@ export async function handleBulkEmails(request: Request, env: Env): Promise<Resp
 
   return ok({ message: `Successfully queued ${enqueued}/${recipients.length} emails.` });
 }
+
+/** GET /api/admin/contact-submissions — list contact form submissions */
+export async function handleListContactSubmissions(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const status = url.searchParams.get('status') ?? 'new';
+  const limit = Math.min(100, parseInt(url.searchParams.get('limit') ?? '50'));
+  const offset = parseInt(url.searchParams.get('offset') ?? '0');
+
+  const rows = await env.PLATFORM_CONTEXT!.db.prepare(
+    `SELECT id, name, email, subject, message, status, ip_address, created_at
+     FROM contact_submissions
+     WHERE status = ? OR ? = 'all'
+     ORDER BY created_at DESC
+     LIMIT ? OFFSET ?`,
+  ).bind(status, status, limit, offset).all<{
+    id: string; name: string; email: string; subject: string;
+    message: string; status: string; ip_address: string | null; created_at: string;
+  }>();
+
+  return ok({ results: rows.results, limit, offset });
+}
+
+/** GET /api/admin/newsletter-subscribers — list newsletter subscribers */
+export async function handleListNewsletterSubscribers(request: Request, env: Env): Promise<Response> {
+  const url = new URL(request.url);
+  const status = url.searchParams.get('status') ?? 'active';
+  const limit = Math.min(500, parseInt(url.searchParams.get('limit') ?? '100'));
+  const offset = parseInt(url.searchParams.get('offset') ?? '0');
+
+  const [rows, total] = await Promise.all([
+    env.PLATFORM_CONTEXT!.db.prepare(
+      `SELECT id, email, source, status, subscribed_at
+       FROM newsletter_subscribers
+       WHERE status = ? OR ? = 'all'
+       ORDER BY subscribed_at DESC
+       LIMIT ? OFFSET ?`,
+    ).bind(status, status, limit, offset).all<{
+      id: string; email: string; source: string; status: string; subscribed_at: string;
+    }>(),
+    env.PLATFORM_CONTEXT!.db.prepare(
+      `SELECT COUNT(*) AS n FROM newsletter_subscribers WHERE status = ? OR ? = 'all'`,
+    ).bind(status, status).first<{ n: number }>(),
+  ]);
+
+  return ok({ results: rows.results, total: total?.n ?? 0, limit, offset });
+}

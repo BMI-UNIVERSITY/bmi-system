@@ -1,6 +1,4 @@
-/* eslint-disable */
-/* eslint-disable */
-import React, { useEffect } from "react";
+import { useEffect } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import { Menu, Bell } from "lucide-react";
 import Sidebar from "./components/Sidebar";
@@ -40,7 +38,7 @@ function PublicRoutes() {
 /** Authenticated app layout with sidebar + main content */
 function AuthenticatedLayout() {
   const { logout: authLogout } = useAuthStore();
-  const { fetchAllCoreData, clearAll } = useDataStore();
+  const { clearAll } = useDataStore();
   const { pathname } = useLocation();
   const {
     theme,
@@ -172,12 +170,13 @@ function App() {
         );
         if (fresh.length !== docs.length) {
           localStorage.setItem("bmi_documents", JSON.stringify(fresh));
+          // eslint-disable-next-line no-console
           console.info(
             `[App] Purged ${docs.length - fresh.length} legacy transcript record(s) from localStorage.`,
           );
         }
       }
-    } catch (error) {
+    } catch {
       // If parsing fails, remove the entire key so we start clean
       localStorage.removeItem("bmi_documents");
     }
@@ -212,10 +211,18 @@ function App() {
   }
 
   if (!isLoggedIn) {
-    return <PublicRoutes />;
+    return (
+      <ErrorBoundary>
+        <PublicRoutes />
+      </ErrorBoundary>
+    );
   }
 
-  return <AuthenticatedLayout />;
+  return (
+    <ErrorBoundary>
+      <AuthenticatedLayout />
+    </ErrorBoundary>
+  );
 }
 
 export default App;

@@ -4,7 +4,7 @@ import Apply from './Apply';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import * as useAuthModule from '../hooks/useAuth';
-import React from 'react';
+
 
 // Mock API and Auth
 vi.mock('../hooks/useAuth');

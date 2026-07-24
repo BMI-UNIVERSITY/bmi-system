@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI University Management System - Document Verifier
  * Unified verification interface for all institutional documents
@@ -20,8 +18,8 @@ import {
   CreditCard,
   Mail,
   Clock,
-  User,
-  Calendar,
+  
+  
   Hash,
   RefreshCw,
   ExternalLink,
@@ -65,7 +63,7 @@ export const DocumentVerifier: React.FC<DocumentVerifierProps> = ({
       } else {
         setError(verificationResult.error || "Document verification failed");
       }
-    } catch (error) { setError("An error occurred during verification. Please try again.");
+    } catch { setError("An error occurred during verification. Please try again.");
      } finally {
       setIsVerifying(false);
     }
@@ -77,8 +75,8 @@ export const DocumentVerifier: React.FC<DocumentVerifierProps> = ({
     setError(null);
   };
 
-  const getDocumentIcon = (type: DocumentType) => {
-    const icons: Record<DocumentType, any> = {
+  const getDocumentIcon = (type: DocumentType): React.ElementType => {
+    const icons: Record<DocumentType, React.ComponentType<{ size?: number }>> = {
       certificate: Award,
       transcript: FileText,
       id_card: CreditCard,

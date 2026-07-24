@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Grade Entry Modal
  * Modern grade entry component with weighted assessment support
@@ -190,7 +188,7 @@ const GradeEntryModal: React.FC<GradeEntryModalProps> = ({
     }
   };
 
-  const updateComponent = (index: number, field: keyof AssessmentComponent, value: any) => {
+  const updateComponent = (index: number, field: keyof AssessmentComponent, value: unknown) => {
     const updated = [...assessmentComponents];
     updated[index] = { ...updated[index], [field]: value };
     setAssessmentComponents(updated);
@@ -244,7 +242,7 @@ const GradeEntryModal: React.FC<GradeEntryModalProps> = ({
         isComplete: result.isComplete,
         completionPercentage: result.completionPercentage,
       };
-    } catch (error) {
+    } catch {
       return null;
     }
   };

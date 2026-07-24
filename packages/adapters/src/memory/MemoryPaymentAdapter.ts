@@ -30,7 +30,7 @@ export class MemoryPaymentAdapter implements IPaymentProvider {
     return intent;
   }
 
-  async handleWebhook(payload: any, signature: string): Promise<PaymentIntent> {
+  async handleWebhook(payload: any, _signature: string): Promise<PaymentIntent> {
     const id = payload.data?.object?.id;
     const intent = this.intents.get(id);
     if (!intent) throw new Error('Payment intent not found');

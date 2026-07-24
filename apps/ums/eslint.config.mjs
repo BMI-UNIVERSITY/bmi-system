@@ -37,7 +37,7 @@ export default [
       'react-hooks/refs': 'off',
       'react-hooks/purity': 'off',
       '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/no-unused-vars': 'error',
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
       'no-console': 'warn',
       'no-undef': 'off',
     },

@@ -56,13 +56,6 @@ interface StandingRule {
   description: string | null;
 }
 
-interface GradeRow {
-  enrollment_id: string;
-  credits: number;
-  grade_points: number | null;
-  passed: number; // 1 if grade_points >= 1.0 (D or above)
-}
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 function matchRule(
@@ -165,7 +158,7 @@ async function computeStandingForTerm(
         : null;
 
       // 4. Compute cumulative GPA across all completed terms
-      const cumulativeRow = await db.prepare(
+      await db.prepare(
         `SELECT
            SUM(c.credits) as total_attempted,
            SUM(CASE WHEN e.status != 'waitlisted' THEN c.credits ELSE 0 END) as total_earned_credits
@@ -280,7 +273,7 @@ async function computeStandingForTerm(
  * Auth: admin or the student themselves.
  */
 export async function handleGetStudentStanding(
-  req: Request,
+  _req: Request,
   env: Env,
   studentId: string,
   requestingUserId: string,
@@ -314,7 +307,7 @@ export async function handleGetStudentStanding(
  * Auth: admin or the student themselves.
  */
 export async function handleGetCurrentStanding(
-  req: Request,
+  _req: Request,
   env: Env,
   studentId: string,
   requestingUserId: string,
@@ -362,10 +355,6 @@ export async function handleAdminListStanding(
   const perPage = Math.min(100, Math.max(1, parseInt(url.searchParams.get('perPage') ?? '50')));
   const offset = (page - 1) * perPage;
 
-  const whereClause = standingFilter
-    ? `WHERE asr.standing = '${standingFilter.replace(/'/g, '')}'`
-    : `WHERE asr.standing != 'good'`;
-
   const { results } = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT
        asr.student_id, asr.standing, asr.term_gpa, asr.cumulative_gpa,
@@ -373,7 +362,7 @@ export async function handleAdminListStanding(
        at.name as term_name,
        u.email,
        s.reg_no,
-       (u.raw_meta->>'first_name' || ' ' || u.raw_meta->>'last_name') as full_name
+       (u.first_name || ' ' || u.last_name) as full_name
      FROM academic_standing_records asr
      INNER JOIN (
        SELECT student_id, MAX(created_at) as latest
@@ -383,10 +372,10 @@ export async function handleAdminListStanding(
      LEFT JOIN academic_terms at ON at.id = asr.term_id
      LEFT JOIN users u ON u.id = asr.student_id
      LEFT JOIN students s ON s.user_id = asr.student_id
-     ${whereClause}
+     ${standingFilter ? `WHERE asr.standing = ?` : `WHERE asr.standing != 'good'`}
      ORDER BY asr.standing DESC, asr.term_gpa ASC
      LIMIT ? OFFSET ?`
-  ).bind(perPage, offset).all();
+  ).bind(...(standingFilter ? [standingFilter] : []), perPage, offset).all();
 
   const { results: countRow } = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT COUNT(DISTINCT asr.student_id) as total
@@ -395,8 +384,8 @@ export async function handleAdminListStanding(
        SELECT student_id, MAX(created_at) as latest
        FROM academic_standing_records GROUP BY student_id
      ) latest_rec ON asr.student_id = latest_rec.student_id AND asr.created_at = latest_rec.latest
-     ${whereClause}`
-  ).all<{ total: number }>();
+     ${standingFilter ? `WHERE asr.standing = ?` : `WHERE asr.standing != 'good'`}`
+  ).bind(...(standingFilter ? [standingFilter] : [])).all<{ total: number }>();
 
   return ok({
     data: results,
@@ -458,7 +447,7 @@ export async function handleComputeStanding(
  * Auth: admin only.
  */
 export async function handleListStandingRules(
-  req: Request,
+  _req: Request,
   env: Env
 ): Promise<Response> {
   const { results } = await env.PLATFORM_CONTEXT!.db.prepare(

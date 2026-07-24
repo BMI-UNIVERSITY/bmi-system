@@ -1,12 +1,10 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Grade Automation Service
  * Handles automated grade operations including incomplete grade conversion,
  * pass/fail grade management, and deadline notifications
  */
 
-import { Grade, GradeStatus, SpecialGrade } from '../types';
+import { Grade, SpecialGrade } from '../types';
 
 /**
  * Service for automated grade operations
@@ -36,8 +34,10 @@ export class GradeAutomationService {
             await this.convertIncompleteToF(grade.id);
             convertedGradeIds.push(grade.id);
             
+            // eslint-disable-next-line no-console
             console.log(`[GradeAutomation] Converted incomplete grade ${grade.id} to F (deadline: ${grade.incompleteDeadline})`);
-          } catch (error) { console.error(`[GradeAutomation] Failed to convert grade ${grade.id }:`, error);
+          } catch (error) { // eslint-disable-next-line no-console
+            console.error(`[GradeAutomation] Failed to convert grade ${grade.id }:`, error);
           }
         }
       }
@@ -53,6 +53,7 @@ export class GradeAutomationService {
   private static async convertIncompleteToF(gradeId: string): Promise<void> {
     // This would call the API to update the grade
     // For now, this is a placeholder
+    // eslint-disable-next-line no-console
     console.log(`Converting grade ${gradeId} from Incomplete to F`);
     
     // TODO: Implement API call
@@ -92,8 +93,10 @@ export class GradeAutomationService {
             await this.sendReminderNotification(grade);
             remindedStudentIds.push(grade.studentId);
             
+            // eslint-disable-next-line no-console
             console.log(`[GradeAutomation] Sent reminder to student ${grade.studentId} for grade ${grade.id}`);
-          } catch (error) { console.error(`[GradeAutomation] Failed to send reminder for grade ${grade.id }:`, error);
+          } catch (error) { // eslint-disable-next-line no-console
+            console.error(`[GradeAutomation] Failed to send reminder for grade ${grade.id }:`, error);
           }
         }
       }
@@ -108,6 +111,7 @@ export class GradeAutomationService {
    */
   private static async sendReminderNotification(grade: Grade): Promise<void> {
     // This would send an email/SMS notification
+    // eslint-disable-next-line no-console
     console.log(`Sending reminder notification for grade ${grade.id} to student ${grade.studentId}`);
     
     // TODO: Implement notification service
@@ -125,8 +129,8 @@ export class GradeAutomationService {
    * @returns Whether the student is eligible for pass/fail grading
    */
   static async validatePassFailEligibility(
-    courseId: string,
-    studentId: string
+//     courseId: string,
+//     studentId: string
   ): Promise<{ eligible: boolean; reason?: string }> {
     // Check if course allows pass/fail grading
     // Check if student hasn't exceeded pass/fail limit for semester
@@ -212,6 +216,7 @@ export class GradeAutomationService {
     convertedIncompletes: string[];
     remindersSet: string[];
   }> {
+    // eslint-disable-next-line no-console
     console.log('[GradeAutomation] Running automated operations...');
 
     // Convert expired incomplete grades
@@ -220,6 +225,7 @@ export class GradeAutomationService {
     // Send reminders for upcoming deadlines
     const remindersSet = await this.sendIncompleteGradeReminders(grades, 7);
 
+    // eslint-disable-next-line no-console
     console.log('[GradeAutomation] Automated operations complete:', {
       convertedIncompletes: convertedIncompletes.length,
       remindersSet: remindersSet.length,

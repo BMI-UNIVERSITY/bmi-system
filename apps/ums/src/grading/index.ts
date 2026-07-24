@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - University Grading System
  * Public barrel export for the grading system module.

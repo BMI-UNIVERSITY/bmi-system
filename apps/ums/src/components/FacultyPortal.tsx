@@ -1,11 +1,9 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS — Faculty Portal
  * Self-service view for role === 'faculty'
  * Shows assigned courses and a quick grade entry form.
  */
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   BookOpen, Users, Award, PenLine, CheckCircle, AlertCircle, Loader2,
 } from 'lucide-react';

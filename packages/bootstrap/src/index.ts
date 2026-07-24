@@ -43,6 +43,7 @@ import {
   MemoryStorageAdapter,
   StripeAdapter,
   PdfDocumentAdapter,
+  D1IdentityAdapter,
 } from '@bmi/adapters';
 
 export interface PlatformContext {
@@ -110,11 +111,12 @@ function buildCloudflare(env: any): PlatformContext {
     : new MemoryWriteQueueAdapter();
 
   const paymentProvider = env.STRIPE_SECRET_KEY
-    ? new StripeAdapter(env.STRIPE_SECRET_KEY)
+    ? new StripeAdapter(env.STRIPE_SECRET_KEY, env.STRIPE_WEBHOOK_SECRET)
     : unimplemented<IPaymentProvider>('payment');
 
+  const dbAdapter = new D1DatabaseAdapter(env.DB);
   return {
-    db: new D1DatabaseAdapter(env.DB),
+    db: dbAdapter,
     kv: new CloudflareKVAdapter(env.KV),
     queue: new CloudflareQueueAdapter(env.EMAIL_QUEUE || env.QUEUE),
     rateLimiter,
@@ -122,7 +124,7 @@ function buildCloudflare(env: any): PlatformContext {
     secrets: new EnvironmentSecretsAdapter(env),
     logger: new CloudflareLoggerAdapter(tracer.getRequestId()),
     tracer,
-    identity: unimplemented<IIdentityProvider>('identity'),
+    identity: new D1IdentityAdapter(dbAdapter),
     lms: unimplemented<ILMSProvider>('lms'),
     email: emailProvider,
     payment: paymentProvider,

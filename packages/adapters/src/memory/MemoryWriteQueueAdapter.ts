@@ -19,7 +19,7 @@ export class MemoryWriteQueueAdapter implements IWriteQueue, IHealthCheck {
     try {
       const queue = this.queues.get(shardKey);
       while (queue && queue.length > 0) {
-        const op = queue.shift();
+        queue.shift(); // dequeue — processing is mocked below
         // Mock processing the operation (in a real scenario, this would call a handler)
         // console.log(`Processing op for ${shardKey}:`, op);
         await new Promise(resolve => setTimeout(resolve, 10)); // Simulate async work

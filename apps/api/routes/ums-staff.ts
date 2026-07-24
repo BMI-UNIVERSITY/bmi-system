@@ -43,7 +43,7 @@ export async function handleListStaff(request: Request, env: Env): Promise<Respo
   return ok({ items: rows.results, page, perPage, total: countRow?.total ?? 0 });
 }
 
-export async function handleGetStaff(request: Request, env: Env, staffId: string): Promise<Response> {
+export async function handleGetStaff(_request: Request, env: Env, staffId: string): Promise<Response> {
   const row = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT st.*, u.email, u.first_name, u.last_name, u.phone, u.role,
             d.name as department_name
@@ -68,10 +68,13 @@ export async function handleCreateStaff(request: Request, env: Env): Promise<Res
     return error('Missing required: email, first_name, last_name, staff_no');
   }
 
-  const existingUser = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id FROM users WHERE email = ?').bind(email).first<{ id: string }>();
+  const existingUser = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id, role FROM users WHERE email = ?').bind(email).first<{ id: string; role: string }>();
   let userId: string;
 
   if (existingUser) {
+    if (existingUser.role !== 'applicant') {
+      return error(`User with email ${email} already exists with role '${existingUser.role}'`, 409);
+    }
     userId = existingUser.id;
     await env.PLATFORM_CONTEXT!.db.prepare(`UPDATE users SET role = ?, updated_at = datetime('now') WHERE id = ?`).bind(role, userId).run();
   } else {

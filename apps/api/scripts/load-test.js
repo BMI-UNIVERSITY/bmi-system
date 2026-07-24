@@ -44,7 +44,7 @@ export default function () {
   // The cookie has the Secure flag so browsers won't send it back over plain HTTP.
   // The auth middleware also accepts Authorization: Bearer, so we use that instead.
   // See: packages/api-middleware/src/auth.ts -> requireAuth()
-  const setCookie = loginRes.headers['Set-Cookie'] || '';
+  const setCookie = loginRes.headers['set-cookie'] || '';
   const tokenMatch = setCookie.match(/bmi_token=([^;]+)/);
   const jwt = tokenMatch ? tokenMatch[1] : '';
 

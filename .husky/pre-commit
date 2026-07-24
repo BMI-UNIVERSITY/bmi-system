@@ -3,5 +3,11 @@
 if [ "$SKIP_CI" = "true" ]; then
   echo "⏩ Skipping type-check (SKIP_CI=true)"
 else
-  npx turbo run type-check --concurrency=100%
+  npx turbo run lint type-check --concurrency=100%
+fi
+
+# Basic Secret Scanning
+if git diff --cached | grep -iE "(API_KEY|SECRET|PASSWORD|TOKEN).{0,5}=" > /dev/null; then
+  echo "🚨 ERROR: Potential secrets found in staged files. Remove them before committing."
+  exit 1
 fi

@@ -4,10 +4,15 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 
 export default function CookieBanner() {
-  const [isVisible, setIsVisible] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    return !localStorage.getItem("bmi_cookie_consent");
-  });
+  const [isVisible, setIsVisible] = useState(false);
+
+  // Read localStorage only on the client, after hydration, to avoid SSR mismatch
+  useEffect(() => {
+    if (!localStorage.getItem("bmi_cookie_consent")) {
+      const id = setTimeout(() => setIsVisible(true), 0);
+      return () => clearTimeout(id);
+    }
+  }, []);
 
   const acceptCookies = () => {
     localStorage.setItem("bmi_cookie_consent", "true");

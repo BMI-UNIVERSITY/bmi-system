@@ -142,7 +142,7 @@ export default function Apply() {
   const prev = () => setStep(s => Math.max(s - 1, 0));
 
   const canProceedStep0 = SubmitApplicationSchema.pick({ program: true, degree_level: true }).safeParse(form).success;
-  const canProceedStep1 = true; // Optional fields
+
   const canProceedStep2 = SubmitApplicationSchema.pick({ prior_education: true }).safeParse(form).success;
   const canProceedStep3 = SubmitApplicationSchema.pick({ personal_statement: true }).safeParse(form).success;
 

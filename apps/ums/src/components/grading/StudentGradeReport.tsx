@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Student Grade Report Component
  * Displays comprehensive grade report with GPA, academic standing, and trends
@@ -46,7 +44,8 @@ const StudentGradeReport: React.FC<StudentGradeReportProps> = ({
         setGrades(studentGrades);
         calculateGPAs(studentGrades);
       }
-    } catch (error) { console.error('Failed to load student grades:', error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error('Failed to load student grades:', error);
      } finally {
       setIsLoading(false);
     }

@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useEffect, useCallback } from 'react';
 import { isTokenExpiringSoon, refreshAccessToken, logout } from '../services/authService';
 

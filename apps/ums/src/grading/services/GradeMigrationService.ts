@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Grade Migration Service
  * Migrates data from old grading system to new system
@@ -22,7 +20,7 @@ import { createUS40Scale, scoreToLetterGrade, letterGradeToPoints } from '../mod
 export async function migrateGrades(
   legacyGrades: LegacyGrade[]
 ): Promise<MigrationResult> {
-  const startTime = Date.now();
+//   const _startTime = Date.now();
   const errors: MigrationResult['errors'] = [];
   let migratedCount = 0;
 
@@ -151,7 +149,9 @@ async function createBackup(legacyGrades: LegacyGrade[]): Promise<string> {
   const backupPath = `backups/legacy-grades-${timestamp}.json`;
   
   // In real implementation, this would save to file system or cloud storage
+  // eslint-disable-next-line no-console
   console.log(`[Migration] Backup created at: ${backupPath}`);
+  // eslint-disable-next-line no-console
   console.log(`[Migration] Backup size: ${backupData.length} bytes`);
   
   return backupPath;

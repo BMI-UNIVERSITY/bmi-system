@@ -35,7 +35,7 @@ export interface GradesListResponse {
   error?: string;
 }
 
-export async function getGrades(filters?: Record<string, unknown>): Promise<GradesListResponse> {   
+export async function getGrades(filters?: any): Promise<GradesListResponse> {   
   try {
     const params = new URLSearchParams();
     if (filters?.perPage) params.append('perPage', filters.perPage.toString()); 

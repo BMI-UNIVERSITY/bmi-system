@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - GPA Calculator
  * Calculates course-level, semester, and cumulative GPAs
@@ -7,7 +5,7 @@
 
 import {
   Grade,
-  GPAResult,
+  
   SemesterGPA,
   CumulativeGPA,
   GradingScale,
@@ -83,6 +81,7 @@ export function calculateSemesterGPA(
   for (const grade of includedGrades) {
     const scale = gradingScales.get(grade.gradingScaleId);
     if (!scale) {
+      // eslint-disable-next-line no-console
       console.warn(`Grading scale not found for grade ${grade.id}`);
       continue;
     }
@@ -144,6 +143,7 @@ export function calculateCumulativeGPA(
   for (const grade of gradesAfterRetakes) {
     const scale = gradingScales.get(grade.gradingScaleId);
     if (!scale) {
+      // eslint-disable-next-line no-console
       console.warn(`Grading scale not found for grade ${grade.id}`);
       continue;
     }
@@ -220,7 +220,7 @@ function applyRetakePolicy(grades: Grade[]): Grade[] {
   // For each course, keep only the most recent grade
   const result: Grade[] = [];
   
-  for (const [courseCode, courseGradeList] of courseGrades) {
+  for (const [, courseGradeList] of courseGrades) {
     if (courseGradeList.length === 1) {
       result.push(courseGradeList[0]);
     } else {

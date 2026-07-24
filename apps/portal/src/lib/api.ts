@@ -91,7 +91,8 @@ export const api = {
         .then(res => { if (res.csrf_token) setCsrfToken(res.csrf_token); return res; }),
 
     me: () =>
-      request<User>('/auth/me'),
+      request<User & { csrf_token?: string }>('/auth/me')
+        .then(res => { if (res.csrf_token) setCsrfToken(res.csrf_token); return res as User; }),
 
     verifyEmail: (token: string) =>
       request<{ message: string }>(`/auth/verify?token=${encodeURIComponent(token)}`),

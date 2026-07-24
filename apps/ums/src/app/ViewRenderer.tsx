@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - ViewRenderer (Compatibility Bridge)
  *
@@ -49,7 +47,6 @@ import type {
   Transaction,
 } from "../types";
 import type { SetStateAction } from "react";
-import { useDataStore } from "../stores/dataStore";
 import { useUIStore } from "../stores/uiStore";
 
 type ViewKey =
@@ -115,40 +112,19 @@ export interface ViewRendererProps {
 export default function ViewRenderer(props: ViewRendererProps) {
   const { currentView } = props;
 
-  // Get data from Zustand stores instead of props
-  const {
-    students,
-    staff,
-    transactions,
-    courses,
-    library,
-    setStudents,
-    setStaff,
-    setTransactions,
-    setCourses,
-    setLibrary,
-    addStudent,
-    addTransaction,
-  } = useDataStore();
-  const {
-    theme,
-    logo,
-    setTheme: onUpdateTheme,
-    setLogo: onUpdateLogo,
-  } = useUIStore();
-  const stats = useDataStore((s) => s.getStats());
+  const { logo } = useUIStore();
   const openAIModal = useUIStore((s) => s.openAIModal);
   const navigate = useNavigate();
 
-  const onNavigate = (view: ViewKey) => {
-    if (view === "ai") {
-      openAIModal();
-    } else if (view === "sms") {
-      navigate("/communications");
-    } else {
-      navigate(`/${view}`);
-    }
-  };
+// //   const _onNavigate = (view: ViewKey) => {
+// //     if (view === "ai") {
+// //       openAIModal();
+// //     } else if (view === "sms") {
+// //       navigate("/communications");
+// //     } else {
+// //       navigate(`/${view}`);
+// //     }
+// //   };
 
   const [pendingAction, setPendingAction] = useState<string | null>(null);
 
@@ -178,7 +154,7 @@ export default function ViewRenderer(props: ViewRendererProps) {
     case "grades":
       return <Grades />;
     case "transcripts":
-      return <Transcripts students={students} courses={courses} logo={logo} />;
+      return <Transcripts logo={logo} />;
     case "certificates":
       return <Certificates />;
     case "verify":

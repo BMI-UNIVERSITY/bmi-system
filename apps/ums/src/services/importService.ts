@@ -1,8 +1,6 @@
-/* eslint-disable */
-/* eslint-disable */
-/* eslint-disable */
 import ExcelJS from 'exceljs';
 
+/* eslint-disable @typescript-eslint/no-explicit-any */
 export interface V2ImportData {
   faculties: any[];
   departments: any[];
@@ -14,6 +12,7 @@ export interface V2ImportData {
   enrollments: any[];
   grades: any[];
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 export function parseV2Template(file: File): Promise<V2ImportData> {
   // Enforce a 10MB file size limit before parsing.
@@ -47,7 +46,7 @@ export function parseV2Template(file: File): Promise<V2ImportData> {
             const worksheet = workbook.getWorksheet(sheetName);
             if (!worksheet) return [];
 
-            const list: any[] = [];
+            const list: unknown[] = [];
             const headerRow = worksheet.getRow(1);
             const headers: string[] = [];
             const colCount = worksheet.columnCount || 100;
@@ -59,7 +58,7 @@ export function parseV2Template(file: File): Promise<V2ImportData> {
 
             worksheet.eachRow((row, rowNumber) => {
               if (rowNumber === 1) return; // skip header
-              const rowData: any = {};
+              const rowData: Record<string, string> = {};
               let hasData = false;
               for (let c = 1; c <= headers.length; c++) {
                 const header = headers[c - 1];
@@ -71,11 +70,12 @@ export function parseV2Template(file: File): Promise<V2ImportData> {
                 // Handle rich text, formula results, and object structures
                 if (val && typeof val === 'object') {
                   if ('result' in val) {
-                    val = (val as any).result;
+                    val = (val as { result: string }).result;
                   } else if ('text' in val) {
-                    val = (val as any).text;
-                  } else if (Array.isArray((val as any).richText)) {
-                    val = (val as any).richText.map((rt: any) => rt.text || '').join('');
+                    val = (val as { text: string }).text;
+                  } else if (Array.isArray((val as { richText: Array<{ text: string }> }).richText)) {
+                    val = (val as { richText: Array<{ text: string }> }).richText.map(
+                    (rt: { text: string }) => rt.text || '').join('');
                   }
                 }
 
@@ -105,10 +105,10 @@ export function parseV2Template(file: File): Promise<V2ImportData> {
           };
 
           resolve(result);
-        }).catch((error) => {
+        }).catch(() => {
           reject(new Error('Failed to parse V2 template. Ensure it is a valid .xlsx file matching the V2 structure.'));
         });
-      } catch (error) { reject(new Error('Failed to parse V2 template. Ensure it is a valid .xlsx file matching the V2 structure.'));
+      } catch { reject(new Error('Failed to parse V2 template. Ensure it is a valid .xlsx file matching the V2 structure.'));
        }
     };
     reader.onerror = () => reject(new Error('Failed to read file.'));

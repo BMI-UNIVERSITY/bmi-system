@@ -9,7 +9,7 @@ import type { Env } from '../lib/types';
 // CATALOG (faculties, departments, programs) — used by forms/dropdowns
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export async function handleCatalogFaculties(request: Request, env: Env): Promise<Response> {
+export async function handleCatalogFaculties(_request: Request, env: Env): Promise<Response> {
   const { results } = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT id, name, code, description, is_active FROM faculties WHERE is_active=1 ORDER BY name`).all();
   return ok(results);
 }
@@ -36,7 +36,7 @@ export async function handleCatalogPrograms(request: Request, env: Env): Promise
   return ok(results);
 }
 
-export async function handleCatalogTerms(request: Request, env: Env): Promise<Response> {
+export async function handleCatalogTerms(_request: Request, env: Env): Promise<Response> {
   const { results } = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT * FROM academic_terms ORDER BY start_date DESC`).all();
   return ok(results);
 }
@@ -45,7 +45,7 @@ export async function handleCatalogTerms(request: Request, env: Env): Promise<Re
 // STATS OVERVIEW ENDPOINTS
 // ═══════════════════════════════════════════════════════════════════════════════
 
-export async function handleStudentStatsOverview(request: Request, env: Env): Promise<Response> {
+export async function handleStudentStatsOverview(_request: Request, env: Env): Promise<Response> {
   const total     = (await env.PLATFORM_CONTEXT!.db.prepare(`SELECT COUNT(*) as c FROM students`).first<{c:number}>())?.c || 0;
   const active    = (await env.PLATFORM_CONTEXT!.db.prepare(`SELECT COUNT(*) as c FROM students WHERE status='Active'`).first<{c:number}>())?.c || 0;
   const inactive  = (await env.PLATFORM_CONTEXT!.db.prepare(`SELECT COUNT(*) as c FROM students WHERE status='Inactive'`).first<{c:number}>())?.c || 0;
@@ -56,13 +56,13 @@ export async function handleStudentStatsOverview(request: Request, env: Env): Pr
   return ok({ total, active, inactive, graduated, applicants, suspended, byGender: byGender.results });
 }
 
-export async function handleStaffStatsOverview(request: Request, env: Env): Promise<Response> {
+export async function handleStaffStatsOverview(_request: Request, env: Env): Promise<Response> {
   const total = (await env.PLATFORM_CONTEXT!.db.prepare(`SELECT COUNT(*) as c FROM staff`).first<{c:number}>())?.c || 0;
   const byDept = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT d.name as department, COUNT(*) as count FROM staff s LEFT JOIN departments d ON s.department_id=d.id GROUP BY s.department_id ORDER BY count DESC LIMIT 10`).all();
   return ok({ total, byDepartment: byDept.results });
 }
 
-export async function handleCourseStatsOverview(request: Request, env: Env): Promise<Response> {
+export async function handleCourseStatsOverview(_request: Request, env: Env): Promise<Response> {
   const total      = (await env.PLATFORM_CONTEXT!.db.prepare(`SELECT COUNT(*) as c FROM courses`).first<{c:number}>())?.c || 0;
   const published  = (await env.PLATFORM_CONTEXT!.db.prepare(`SELECT COUNT(*) as c FROM courses WHERE status='Published'`).first<{c:number}>())?.c || 0;
   const draft      = (await env.PLATFORM_CONTEXT!.db.prepare(`SELECT COUNT(*) as c FROM courses WHERE status='Draft'`).first<{c:number}>())?.c || 0;
@@ -70,7 +70,7 @@ export async function handleCourseStatsOverview(request: Request, env: Env): Pro
   return ok({ total, published, draft, enrollments });
 }
 
-export async function handleFinanceStats(request: Request, env: Env): Promise<Response> {
+export async function handleFinanceStats(_request: Request, env: Env): Promise<Response> {
   const totalInvoices = (await env.PLATFORM_CONTEXT!.db.prepare(`SELECT COUNT(*) as c FROM invoices`).first<{c:number}>())?.c || 0;
   const totalRevenue  = (await env.PLATFORM_CONTEXT!.db.prepare(`SELECT COALESCE(SUM(amount),0) as s FROM invoices WHERE status='paid'`).first<{s:number}>())?.s || 0;
   const outstanding   = (await env.PLATFORM_CONTEXT!.db.prepare(`SELECT COALESCE(SUM(amount),0) as s FROM invoices WHERE status='unpaid'`).first<{s:number}>())?.s || 0;
@@ -132,7 +132,7 @@ export async function handleVerifyCertificate(request: Request, env: Env): Promi
   });
 }
 
-export async function handleCertificateVerificationStats(request: Request, env: Env): Promise<Response> {
+export async function handleCertificateVerificationStats(_request: Request, env: Env): Promise<Response> {
   const total = (await env.PLATFORM_CONTEXT!.db.prepare(`SELECT COUNT(*) as c FROM certificates`).first<{c:number}>())?.c || 0;
   const issued = (await env.PLATFORM_CONTEXT!.db.prepare(`SELECT COUNT(*) as c FROM certificates WHERE status='ISSUED'`).first<{c:number}>())?.c || 0;
   const revoked = (await env.PLATFORM_CONTEXT!.db.prepare(`SELECT COUNT(*) as c FROM certificates WHERE status='REVOKED'`).first<{c:number}>())?.c || 0;

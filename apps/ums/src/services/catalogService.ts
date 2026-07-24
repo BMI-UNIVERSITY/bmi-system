@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import { authFetch } from './authService';
 import { API_URL } from './config';
 import { parseJsonSafe } from './apiClient';

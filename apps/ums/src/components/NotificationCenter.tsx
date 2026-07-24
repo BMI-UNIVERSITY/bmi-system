@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useEffect, useState } from 'react';
 import { Bell, X, CheckCircle, Trash2, Info, AlertTriangle, ExternalLink } from 'lucide-react';
 import { authFetch } from '../services/authService';
@@ -31,7 +29,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
         const data = await res.json();
         if (data.success) setNotifications(data.data);
       }
-    } catch (error) { console.error(error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error(error);
      } finally {
       setIsLoading(false);
     }
@@ -47,7 +46,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
       if (res.ok) {
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, is_read: true } : n));
       }
-    } catch (error) { console.error(error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error(error);
      }
   };
 
@@ -57,7 +57,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ isOpen, onClose
       if (res.ok) {
         setNotifications(prev => prev.filter(n => n.id !== id));
       }
-    } catch (error) { console.error(error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error(error);
      }
   };
 

@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useMemo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -9,7 +7,7 @@ import {
   Calendar,
   Plus,
   ArrowUpRight,
-  Search,
+  
   Bell,
   CheckCircle2,
   TrendingUp,
@@ -61,7 +59,7 @@ const Dashboard: React.FC = () => {
   const transactions = transactionsRes?.data || [];
 
   const addStudent = useDataStore((s) => s.addStudent);
-  const addTransaction = useDataStore((s) => s.addTransaction);
+//   const _addTransaction = useDataStore((s) => s.addTransaction);
 
   // Compute stats locally from stable store references.
   const stats = useMemo(
@@ -87,13 +85,15 @@ const Dashboard: React.FC = () => {
       import("../services/config").then(({ API_URL }) => {
         authFetch(`${API_URL}/dashboard/revenue-trend?months=6`)
           .then((r) => r.json())
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         .then((d: any) => {
           if (!cancelled && d.success && Array.isArray(d.data)) {
             setApiRevenueTrend(d.data);
           }
         })
-        .catch((error) => {
-          console.error("Failed to load statistics:", error);
+        .catch((_error) => {
+          // eslint-disable-next-line no-console
+          console.error("Failed to load statistics:", _error);
         });
       });
     });
@@ -188,38 +188,16 @@ const Dashboard: React.FC = () => {
     day: "numeric",
   });
 
-  const [activeModal, setActiveModal] = useState<
-    "attendance" | "transaction" | "sms" | null
-  >(null);
   const [isStudentRegistrationOpen, setIsStudentRegistrationOpen] =
     useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [toast, setToast] = useState<{ show: boolean; msg: string }>({
     show: false,
     msg: "",
   });
 
-  const [formData, setFormData] = useState({
-    studentName: "",
-    transactionAmount: "",
-    smsMessage: "",
-    attendanceCourse: "CS101",
-  });
-
   const showToast = (msg: string) => {
     setToast({ show: true, msg });
     setTimeout(() => setToast({ show: false, msg: "" }), 3000);
-  };
-
-  const handleCloseModal = () => {
-    setActiveModal(null);
-    setFormData({
-      studentName: "",
-      transactionAmount: "",
-      smsMessage: "",
-      attendanceCourse: "CS101",
-    });
-    setIsLoading(false);
   };
 
   const handleStudentEnrolled = (student: Student) => {

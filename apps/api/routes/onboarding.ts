@@ -4,7 +4,7 @@ import type { Env } from '../lib/types';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
-export async function handleGetOnboardingStatus(request: Request, env: Env, userId: string): Promise<Response> {
+export async function handleGetOnboardingStatus(_request: Request, env: Env, userId: string): Promise<Response> {
   // Check if they uploaded an ID document
   const idDoc = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT id FROM documents WHERE user_id = ? AND doc_type = ?'
@@ -81,9 +81,9 @@ export async function handleUploadStudentDocument(request: Request, env: Env, us
   let applicationId = app?.id;
   if (!applicationId) {
     applicationId = `STUDENT-PROFILE-${userId}`;
-    // Insert a dummy application to satisfy foreign key constraint
+    // Insert a minimal application to satisfy foreign key constraint
     await env.PLATFORM_CONTEXT!.db.prepare(
-      `INSERT OR IGNORE INTO applications (id, user_id, status, program_id) VALUES (?, ?, 'enrolled', 'dummy')`
+      `INSERT OR IGNORE INTO applications (id, user_id, status, program, degree_level) VALUES (?, ?, 'draft', 'General', 'undergraduate')`
     ).bind(applicationId, userId).run();
   }
 

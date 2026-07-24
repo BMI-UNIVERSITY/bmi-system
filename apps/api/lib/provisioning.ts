@@ -74,7 +74,10 @@ async function executeJob(env: Env, job: ProvisioningJob): Promise<void> {
 
       const emailLocal = user.email.split('@')[0];
       const studentEmail = `${emailLocal}@${env.STUDENT_EMAIL_DOMAIN || 'student.bmi.edu'}`;
-      const tempPassword = crypto.randomUUID().split('-').slice(0, 2).join('').toUpperCase() + 'Ab1!';
+      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+      const arr = new Uint8Array(16);
+      crypto.getRandomValues(arr);
+      const tempPassword = Array.from(arr, (byte) => chars[byte % chars.length]).join('') + 'Aa1!';
 
       await ctx.email.createMailbox(uid, studentEmail, tempPassword);
 

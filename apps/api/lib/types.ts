@@ -7,12 +7,6 @@ export type { PaginatedData };
 
 import type { PlatformContext } from '@bmi/bootstrap';
 
-declare global {
-  interface Request {
-    context: PlatformContext;
-  }
-}
-
 export interface Env {
   PLATFORM_CONTEXT?: PlatformContext;
   DB: IDatabase;
@@ -40,6 +34,8 @@ export interface Env {
   WEBHOOK_SECRET?: string;
   /** Stripe secret key for payment processing. */
   STRIPE_SECRET_KEY?: string;
+  /** Stripe webhook signing secret for verifying webhook events. */
+  STRIPE_WEBHOOK_SECRET?: string;
   /** PBKDF2 iteration count for password hashing (defaults to 40000 for Workers Free plan CPU budget). */
   PBKDF2_ITERATIONS?: string;
   /** Email address for critical ops alerts via Resend. */
@@ -106,7 +102,11 @@ export interface ApiResponse<T = unknown> {
 }
 
 export async function typedJson<T>(req: Request): Promise<T> {
-  return req.json() as Promise<T>;
+  const body = await req.json();
+  if (typeof body !== 'object' || body === null) {
+    throw new Error('Request body must be a JSON object');
+  }
+  return body as T;
 }
 
 export function json<T>(data: T, status = 200): Response {

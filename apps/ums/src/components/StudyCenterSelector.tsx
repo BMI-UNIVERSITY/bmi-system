@@ -1,6 +1,4 @@
-/* eslint-disable */
-/* eslint-disable */
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getAllStudyCenters, StudyCenter } from '../services/studyCenterService';
 
 interface StudyCenterSelectorProps {

@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useRef, useEffect } from 'react';
 import { X, Send, Bot, User, Loader2, Sparkles } from 'lucide-react';
 import { getAIResponse } from '../services/aiService';
@@ -45,7 +43,7 @@ const AIModal: React.FC<AIModalProps> = ({ isOpen, onClose }) => {
             if (!raw) return 0;
             const data = JSON.parse(raw);
             return Array.isArray(data) ? data.length : 0;
-        } catch (error) { return 0; }
+        } catch { return 0; }
     };
 
     const systemData = {

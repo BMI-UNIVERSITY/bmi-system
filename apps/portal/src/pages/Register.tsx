@@ -23,7 +23,7 @@ export default function Register() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
 
-  // Read prefill params from the university apply page redirect (G-1 fix)
+  // Read prefill params from the university apply page redirect via URL search params
   const prefillEmail = searchParams.get('email') ?? '';
   const prefillFirstName = searchParams.get('first_name') ?? '';
   const prefillLastName = searchParams.get('last_name') ?? '';

@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState } from 'react';
 import { X, FileText, Send, Loader2, CheckCircle } from 'lucide-react';
 import { authFetch } from '../services/authService';
@@ -37,7 +35,8 @@ const DocumentRequestModal: React.FC<DocumentRequestModalProps> = ({ isOpen, onC
           onClose();
         }, 2000);
       }
-    } catch (error) { console.error(error);
+    } catch (_error) { // eslint-disable-next-line no-console
+      console.error(_error);
      } finally {
       setIsSubmitting(false);
     }

@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - AssessmentComponent Domain Model
  * Implements assessment component configuration and validation

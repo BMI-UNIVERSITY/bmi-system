@@ -1,6 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI University Management System - Document Types
  * Comprehensive type definitions for all institutional documents

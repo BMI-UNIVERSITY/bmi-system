@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Grade Conversion Utilities
  * Convert grades between different grading scales

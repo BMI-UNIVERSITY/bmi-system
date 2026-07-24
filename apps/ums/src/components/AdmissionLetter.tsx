@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI University Management System - Modern Admission Letter Component
  * Official admission letter with elegant design
@@ -8,9 +6,9 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { 
-  Search, Printer, Download, Mail, ShieldCheck, X, Calendar,
-  CheckCircle, Sparkles, FileText, Building2, GraduationCap,
-  MapPin, Phone, Globe, Hash, Send, Award
+  Search, Printer, Download, Mail, ShieldCheck, 
+  Sparkles, FileText, 
+  MapPin, Phone, Globe
 } from 'lucide-react';
 import { PORTAL_URL, MARKETING_URL, ADMISSIONS_EMAIL, PROGRAMS } from '@bmi/shared';
 import { Student } from '../types';
@@ -44,9 +42,9 @@ export const AdmissionLetter: React.FC<AdmissionLetterProps> = ({ students, logo
     reference: '',
   });
 
-  const getFirstName = (student: Student) => student.first_name || (student as any).firstName || '';
-  const getLastName = (student: Student) => student.last_name || (student as any).lastName || '';
-  const getDepartment = (student: Student) => (student as any).department || student.program_code;
+  const getFirstName = (student: Student) => student.first_name || (student as any).firstName as string || '';
+  const getLastName = (student: Student) => student.last_name || (student as any).lastName as string || '';
+  const getDepartment = (student: Student) => (student as any).department as string || student.program_code;
 
   const filteredStudents = useMemo(() => {
     return students.filter(s => {
@@ -65,7 +63,7 @@ export const AdmissionLetter: React.FC<AdmissionLetterProps> = ({ students, logo
       semester: letterConfig.semester,
       program: letterConfig.program,
       faculty: letterConfig.faculty,
-      department: getDepartment(student),
+      department: getDepartment(student) || '',
       admissionDate: new Date().toISOString().split('T')[0],
       registrationDeadline: '2025-01-15',
       tuitionFees: 85000,
@@ -101,7 +99,8 @@ export const AdmissionLetter: React.FC<AdmissionLetterProps> = ({ students, logo
       setGeneratedLetter(letter);
       setSecurityFeatures(security);
       setShowLetter(true);
-    } catch (error) { console.error('Letter generation failed:', error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error('Letter generation failed:', error);
      } finally {
       setIsGenerating(false);
     }
@@ -129,7 +128,8 @@ export const AdmissionLetter: React.FC<AdmissionLetterProps> = ({ students, logo
       };
       
       await html2pdf().set(opt).from(element).save();
-    } catch (error) { console.error('PDF generation failed:', error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error('PDF generation failed:', error);
      }
   };
 

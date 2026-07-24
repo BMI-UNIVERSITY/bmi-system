@@ -1,8 +1,6 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useMemo } from "react";
 import {
-  BookOpen,
+  
   Plus,
   Search,
   Layers,
@@ -30,7 +28,6 @@ import { postCourseBatch } from "../services/batchService";
 import { useDataStore } from "../stores/dataStore";
 import { usePagination } from "../hooks/usePagination";
 import { useCoursesQuery } from "../hooks/useEntityQueries";
-import { useQueryClient } from "@tanstack/react-query";
 
 const Courses: React.FC = () => {
   const courses = useDataStore((s) => s.courses);
@@ -54,11 +51,11 @@ const Courses: React.FC = () => {
   const [editingCourse, setEditingCourse] = useState<Course | null>(null);
   const [bulkCoursesOpen, setBulkCoursesOpen] = useState(false);
   const { page, perPage, meta, setPage, setMeta } = usePagination(50);
-  const queryClient = useQueryClient();
+//   const _queryClient = useQueryClient();
 
   const {
     data: courseResponse,
-    isLoading,
+    
     isFetching,
   } = useCoursesQuery({
     page,
@@ -142,6 +139,7 @@ const Courses: React.FC = () => {
           );
           alert("Course updated successfully!");
         } else {
+          // eslint-disable-next-line no-console
           console.warn(
             "Backend update failed, updating local state only",
             result.error,
@@ -157,7 +155,8 @@ const Courses: React.FC = () => {
             "Course updated in local state (not saved to database). Backend may be offline.",
           );
         }
-      } catch (error) { console.error("Error updating course:", error);
+      } catch (error) { // eslint-disable-next-line no-console
+        console.error("Error updating course:", error);
         setCourses((prev) =>
           prev.map((c) =>
             c.id === editingCourse.id ? ({ ...c, ...courseData  } as Course) : c,
@@ -181,6 +180,7 @@ const Courses: React.FC = () => {
           setCourses((prev) => [result.data || newCourse, ...prev]);
           alert("Course added successfully!");
         } else {
+          // eslint-disable-next-line no-console
           console.warn(
             "Backend save failed, adding to local state only",
             result.error,
@@ -190,7 +190,8 @@ const Courses: React.FC = () => {
             "Course added to local state (not saved to database). Backend may be offline.",
           );
         }
-      } catch (error) { console.error("Error saving course:", error);
+      } catch (error) { // eslint-disable-next-line no-console
+        console.error("Error saving course:", error);
         setCourses((prev) => [newCourse, ...prev]);
         alert(
           "Course added to local state (not saved to database). Backend may be offline.",
@@ -209,6 +210,7 @@ const Courses: React.FC = () => {
           setCourses((prev) => prev.filter((c) => c.id !== id));
           alert("Course deleted successfully!");
         } else {
+          // eslint-disable-next-line no-console
           console.warn(
             "Backend delete failed, removing from local state only",
             result.error,
@@ -218,7 +220,8 @@ const Courses: React.FC = () => {
             "Course removed from local state (not deleted from database). Backend may be offline.",
           );
         }
-      } catch (error) { console.error("Error deleting course:", error);
+      } catch (error) { // eslint-disable-next-line no-console
+        console.error("Error deleting course:", error);
         setCourses((prev) => prev.filter((c) => c.id !== id));
         alert(
           "Course removed from local state (not deleted from database). Backend may be offline.",
@@ -576,7 +579,7 @@ const Courses: React.FC = () => {
         onSubmit={async (lines) => {
           try {
             const items = lines.map(
-              (l) => JSON.parse(l) as Record<string, unknown>,
+              (l) => JSON.parse(l) as any,
             );
             const r = await postCourseBatch(items);
             const list = await getCourses({ perPage: 500 });
@@ -585,7 +588,7 @@ const Courses: React.FC = () => {
               ok: (r.data?.failureCount ?? 0) === 0,
               message: `Created: ${r.data?.successCount ?? 0}, failed: ${r.data?.failureCount ?? 0}.`,
             };
-          } catch (error) {
+} catch {
             return { ok: false, message: "Invalid JSON on one or more lines." };
           }
         }}
@@ -599,7 +602,7 @@ const Courses: React.FC = () => {
         sampleLine='{"name":"Sample Course","code":"SMPL101","faculty":"Theology","department":"Ministry","level":"Undergraduate","credits":3,"status":"Published","description":"At least ten chars here.","syllabus":"At least ten chars in syllabus text."}'
         onSubmit={async (lines) => {
           try {
-            const items = lines.map((l) => JSON.parse(l) as Record<string, unknown>);
+            const items = lines.map((l) => JSON.parse(l) as any);
             const r = await postCourseBatch(items);
             const list = await getCourses({ perPage: 500 });
             if (list.success && list.data) setCourses(list.data.items);

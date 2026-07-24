@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - ECTS Converter
  * Converts between US credit hours and ECTS credits

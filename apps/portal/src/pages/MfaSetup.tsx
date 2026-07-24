@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../lib/api';
+import { QRCodeSVG } from 'qrcode.react';
 
 export default function MfaSetup() {
   const [otpAuthUrl, setOtpAuthUrl] = useState<string | null>(null);
@@ -8,7 +9,6 @@ export default function MfaSetup() {
   const [token, setToken] = useState('');
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
-  const [qrDataUrl, setQrDataUrl] = useState<string | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -17,9 +17,6 @@ export default function MfaSetup() {
         const res = await api.auth.mfaSetup();
         setSecret(res.secret);
         setOtpAuthUrl(res.otp_auth_url);
-
-        const qrSvg = generateQRCode(res.otp_auth_url);
-        setQrDataUrl('data:image/svg+xml,' + encodeURIComponent(qrSvg));
       } catch (err: any) {
         setError(err.response?.data?.error || err.message);
       }
@@ -38,76 +35,7 @@ export default function MfaSetup() {
     }
   }
 
-  function generateQRCode(text: string): string {
-    const size = 256;
-    const cellSize = 8;
-    const padding = 16;
-    const innerSize = size - padding * 2;
-    const cells = innerSize / cellSize;
 
-    function xor(a: number, b: number) { return a ^ b; }
-
-    function rsEncode(data: number[]): number[] {
-      const gen = [1, 2, 4, 8, 16, 32, 64, 128];
-      const res = [...data, 0, 0, 0, 0, 0, 0, 0];
-      for (let i = 0; i < data.length; i++) {
-        if (res[i] !== 0) {
-          const lead = res[i];
-          for (let j = 0; j < gen.length; j++) {
-            res[i + j] = xor(res[i + j], gen[j]);
-          }
-        }
-      }
-      return res;
-    }
-
-    function padData(data: number[]): number[] {
-      const totalBits = cells * cells;
-      const dataBits = data.length * 8;
-      const remaining = totalBits - dataBits;
-      const padBytes = Math.floor(remaining / 8) - 4;
-      for (let i = 0; i < padBytes; i++) {
-        data.push(i % 2 === 0 ? 236 : 17);
-      }
-      return data;
-    }
-
-    function getMatrix(data: number[]): number[][] {
-      const matrix: number[][] = Array.from({ length: cells }, () => Array(cells).fill(0));
-      let idx = 0;
-      for (let row = 0; row < cells; row++) {
-        for (let col = 0; col < cells; col++) {
-          if (idx < data.length * 8) {
-            const byteIdx = Math.floor(idx / 8);
-            const bitIdx = 7 - (idx % 8);
-            matrix[row][col] = (data[byteIdx] >> bitIdx) & 1;
-            idx++;
-          }
-        }
-      }
-      return matrix;
-    }
-
-    const encoder = new TextEncoder();
-    const utf8Bytes = Array.from(encoder.encode(text));
-    const dataBytes = [text.length, ...utf8Bytes];
-    const padded = padData(dataBytes);
-    const matrix = getMatrix(padded);
-
-    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
-      <rect width="${size}" height="${size}" fill="white"/>`;
-    for (let row = 0; row < cells; row++) {
-      for (let col = 0; col < cells; col++) {
-        if (matrix[row][col]) {
-          const x = padding + col * cellSize;
-          const y = padding + row * cellSize;
-          svg += `<rect x="${x}" y="${y}" width="${cellSize}" height="${cellSize}" fill="black"/>`;
-        }
-      }
-    }
-    svg += '</svg>';
-    return svg;
-  }
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
@@ -124,8 +52,8 @@ export default function MfaSetup() {
           <form onSubmit={handleEnable} className="mt-8 space-y-6">
             <div className="text-center">
               <div className="bg-gray-100 p-4 rounded-lg inline-block mb-4">
-                {qrDataUrl ? (
-                  <img src={qrDataUrl} alt="QR Code" className="w-48 h-48 mx-auto" />
+                {otpAuthUrl ? (
+                  <QRCodeSVG value={otpAuthUrl} size={192} />
                 ) : (
                   <div className="w-48 h-48 bg-gray-200 rounded-md flex items-center justify-center">
                     <span className="text-gray-500">QR Code</span>

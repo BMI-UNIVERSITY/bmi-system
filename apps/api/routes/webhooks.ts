@@ -101,7 +101,7 @@ export async function handleListDeadLetters(_request: Request, env: Env): Promis
 
 /** POST /api/webhooks/retry/:id — admin: manually retry a dead-letter event */
 export async function handleRetryDeadLetter(
-  request: Request,
+  _request: Request,
   env: Env,
   deadLetterId: string,
   ctx: ExecutionContext,

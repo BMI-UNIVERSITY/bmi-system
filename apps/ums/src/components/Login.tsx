@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState } from 'react';
 import { Mail, Lock, AlertCircle, Loader2 } from 'lucide-react';
 import { User, AuthResponse } from '../services/authService';
@@ -24,7 +22,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, logo }) => {
   
   // MFA state
   const [showMfa, setShowMfa] = useState(false);
-  const [mfaData, setMfaData] = useState<{
+  const [mfaData] = useState<{
     mfaToken: string;
     setupRequired: boolean;
   } | null>(null);
@@ -46,7 +44,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, logo }) => {
       let errorMsg = result.error || 'Login failed';
       
       if (typeof errorMsg === 'string' && (errorMsg.includes('Network error') || errorMsg.includes('Failed to fetch'))) {
-        const isProd = (import.meta as any).env?.PROD;
+        const isProd = (import.meta as unknown as { env: Record<string, boolean> }).env?.PROD;
         setError(
           isProd
             ? 'Unable to reach the authentication server. The site administrator has been notified — please try again shortly.'
@@ -169,19 +167,6 @@ const Login: React.FC<LoginProps> = ({ onLogin, logo }) => {
             )}
           </button>
         </form>
-
-        <div className="mt-6 pt-6 border-t border-gray-100 text-center">
-          <p className="text-sm text-gray-600 font-medium">
-            New admitted student?{' '}
-            <button
-              type="button"
-              onClick={() => setShowActivateAccount(true)}
-              className="text-[#4B0082] font-bold hover:text-[#FFD700] transition-colors"
-            >
-              Activate your account
-            </button>
-          </p>
-        </div>
 
         <div className="mt-6 text-center">
           <span className="text-[10px] text-gray-400 uppercase tracking-widest">Powered by BMI Systems © 2024</span>

@@ -51,10 +51,19 @@ export class D1DatabaseAdapter implements IDatabase, IHealthCheck {
     // Create a wrapper that collects prepared statements
     const collectingDb: IDatabase = {
       query: async <U = any>(sql: string, params?: any[]): Promise<U[]> => {
-        throw new Error("Cannot use query() inside D1 transaction batch collector. Use prepare().run/all/first instead.");
+        let qStmt = this.d1.prepare(sql);
+        if (params && params.length > 0) {
+          qStmt = qStmt.bind(...params);
+        }
+        const result = await qStmt.all<U>();
+        return result.results as U[];
       },
       queryOne: async <U = any>(sql: string, params?: any[]): Promise<U | null> => {
-        throw new Error("Cannot use queryOne() inside D1 transaction batch collector.");
+        let qStmt = this.d1.prepare(sql);
+        if (params && params.length > 0) {
+          qStmt = qStmt.bind(...params);
+        }
+        return await qStmt.first<U>();
       },
       prepare: (sql: string): IPreparedStatement => {
         let stmt = this.d1.prepare(sql);
@@ -68,17 +77,16 @@ export class D1DatabaseAdapter implements IDatabase, IHealthCheck {
             return { success: true };
           },
           all: async <U = any>() => {
-            statements.push(stmt);
-            return { results: [] as U[] };
+            const result = await stmt.all<U>();
+            return { results: result.results as U[], meta: result.meta };
           },
           first: async <U = any>() => {
-            statements.push(stmt);
-            return null;
+            return await stmt.first<U>();
           }
         };
         return wrapper;
       },
-      transaction: async <U>(cb: (db: IDatabase) => Promise<U>) => {
+      transaction: async <U>(_cb: (db: IDatabase) => Promise<U>) => {
         throw new Error("Nested transactions are not supported.");
       },
       getPlatform: () => this.getPlatform(),

@@ -70,7 +70,7 @@ export async function handleListStudents(request: Request, env: Env): Promise<Re
 // ─── get single student ──────────────────────────────────────────────────────
 
 export async function handleGetStudent(
-  request: Request,
+  _request: Request,
   env: Env,
   studentId: string,
   callerId: string,
@@ -200,7 +200,7 @@ export async function handleUpdateStudent(request: Request, env: Env, studentId:
 
 // ─── delete student ──────────────────────────────────────────────────────────
 
-export async function handleDeleteStudent(request: Request, env: Env, studentId: string): Promise<Response> {
+export async function handleDeleteStudent(_request: Request, env: Env, studentId: string): Promise<Response> {
   const student = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT user_id FROM students WHERE user_id = ? OR reg_no = ?`
   ).bind(studentId, studentId).first<{ user_id: string }>();

@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState } from 'react';
 import { X, User, Phone, MapPin, Save, Loader2, Download, ShieldAlert } from 'lucide-react';
 import { useAuthStore } from '../stores/authStore';
@@ -32,7 +30,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
         a.download = `bmi_data_export_${new Date().toISOString().split('T')[0]}.json`;
         a.click();
       }
-    } catch (error) { console.error(error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error(error);
      } finally {
       setIsExporting(false);
     }
@@ -47,7 +46,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
         alert("Your data has been scrubbed. You will now be logged out.");
         window.location.reload();
       }
-    } catch (error) { console.error(error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error(error);
      }
   };
 
@@ -67,7 +67,8 @@ const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) => {
           window.location.reload(); // Refresh to update user info in store
         }, 1500);
       }
-    } catch (error) { console.error(error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error(error);
      } finally {
       setIsSubmitting(false);
     }

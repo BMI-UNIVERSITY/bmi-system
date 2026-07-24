@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from '../../hooks/useAuth';
 import { api } from '../../lib/api';
 
-const STEP_LABELS = ['Personal Details', 'Address', 'Programme', 'Modules', 'Fees', 'Confirm'] as const;
+const STEP_LABELS = ['Personal Details', 'Address', 'Program', 'Modules', 'Fees', 'Confirm'] as const;
 
 const COUNTRIES = [
   { name: 'Liberia', code: '+231' },
@@ -58,14 +57,14 @@ interface Confirm {
 interface RegistrationData {
   personal_details?: PersonalDetails;
   address?: Address;
-  program?: Programme;
+  program?: Program;
   modules?: Modules;
   fees?: Fees;
   confirm?: Confirm;
 }
 
 export default function RegistrationWizard() {
-  const { user } = useAuth();
+
   const [currentStep, setCurrentStep] = useState(0);
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -92,21 +91,27 @@ export default function RegistrationWizard() {
         );
         setCurrentStep(Math.max(0, STEP_LABELS.length - 1 - lastIndex));
       }
-    } catch {}
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const fetchModules = async () => {
     try {
       const res = await api.registration.getModules();
       if (Array.isArray(res)) setAvailableModules(res);
-    } catch {}
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const fetchPrograms = async () => {
     try {
       const res = await api.registration.getPrograms();
       if (Array.isArray(res)) setAvailablePrograms(res.filter(p => p.id && p.name));
-    } catch {}
+    } catch (err) {
+      console.error(err);
+    }
   };
 
   const updateField = (step: string, field: string, value: any) => {
@@ -178,7 +183,7 @@ export default function RegistrationWizard() {
     switch (step) {
       case 0: return renderPersonalDetails();
       case 1: return renderAddress();
-      case 2: return renderProgramme();
+      case 2: return renderProgram();
       case 3: return renderModules();
       case 4: return renderFees();
       case 5: return renderConfirm();
@@ -292,8 +297,8 @@ export default function RegistrationWizard() {
     );
   };
 
-  const renderProgramme = () => {
-    const d = data.program || {} as Programme;
+  const renderProgram = () => {
+    const d = data.program || {} as Program;
     const modes = [
       { value: 'full_time', label: 'Full Time', icon: '🏛️', desc: 'On-campus, standard academic schedule' },
       { value: 'part_time', label: 'Part Time', icon: '📅', desc: 'Flexible schedule for working students' },
@@ -316,7 +321,7 @@ export default function RegistrationWizard() {
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
         <div className="form-group">
-          <label className="form-label">Programme</label>
+          <label className="form-label">Program</label>
           <select className="form-select" value={d.program_id || ''} onChange={e => {
             const opt = e.target.options[e.target.selectedIndex];
             updateField('program', 'program_id', e.target.value);
@@ -484,7 +489,7 @@ export default function RegistrationWizard() {
           </p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: '0.9rem', color: 'var(--text-muted)' }}>
             {data.personal_details && <div><strong style={{ color: 'var(--navy)' }}>Name:</strong> {data.personal_details.first_name} {data.personal_details.last_name}</div>}
-            {data.program && <div><strong style={{ color: 'var(--navy)' }}>Programme:</strong> {data.program.program_name} ({data.program.study_mode.replace('_', ' ')})</div>}
+            {data.program && <div><strong style={{ color: 'var(--navy)' }}>Program:</strong> {data.program.program_name} ({data.program.study_mode.replace('_', ' ')})</div>}
             {data.modules && <div><strong style={{ color: 'var(--navy)' }}>Modules Selected:</strong> {data.modules.selected_course_ids.length} ({data.modules.total_credits} credits)</div>}
             {data.address && <div><strong style={{ color: 'var(--navy)' }}>Location:</strong> {data.address.city}, {data.address.country}</div>}
           </div>

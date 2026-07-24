@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import { authFetch } from './authService';
 import { API_URL } from './config';
 
@@ -64,6 +62,7 @@ export async function downloadDocument(docId: string): Promise<void> {
     const response = await authFetch(url, {}, 10000);
     if (!response.ok) {
       const errText = await response.text().catch(() => 'Unknown error');
+      // eslint-disable-next-line no-console
       console.error('Download failed:', response.status, errText);
       return;
     }
@@ -81,6 +80,7 @@ export async function downloadDocument(docId: string): Promise<void> {
     a.click();
     URL.revokeObjectURL(urlObject);
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Download failed:', error);
   }
 }

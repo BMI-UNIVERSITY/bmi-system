@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Grade Domain Model
  * Core grade entity and operations
@@ -178,7 +176,7 @@ export function convertIncompleteToFinal(
  */
 export function autoConvertIncompleteToF(
   grade: Grade,
-  gradingScale: GradingScale
+//   gradingScale: GradingScale
 ): Grade {
   return {
     ...grade,

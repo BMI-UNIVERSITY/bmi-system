@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useEffect } from 'react';
 import { X, UserPlus, Upload, User, CheckCircle2, Loader2 } from 'lucide-react';
 import { Student } from '../types';
@@ -32,7 +30,7 @@ const StudentRegistrationModal: React.FC<StudentRegistrationModalProps> = ({
 }) => {
   const { t } = useTranslation();
   const [programs, setPrograms] = useState<Program[]>([]);
-  const [campuses, setCampuses] = useState<StudyCenter[]>([]);
+  const [, setCampuses] = useState<StudyCenter[]>([]);
   const [loadingPrograms, setLoadingPrograms] = useState(false);
 
   const [formData, setFormData] = useState<Partial<Student>>({
@@ -75,7 +73,7 @@ const StudentRegistrationModal: React.FC<StudentRegistrationModalProps> = ({
           }
           setCampuses(centers);
         }
-      } catch (error) { // Handle error
+      } catch { // Handle error
        } finally {
         if (!cancelled) setLoadingPrograms(false);
       }
@@ -108,7 +106,7 @@ const StudentRegistrationModal: React.FC<StudentRegistrationModalProps> = ({
     }
   }, [initialData, isOpen]);
 
-  const handleChange = (field: keyof Student, value: any) => {
+  const handleChange = (field: keyof Student, value: unknown) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -180,7 +178,7 @@ const StudentRegistrationModal: React.FC<StudentRegistrationModalProps> = ({
           } else if (typeof result.error === 'object') {
             const errObj = result.error as any;
             if (errObj.issues && Array.isArray(errObj.issues)) {
-              errMsg = errObj.issues.map((i: any) => `${i.path.join('.')}: ${i.message}`).join(', ');
+              errMsg = (errObj.issues as Array<any>).map((i) => `${(i.path as string[]).join('.')}: ${i.message}`).join(', ');
             } else if (errObj.message) {
               errMsg = errObj.message;
             } else {

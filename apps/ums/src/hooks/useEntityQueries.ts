@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS — TanStack Query hooks for core entities
  *
@@ -23,12 +21,12 @@ import { getGrades } from '../services/gradeService';
 // ── Query Keys ────────────────────────────────────────────────────────────────
 // Centralised so mutations can call queryClient.invalidateQueries({ queryKey: QUERY_KEYS.students() })
 export const QUERY_KEYS = {
-  students: (filters?: Record<string, unknown>) => ['students', filters ?? {}] as const,
-  grades: (filters?: Record<string, unknown>) => ['grades', filters ?? {}] as const,
-  staff: (filters?: Record<string, unknown>) => ['staff', filters ?? {}] as const,
-  courses: (filters?: Record<string, unknown>) => ['courses', filters ?? {}] as const,
-  library: (filters?: Record<string, unknown>) => ['library', filters ?? {}] as const,
-  transactions: (filters?: Record<string, unknown>) => ['transactions', filters ?? {}] as const,
+  students: (filters?: any) => ['students', filters ?? {}] as const,
+  grades: (filters?: any) => ['grades', filters ?? {}] as const,
+  staff: (filters?: any) => ['staff', filters ?? {}] as const,
+  courses: (filters?: any) => ['courses', filters ?? {}] as const,
+  library: (filters?: any) => ['library', filters ?? {}] as const,
+  transactions: (filters?: any) => ['transactions', filters ?? {}] as const,
   studyCenters: () => ['studyCenters'] as const,
 };
 
@@ -42,7 +40,7 @@ export function useStudentsQuery(params?: {
   program?: string;
 }) {
   return useQuery({
-    queryKey: QUERY_KEYS.students(params as Record<string, unknown> | undefined),
+    queryKey: QUERY_KEYS.students(params as any | undefined),
     queryFn: () => {
       if (!params) return getStudents({ perPage: 50 });
       // StudentFilters uses campusId (camelCase); map from the snake_case param
@@ -61,7 +59,7 @@ export function useGradesQuery(params?: {
   studentId?: string;
 }) {
   return useQuery({
-    queryKey: QUERY_KEYS.grades(params as Record<string, unknown> | undefined),
+    queryKey: QUERY_KEYS.grades(params as any | undefined),
     queryFn: () => getGrades(params ?? { perPage: 50 }),
     staleTime: 5 * 60 * 1000,
   });
@@ -78,7 +76,7 @@ export function useStaffQuery(params?: {
   category?: string;
 }) {
   return useQuery({
-    queryKey: QUERY_KEYS.staff(params as Record<string, unknown> | undefined),
+    queryKey: QUERY_KEYS.staff(params as any | undefined),
     queryFn: () => {
       if (!params) return getStaff({ perPage: 50 });
       const { study_center_id, ...rest } = params;
@@ -98,7 +96,7 @@ export function useCoursesQuery(params?: {
   module_id?: string;
 }) {
   return useQuery({
-    queryKey: QUERY_KEYS.courses(params as Record<string, unknown> | undefined),
+    queryKey: QUERY_KEYS.courses(params as any | undefined),
     queryFn: () => {
       if (!params) return getCourses({ perPage: 100 });
       const { study_center_id, module_id, ...rest } = params;

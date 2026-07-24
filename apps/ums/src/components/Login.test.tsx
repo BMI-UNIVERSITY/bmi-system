@@ -1,10 +1,8 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * Login — smoke tests
  */
-import React from "react";
-import { render, screen, fireEvent } from "@testing-library/react";
+import "react";
+import { render, screen } from "@testing-library/react";
 import { describe, it, expect, vi } from "vitest";
 import Login from "./Login";
 import { checkA11y } from '../test/axe';

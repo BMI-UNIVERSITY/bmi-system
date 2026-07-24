@@ -1,6 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
-/* eslint-disable */
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {

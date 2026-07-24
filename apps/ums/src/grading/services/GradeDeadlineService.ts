@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Grade Deadline Service
  * Manages grade submission deadlines, reminders, and auto-finalization
@@ -63,6 +61,7 @@ export class GradeDeadlineService {
       updatedAt: new Date().toISOString(),
     };
 
+    // eslint-disable-next-line no-console
     console.log('[GradeDeadline] Set deadline:', deadline);
     return deadline;
   }
@@ -72,6 +71,7 @@ export class GradeDeadlineService {
    */
   static async getDeadline(academicYear: string, semester: string): Promise<DeadlineConfig | null> {
     // TODO: Implement API call to fetch deadline configuration
+    // eslint-disable-next-line no-console
     console.log('[GradeDeadline] Fetching deadline for:', academicYear, semester);
     return null;
   }
@@ -123,8 +123,10 @@ export class GradeDeadlineService {
         await this.sendReminderNotification(course, deadline, daysUntil);
         notifiedInstructors.push(course.instructorId);
         
+        // eslint-disable-next-line no-console
         console.log(`[GradeDeadline] Sent reminder to instructor ${course.instructorId} for course ${course.courseCode}`);
-      } catch (error) { console.error(`[GradeDeadline] Failed to send reminder for course ${course.courseCode }:`, error);
+      } catch (error) { // eslint-disable-next-line no-console
+        console.error(`[GradeDeadline] Failed to send reminder for course ${course.courseCode }:`, error);
       }
     }
 
@@ -140,6 +142,7 @@ export class GradeDeadlineService {
     daysUntil: number
   ): Promise<void> {
     // TODO: Implement notification service
+    // eslint-disable-next-line no-console
     console.log(`Sending deadline reminder to ${course.instructorEmail}:`, {
       course: course.courseCode,
       missingGrades: course.missingGrades,
@@ -156,6 +159,7 @@ export class GradeDeadlineService {
     semester: string
   ): Promise<MissingGradeCourse[]> {
     // TODO: Implement API call to fetch courses with missing grades
+    // eslint-disable-next-line no-console
     console.log('[GradeDeadline] Fetching courses with missing grades:', academicYear, semester);
     
     // Mock data
@@ -192,6 +196,7 @@ export class GradeDeadlineService {
       if (course.missingGrades > 0) {
         // TODO: Flag course in database
         flaggedCourses.push(course.courseId);
+        // eslint-disable-next-line no-console
         console.log(`[GradeDeadline] Flagged course ${course.courseCode} with ${course.missingGrades} missing grades`);
       }
     }
@@ -245,6 +250,7 @@ export class GradeDeadlineService {
     };
 
     // TODO: Save to database
+    // eslint-disable-next-line no-console
     console.log('[GradeDeadline] Extension requested:', extension);
     return extension;
   }
@@ -258,6 +264,7 @@ export class GradeDeadlineService {
     reviewerId: string
   ): Promise<DeadlineExtension> {
     // TODO: Update extension in database
+    // eslint-disable-next-line no-console
     console.log('[GradeDeadline] Extension reviewed:', {
       extensionId,
       approved,
@@ -286,6 +293,7 @@ export class GradeDeadlineService {
     visible: boolean
   ): Promise<void> {
     // TODO: Update grade visibility in database
+    // eslint-disable-next-line no-console
     console.log('[GradeDeadline] Set grade visibility:', { gradeId, visible });
   }
 
@@ -302,6 +310,7 @@ export class GradeDeadlineService {
     
     const finalizedGradeIds: string[] = [];
     
+    // eslint-disable-next-line no-console
     console.log('[GradeDeadline] Auto-finalizing grades for:', {
       academicYear,
       semester,
@@ -319,6 +328,7 @@ export class GradeDeadlineService {
     flaggedCourses: string[];
     finalizedGrades: string[];
   }> {
+    // eslint-disable-next-line no-console
     console.log('[GradeDeadline] Running deadline operations...');
 
     const daysUntil = this.getDaysUntilDeadline(deadline.submissionDeadline);
@@ -345,6 +355,7 @@ export class GradeDeadlineService {
       deadline.autoFinalizeAfterDays
     );
 
+    // eslint-disable-next-line no-console
     console.log('[GradeDeadline] Deadline operations complete:', {
       remindersSent: remindersSent.length,
       flaggedCourses: flaggedCourses.length,

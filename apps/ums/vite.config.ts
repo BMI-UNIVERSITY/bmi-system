@@ -8,7 +8,7 @@ import { VitePWA } from "vite-plugin-pwa";
 
 export default defineConfig({
   preview: {
-    port: 3000,
+    port: 5174,
     host: "0.0.0.0",
     // Allow any host — needed when Ngrok Tunnel or a reverse proxy forwards
     // requests from a public domain.  Safe because the preview server only
@@ -16,7 +16,7 @@ export default defineConfig({
     allowedHosts: true,
   },
   server: {
-    port: 3000,
+    port: 5174,
     host: "0.0.0.0",
     // Allow any host — needed when Ngrok Tunnel or a reverse proxy forwards
     // requests from a public domain.
@@ -24,7 +24,7 @@ export default defineConfig({
     // historyApiFallback is handled by Vite's SPA fallback natively
     proxy: {
       "/api": {
-        target: "http://127.0.0.1:3001",
+        target: "http://127.0.0.1:8787",
         changeOrigin: true,
         secure: false,
       },

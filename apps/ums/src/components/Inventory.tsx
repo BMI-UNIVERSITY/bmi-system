@@ -1,21 +1,19 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Package, 
-  Truck, 
+  
   AlertTriangle, 
   Plus, 
   Search, 
   Layers, 
-  Box, 
+  
   BarChart, 
   X, 
   CheckCircle2, 
   Trash2, 
   Edit, 
-  ChevronRight,
-  Filter,
+  
+  
   ShieldAlert,
   MapPin
 } from 'lucide-react';
@@ -319,7 +317,7 @@ const Inventory: React.FC = () => {
                          <label className="text-[10px] font-black uppercase text-gray-500 tracking-[0.2em]">Current Condition Status</label>
                          <select 
                            value={formData.condition}
-                           onChange={e => setFormData({...formData, condition: e.target.value as any})}
+                            onChange={e => setFormData({...formData, condition: e.target.value as "New" | "Good" | "Fair" | "Poor"})}
                            className="w-full px-5 py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none text-xs font-black uppercase cursor-pointer outline-none focus:border-[#4B0082]"
                          >
                             <option value="New">New / Sealed</option>

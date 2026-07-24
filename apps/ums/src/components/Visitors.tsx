@@ -1,11 +1,9 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useMemo, useEffect } from 'react';
 import { 
   ShieldCheck, 
-  User, 
-  Clock, 
-  Calendar, 
+  
+  
+  
   LogIn, 
   LogOut, 
   Search, 
@@ -13,26 +11,26 @@ import {
   X, 
   CheckCircle2, 
   Trash2, 
-  MoreVertical, 
-  MapPin, 
+  
+  
   ShieldAlert, 
-  ChevronRight,
-  Filter,
+  
+  
   UserCheck,
   Building2,
   Users
 } from 'lucide-react';
 import { useApiDataStore } from '../stores/apiDataStore';
 
-interface Visitor {
-  id: string;
-  name: string;
-  purpose: string;
-  host: string;
-  checkIn: string;
-  checkOut?: string;
-  status: 'Active' | 'Checked Out';
-}
+// interface Visitor {
+//   id: string;
+//   name: string;
+//   purpose: string;
+//   host: string;
+//   checkIn: string;
+//   checkOut?: string;
+//   status: 'Active' | 'Checked Out';
+// }
 
 const Visitors: React.FC = () => {
   const {
@@ -63,7 +61,7 @@ const Visitors: React.FC = () => {
         const matchesStatus = statusFilter === 'All Status' || v.status === statusFilter;
         return matchesSearch && matchesStatus;
       })
-      .sort((a, b) => (a.status === 'Active' ? -1 : 1));
+      .sort((a) => (a.status === 'Active' ? -1 : 1));
   }, [visitors, searchTerm, statusFilter]);
 
   const stats = {

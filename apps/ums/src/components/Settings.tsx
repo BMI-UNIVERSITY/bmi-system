@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useEffect } from "react";
 import {
   Save,
@@ -13,7 +11,7 @@ import {
   Upload,
   ImageIcon,
   Check,
-  AlertTriangle,
+  
   Database,
 } from "lucide-react";
 import { authFetch } from "../services/authService";
@@ -147,7 +145,7 @@ const Settings: React.FC = () => {
       } else {
         setToastMessage(data.error || "Failed to update password");
       }
-    } catch (error) {
+    } catch {
       setToastMessage("Failed to update password. Please try again.");
     } finally {
       setIsLoading(false);
@@ -215,7 +213,7 @@ const Settings: React.FC = () => {
     }
   };
 
-  const TabButton = ({ id, label, icon: Icon }: any) => (
+  const TabButton = ({ id, label, icon: Icon }: { id: string; label: string; icon: React.ComponentType<{ size?: number }> }) => (
     <button
       onClick={() => setActiveTab(id)}
       className={`flex items-center gap-3 px-8 py-4 text-xs font-black uppercase tracking-widest transition-all rounded-none ${

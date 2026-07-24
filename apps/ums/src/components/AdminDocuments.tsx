@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useMemo, useEffect, useCallback } from "react";
 import {
   FileText,
@@ -8,7 +6,7 @@ import {
   RefreshCw,
   ChevronLeft,
   ChevronRight,
-  Filter,
+  
   User,
   Eye,
   X,
@@ -26,7 +24,7 @@ const PREVIEWABLE_TYPES = new Set([
 ]);
 
 const AdminDocuments: React.FC = () => {
-  const { t } = useTranslation();
+  useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
   const [docTypeFilter, setDocTypeFilter] = useState("All Types");
   const [isLoading, setIsLoading] = useState(false);
@@ -57,6 +55,7 @@ const AdminDocuments: React.FC = () => {
         });
       }
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error("Failed to fetch documents:", error);
     } finally {
       setIsLoading(false);
@@ -80,6 +79,7 @@ const AdminDocuments: React.FC = () => {
     } catch (error) {
       const msg = error instanceof Error ? error.message : 'Failed to load document';
       setPreviewError(msg);
+      // eslint-disable-next-line no-console
       console.error("Failed to view document:", error);
     } finally {
       setIsPreviewLoading(false);

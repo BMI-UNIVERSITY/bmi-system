@@ -1,6 +1,4 @@
-/* eslint-disable */
-/* eslint-disable */
-/* eslint-disable */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let html2pdfLoader: Promise<any> | null = null;
 
 /**

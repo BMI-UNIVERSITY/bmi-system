@@ -1,18 +1,16 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Grades Management Component
  * Main component for managing student grades with the new grading system
  */
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Plus,
   Search,
-  Filter,
+  
   Download,
   Upload,
-  TrendingUp,
+  
   Eye,
   User,
   BarChart2,
@@ -36,10 +34,8 @@ import {
 } from "../grading/services/GradeAPIService";
 import { getAcademicRecords } from "../services/academicRecordsService";
 import { Grade } from "../grading/types";
-import { Student, Course } from "../types";
 import { BulkEntryModal } from "./BulkEntryModal";
 import { postGradeBatch } from "../services/batchService";
-import { useDataStore } from "../stores/dataStore";
 import { useStudentsQuery, useCoursesQuery } from "../hooks/useEntityQueries";
 
 const Grades: React.FC = () => {
@@ -144,9 +140,12 @@ const Grades: React.FC = () => {
         updatedAt: "",
         createdBy: "system",
         lastModifiedBy: "system",
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       })) as any[];
-      setGrades(mapped);
-    } catch (error) { console.error("Failed to load grades:", error);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      setGrades(mapped as any[]);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error("Failed to load grades:", error);
      } finally {
       setIsLoading(false);
     }
@@ -158,8 +157,10 @@ const Grades: React.FC = () => {
     try {
       let response;
       if (gradeData.id) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         response = await updateGrade(gradeData.id, gradeData as any);
       } else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         response = await createGrade(gradeData as any);
       }
 
@@ -239,7 +240,8 @@ const Grades: React.FC = () => {
     try {
       await deleteGrade(gradeId);
       await loadGrades();
-    } catch (error) { console.error("Failed to delete grade:", error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error("Failed to delete grade:", error);
      } finally {
       setIsLoading(false);
     }
@@ -275,7 +277,8 @@ const Grades: React.FC = () => {
       } else {
         alert(result.error || "Failed to submit appeal");
       }
-    } catch (error) { console.error("Failed to submit appeal:", error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error("Failed to submit appeal:", error);
       alert("An error occurred while submitting the appeal");
      } finally {
       setIsLoading(false);
@@ -296,7 +299,8 @@ const Grades: React.FC = () => {
       } else {
         alert(result.error || "Failed to approve appeal");
       }
-    } catch (error) { console.error("Failed to approve appeal:", error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error("Failed to approve appeal:", error);
       alert("An error occurred while approving the appeal");
      } finally {
       setIsLoading(false);
@@ -312,7 +316,8 @@ const Grades: React.FC = () => {
       } else {
         alert(result.error || "Failed to deny appeal");
       }
-    } catch (error) { console.error("Failed to deny appeal:", error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error("Failed to deny appeal:", error);
       alert("An error occurred while denying the appeal");
      } finally {
       setIsLoading(false);
@@ -776,7 +781,7 @@ const Grades: React.FC = () => {
         onSubmit={async (lines) => {
           try {
             const items = lines.map(
-              (l) => JSON.parse(l) as Record<string, unknown>,
+              (l) => JSON.parse(l) as any,
             );
             const r = await postGradeBatch(items);
             await loadGrades();
@@ -785,7 +790,7 @@ const Grades: React.FC = () => {
               ok,
               message: `Created: ${r.data?.successCount ?? 0}, failed: ${r.data?.failureCount ?? 0}. ${(r.data?.errors || []).map((e) => `#${e.index}: ${e.error}`).join(" | ")}`,
             };
-          } catch (error) {
+} catch {
             return { ok: false, message: "Invalid JSON on one or more lines." };
           }
         }}

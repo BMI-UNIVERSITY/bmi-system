@@ -13,7 +13,7 @@ async function encryptBackup(plaintext: string, keyHex: string): Promise<ArrayBu
 }
 
 export default {
-  async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext) {
+  async scheduled(_controller: ScheduledController, env: Env, ctx: ExecutionContext) {
     const encryptionKey = env.BACKUP_ENCRYPTION_KEY;
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
@@ -41,13 +41,27 @@ export default {
       }
     })());
 
+    const BACKUP_CHUNK_SIZE = 1000;
+
     for (const table of tables) {
       try {
-        const { results } = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT * FROM ${table}`).all();
-        if (results.length === 0) continue;
+        let allResults: Record<string, unknown>[] = [];
+        let offset = 0;
 
-        let body: ArrayBuffer | string = JSON.stringify(results);
-        const metadata: Record<string, string> = { table };
+        while (true) {
+          const { results } = await env.PLATFORM_CONTEXT!.db.prepare(
+            `SELECT * FROM ${table} ORDER BY rowid LIMIT ? OFFSET ?`
+          ).bind(BACKUP_CHUNK_SIZE, offset).all<Record<string, unknown>>();
+          if (results.length === 0) break;
+          allResults = allResults.concat(results);
+          offset += results.length;
+          if (results.length < BACKUP_CHUNK_SIZE) break;
+        }
+
+        if (allResults.length === 0) continue;
+
+        let body: ArrayBuffer | string = JSON.stringify(allResults);
+        const metadata: Record<string, string> = { table, rowCount: String(allResults.length) };
 
         if (encryptionKey) {
           body = await encryptBackup(body, encryptionKey);

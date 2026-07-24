@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAuth } from '../hooks/useAuth';
 
 const WARNING_BEFORE_EXPIRY_MS = 30 * 60 * 1000; // 30 minutes

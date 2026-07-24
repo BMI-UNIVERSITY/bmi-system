@@ -65,9 +65,9 @@ export class PdfDocumentAdapter implements IDocumentGenerator {
     };
   }
 
-  async getDocument(id: string): Promise<Document | null> { return null; }
-  async getDocumentsByUser(userId: string): Promise<Document[]> { return []; }
-  async verifyDocument(verificationCode: string): Promise<Document | null> { return null; }
+  async getDocument(_id: string): Promise<Document | null> { return null; }
+  async getDocumentsByUser(_userId: string): Promise<Document[]> { return []; }
+  async verifyDocument(_verificationCode: string): Promise<Document | null> { return null; }
 
   private async getLogoBytes(): Promise<Uint8Array | null> {
     if (this.logoCache) return this.logoCache;
@@ -305,7 +305,7 @@ export class PdfDocumentAdapter implements IDocumentGenerator {
     this.drawFooter(pdf, page, font);
   }
 
-  private drawLetterhead(pdf: PDFDocument, page: any, font: PDFFont, bold: PDFFont, logo?: PDFImage): void {
+  private drawLetterhead(_pdf: PDFDocument, page: any, font: PDFFont, bold: PDFFont, logo?: PDFImage): void {
     this.drawRect(page, 0, 650, PdfDocumentAdapter.PAGE_W, 142, PdfDocumentAdapter.NAVY);
 
     if (logo) {
@@ -320,7 +320,7 @@ export class PdfDocumentAdapter implements IDocumentGenerator {
     this.drawHLine(page, 645, PdfDocumentAdapter.GOLD, 0, 612, 3);
   }
 
-  private drawFooter(pdf: PDFDocument, page: any, font: PDFFont): void {
+  private drawFooter(_pdf: PDFDocument, page: any, font: PDFFont): void {
     this.drawHLine(page, 50, PdfDocumentAdapter.LIGHT_GRAY, 50, 512, 1);
     page.drawText('This is a computer-generated document. Verification code can be used to validate authenticity.', {
       x: 50, y: 30, size: 10, font, color: PdfDocumentAdapter.LIGHT_GRAY,

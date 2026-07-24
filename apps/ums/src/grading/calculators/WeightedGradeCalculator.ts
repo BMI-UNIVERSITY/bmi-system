@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Weighted Grade Calculator
  * Calculates final grades from weighted assessment components

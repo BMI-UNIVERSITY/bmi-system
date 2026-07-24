@@ -1,12 +1,10 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Grade Details View Component
  * Displays detailed grade breakdown with components, GPA, and audit trail
  */
 
 import React, { useState, useEffect } from 'react';
-import { X, TrendingUp, Clock, User, AlertCircle } from 'lucide-react';
+import { X, Clock, User, AlertCircle } from 'lucide-react';
 import { Grade, GradeAuditLog } from '../../grading/types';
 import { getGrade } from '../../grading/services/GradeAPIService';
 
@@ -18,7 +16,7 @@ interface GradeDetailsViewProps {
 
 const GradeDetailsView: React.FC<GradeDetailsViewProps> = ({ gradeId, isOpen, onClose }) => {
   const [grade, setGrade] = useState<Grade | null>(null);
-  const [auditLog, setAuditLog] = useState<GradeAuditLog[]>([]);
+  const [auditLog] = useState<GradeAuditLog[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'details' | 'components' | 'history'>('details');
 
@@ -35,7 +33,8 @@ const GradeDetailsView: React.FC<GradeDetailsViewProps> = ({ gradeId, isOpen, on
       if (response.success && response.data) {
         setGrade(response.data);
       }
-    } catch (error) { console.error('Failed to load grade details:', error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error('Failed to load grade details:', error);
      } finally {
       setIsLoading(false);
     }

@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - UI Store (Zustand)
  * Centralizes UI-level state: theme, sidebar, modals, logo.
@@ -18,7 +16,7 @@ function loadPersisted<T>(key: string, fallback: T): T {
   }
 }
 
-function persist(key: string, partial: Record<string, unknown>) {
+function persist(key: string, partial: any) {
   try {
     let current = {};
     const raw = localStorage.getItem(key);

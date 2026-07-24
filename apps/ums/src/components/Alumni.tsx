@@ -1,33 +1,30 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useMemo, useEffect } from "react";
 import {
   Award,
   Briefcase,
   GraduationCap,
-  Mail,
+  
   MapPin,
   Search,
-  Filter,
+  
   Share2,
   Plus,
   X,
-  CheckCircle2,
-  MoreVertical,
+  
+  
   Trash2,
   Edit,
   Star,
-  ExternalLink,
+  
   Bot,
   Loader2,
   Globe,
-  TrendingUp,
+  
   ChevronRight,
   ShieldCheck,
   Check,
 } from "lucide-react";
 import { getAIResponse } from "../services/aiService";
-import { Student } from "../types";
 import { useDataStore } from "../stores/dataStore";
 
 interface AlumniMember {
@@ -491,7 +488,7 @@ const Alumni: React.FC = () => {
                     />
                   </button>
                   <button
-                    onClick={(e) => handleOpenModal(member)}
+                    onClick={(_e) => handleOpenModal(member)}
                     className="p-2 text-gray-300 hover:text-[#4B0082]"
                     title="Modify Record"
                   >

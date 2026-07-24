@@ -16,7 +16,7 @@ interface MemoryInfo {
 /**
  * Get current performance metrics (admin only)
  */
-export async function handleGetPerformanceMetrics(request: Request, env: Env): Promise<Response> {
+export async function handleGetPerformanceMetrics(_request: Request, _env: Env): Promise<Response> {
   const metrics = getPerformanceMetrics();
   const alerts = getPerformanceAlerts();
   const analysis = analyzePerformance();
@@ -66,7 +66,7 @@ export async function handleGetPerformanceMetrics(request: Request, env: Env): P
 /**
  * Get detailed query analysis (admin only)
  */
-export async function handleGetQueryAnalysis(request: Request, env: Env): Promise<Response> {
+export async function handleGetQueryAnalysis(_request: Request, _env: Env): Promise<Response> {
   const metrics = getPerformanceMetrics();
   
   // Analyze query patterns
@@ -96,7 +96,7 @@ export async function handleGetQueryAnalysis(request: Request, env: Env): Promis
 /**
  * Run database maintenance operations (admin only)
  */
-export async function handleRunMaintenance(request: Request, env: Env): Promise<Response> {
+export async function handleRunMaintenance(_request: Request, env: Env): Promise<Response> {
   const startTime = Date.now();
   
   try {
@@ -149,7 +149,7 @@ export async function handleRunMaintenance(request: Request, env: Env): Promise<
 /**
  * Get database connection and performance status
  */
-export async function handleGetSystemHealth(request: Request, env: Env): Promise<Response> {
+export async function handleGetSystemHealth(_request: Request, env: Env): Promise<Response> {
   const startTime = Date.now();
   
   try {
@@ -226,7 +226,7 @@ export async function handleGetSystemHealth(request: Request, env: Env): Promise
 /**
  * Force cleanup of performance metrics (admin only)
  */
-export async function handleClearMetrics(request: Request, env: Env): Promise<Response> {
+export async function handleClearMetrics(_request: Request, _env: Env): Promise<Response> {
   // This would clear the in-memory metrics - for demonstration
   // In a real implementation, you might want to persist metrics to D1
   
@@ -240,7 +240,7 @@ export async function handleClearMetrics(request: Request, env: Env): Promise<Re
 /**
  * Get performance alerts (admin only)
  */
-export async function handleGetPerformanceAlerts(request: Request, env: Env): Promise<Response> {
+export async function handleGetPerformanceAlerts(request: Request, _env: Env): Promise<Response> {
   const alerts = getPerformanceAlerts();
   const url = new URL(request.url);
   const severity = url.searchParams.get('severity');

@@ -32,13 +32,13 @@ export async function handleListStudyCenters(request: Request, env: Env): Promis
   return json({ success: true, data: results, total, page, perPage, totalPages: Math.ceil(total / perPage) });
 }
 
-export async function handleGetStudyCenter(request: Request, env: Env, id: string): Promise<Response> {
+export async function handleGetStudyCenter(_request: Request, env: Env, id: string): Promise<Response> {
   const row = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT * FROM study_centers WHERE id = ?`).bind(id).first();
   if (!row) return error('Study center not found', 404);
   return ok(row);
 }
 
-export async function handleGetStudyCenterStats(request: Request, env: Env, id: string): Promise<Response> {
+export async function handleGetStudyCenterStats(_request: Request, env: Env, id: string): Promise<Response> {
   const center = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT * FROM study_centers WHERE id = ?`).bind(id).first();
   if (!center) return error('Study center not found', 404);
   const studentCount = (await env.PLATFORM_CONTEXT!.db.prepare(`SELECT COUNT(*) as c FROM students WHERE study_center_id = ?`).bind(id).first<{c:number}>())?.c || 0;
@@ -145,7 +145,7 @@ export async function handleCreateRoomAssignment(request: Request, env: Env): Pr
   return ok(row);
 }
 
-export async function handleDeleteRoomAssignment(request: Request, env: Env, id: string): Promise<Response> {
+export async function handleDeleteRoomAssignment(_request: Request, env: Env, id: string): Promise<Response> {
   await env.PLATFORM_CONTEXT!.db.prepare(`UPDATE hostel_room_assignments SET status='Revoked', updated_at=datetime('now') WHERE id=?`).bind(id).run();
   return ok({ id, deleted: true });
 }
@@ -182,7 +182,7 @@ export async function handleCreateMedicalRecord(request: Request, env: Env): Pro
   return ok(row);
 }
 
-export async function handleDeleteMedicalRecord(request: Request, env: Env, id: string): Promise<Response> {
+export async function handleDeleteMedicalRecord(_request: Request, env: Env, id: string): Promise<Response> {
   await env.PLATFORM_CONTEXT!.db.prepare(`DELETE FROM medical_records WHERE id = ?`).bind(id).run();
   return ok({ id, deleted: true });
 }
@@ -219,7 +219,7 @@ export async function handleUpdateInventoryItem(request: Request, env: Env, id: 
   return ok(row);
 }
 
-export async function handleDeleteInventoryItem(request: Request, env: Env, id: string): Promise<Response> {
+export async function handleDeleteInventoryItem(_request: Request, env: Env, id: string): Promise<Response> {
   await env.PLATFORM_CONTEXT!.db.prepare(`DELETE FROM inventory_items WHERE id = ?`).bind(id).run();
   return ok({ id, deleted: true });
 }
@@ -252,7 +252,7 @@ export async function handleUpdateVisitor(request: Request, env: Env, id: string
   return ok(row);
 }
 
-export async function handleDeleteVisitor(request: Request, env: Env, id: string): Promise<Response> {
+export async function handleDeleteVisitor(_request: Request, env: Env, id: string): Promise<Response> {
   await env.PLATFORM_CONTEXT!.db.prepare(`DELETE FROM visitors WHERE id = ?`).bind(id).run();
   return ok({ id, deleted: true });
 }

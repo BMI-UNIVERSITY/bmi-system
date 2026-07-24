@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Course Service
  */
@@ -42,6 +40,7 @@ export async function getCourses(filters?: {
     const queryString = params.toString();
     const url = `${API_URL}/courses${queryString ? `?${queryString}` : ''}`;
     const response = await authFetch(url);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let data = await parseJsonSafe<any>(response);
     if (data?.success && !data.data?.items) {
       // Make sure data has the paginated structure
@@ -54,7 +53,7 @@ export async function getCourses(filters?: {
       }
     }
     return data ?? { success: false, error: 'Failed to parse courses response' };
-  } catch (error) { return { success: false, error: 'Failed to fetch courses'  };
+  } catch { return { success: false, error: 'Failed to fetch courses'  };
   }
 }
 
@@ -66,7 +65,7 @@ export async function createCourse(data: Partial<Course>): Promise<CourseRespons
     });
     const result = await parseJsonSafe<CourseResponse>(response);
     return result ?? { success: false, error: 'Failed to parse create course response' };
-  } catch (error) { return { success: false, error: 'Failed to create course'  };
+  } catch { return { success: false, error: 'Failed to create course'  };
   }
 }
 
@@ -78,7 +77,7 @@ export async function updateCourse(id: string, data: Partial<Course>): Promise<C
     });
     const result = await parseJsonSafe<CourseResponse>(response);
     return result ?? { success: false, error: 'Failed to parse update course response' };
-  } catch (error) { return { success: false, error: 'Failed to update course'  };
+  } catch { return { success: false, error: 'Failed to update course'  };
   }
 }
 
@@ -87,16 +86,18 @@ export async function deleteCourse(id: string): Promise<CourseResponse> {
     const response = await authFetch(`${API_URL}/courses/${id}`, { method: 'DELETE' });
     const result = await parseJsonSafe<CourseResponse>(response);
     return result ?? { success: false, error: 'Failed to parse delete course response' };
-  } catch (error) { return { success: false, error: 'Failed to delete course'  };
+  } catch { return { success: false, error: 'Failed to delete course'  };
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getCourseStats(): Promise<any> {
   try {
     const response = await authFetch(`${API_URL}/courses/stats/overview`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const data = await parseJsonSafe<any>(response);
     return data ?? { success: false, error: 'Failed to parse course statistics response' };
-  } catch (error) { return { success: false, error: 'Failed to fetch course statistics'  };
+  } catch { return { success: false, error: 'Failed to fetch course statistics'  };
   }
 }
 

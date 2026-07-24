@@ -2,7 +2,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import RegistrationWizard from './RegistrationWizard';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import React from 'react';
+
 import { api } from '../../lib/api';
 
 vi.mock('../../hooks/useAuth', () => ({
@@ -42,7 +42,7 @@ describe('RegistrationWizard Page', () => {
     await renderPage();
     expect(screen.getAllByText('Personal Details').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Address').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Programme').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Program').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Modules').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Fees').length).toBeGreaterThan(0);
     expect(screen.getAllByText('Confirm').length).toBeGreaterThan(0);

@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - AI Service
  * Connects to local Ollama backend for AI chat responses
@@ -78,7 +76,8 @@ async function getAIResponseFromMessages(
     }
 
     return data.data.response;
-  } catch (error) { console.error('AI service error:', error);
+  } catch (error) { // eslint-disable-next-line no-console
+    console.error('AI service error:', error);
     
     // Check if backend is available
     const backendAvailable = await isBackendAvailable();
@@ -133,7 +132,7 @@ async function isBackendAvailable(): Promise<boolean> {
       signal: AbortSignal.timeout(5000),
     });
     return response.ok;
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -149,7 +148,7 @@ export async function isAIServiceAvailable(): Promise<boolean> {
     });
     const data = await response.json();
     return data.success && data.services?.ai !== 'offline';
-  } catch (error) {
+  } catch {
     return false;
   }
 }

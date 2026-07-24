@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useMemo, useRef } from "react";
 import {
   Search,
@@ -20,17 +18,17 @@ import {
   BookMarked,
   Eye,
   AlertCircle,
-  Upload,
+  
   FileUp,
   Loader2,
   Check,
   CheckCircle2,
   Library as LibraryIcon,
 } from "lucide-react";
-import { LibraryItem, Course } from "../types";
+import { LibraryItem } from "../types";
 import { getAIResponse } from "../services/aiService";
 import { useDataStore } from "../stores/dataStore";
-import { useLibraryQuery, useCoursesQuery } from "../hooks/useEntityQueries";
+import { useLibraryQuery } from "../hooks/useEntityQueries";
 
 function extractMetadataFromDoc(
   base64String: string,
@@ -47,17 +45,12 @@ function extractMetadataFromDoc(
 }
 
 export const Library: React.FC = () => {
-  const { data: libraryRes, isLoading: isLoadingLibrary } = useLibraryQuery({
-    page: 1,
-    perPage: 500,
-  });
-  const { data: coursesRes } = useCoursesQuery({
+  const { data: libraryRes } = useLibraryQuery({
     page: 1,
     perPage: 500,
   });
 
   const library = libraryRes?.data || [];
-  const courses = coursesRes?.data?.items || [];
 
   const _setLibrary = useDataStore((s) => s.setLibrary);
   const setLibrary = (action: React.SetStateAction<LibraryItem[]>) => {
@@ -175,7 +168,7 @@ export const Library: React.FC = () => {
           year: metadata.year || prev.year,
           category: (categories.includes(metadata.category)
             ? metadata.category
-            : prev.category) as any,
+            : prev.category) as typeof prev.category,
           description: metadata.description || prev.description,
         }));
       }
@@ -939,7 +932,7 @@ export const Library: React.FC = () => {
                           onChange={(e) =>
                             setNewItem({
                               ...newItem,
-                              category: e.target.value as any,
+                              category: e.target.value as "Theology" | "ICT" | "Business" | "Education" | "General",
                             })
                           }
                           className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-none text-xs font-black uppercase cursor-pointer"
@@ -963,7 +956,7 @@ export const Library: React.FC = () => {
                           onChange={(e) =>
                             setNewItem({
                               ...newItem,
-                              type: e.target.value as any,
+                              type: e.target.value as "PDF" | "E-Book" | "Hardcopy" | "Journal" | "Video",
                             })
                           }
                           className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-none text-xs font-black uppercase cursor-pointer"
@@ -984,7 +977,7 @@ export const Library: React.FC = () => {
                           onChange={(e) =>
                             setNewItem({
                               ...newItem,
-                              status: e.target.value as any,
+                              status: e.target.value as "Digital" | "Available" | "Borrowed" | "Reserved",
                             })
                           }
                           className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-none text-xs font-black uppercase cursor-pointer"

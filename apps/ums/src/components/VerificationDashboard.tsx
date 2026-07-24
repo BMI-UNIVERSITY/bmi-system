@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * KIRO: DO NOT MODIFY
  * This file contains stable production logic.
@@ -20,15 +18,14 @@ import {
   Eye,
   Download,
   Search,
-  Filter,
-  Calendar,
-  BarChart3,
+  
+  
+  
   Globe,
   Smartphone,
   Clock,
   MapPin
 } from 'lucide-react';
-import { verificationService } from '../services/verificationService';
 
 interface VerificationStats {
   total_verifications: number;
@@ -66,7 +63,7 @@ const VerificationDashboard: React.FC = () => {
   const [stats, setStats] = useState<VerificationStats | null>(null);
   const [logs, setLogs] = useState<VerificationLog[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedTimeRange, setSelectedTimeRange] = useState('7d');
+  const [selectedTimeRange] = useState('7d');
   const [searchTerm, setSearchTerm] = useState('');
   const [filterMethod, setFilterMethod] = useState('all');
   const [filterResult, setFilterResult] = useState('all');
@@ -110,8 +107,8 @@ const VerificationDashboard: React.FC = () => {
         id: `log-${i + 1}`,
         certificate_serial: `BMI-${2024 - Math.floor(i / 20)}-${String(Math.floor(Math.random() * 999999)).padStart(6, '0')}`,
         student_name: ['James Smith', 'Mary Johnson', 'John Williams', 'Patricia Jones', 'Robert Brown'][i % 5],
-        verification_result: ['valid', 'valid', 'valid', 'invalid', 'revoked'][Math.floor(Math.random() * 5)] as any,
-        method: ['online', 'offline', 'qr_scan'][Math.floor(Math.random() * 3)] as any,
+        verification_result: (['valid', 'valid', 'valid', 'invalid', 'revoked'][Math.floor(Math.random() * 5)] as 'valid' | 'invalid' | 'revoked'),
+        method: (['online', 'offline', 'qr_scan'][Math.floor(Math.random() * 3)] as 'online' | 'offline' | 'qr_scan'),
         timestamp: new Date(Date.now() - Math.random() * 7 * 24 * 60 * 60 * 1000).toISOString(),
         ip_address: `192.168.${Math.floor(Math.random() * 255)}.${Math.floor(Math.random() * 255)}`,
         location: ['Nairobi, Kenya', 'Mombasa, Kenya', 'Kisumu, Kenya', 'Eldoret, Kenya'][Math.floor(Math.random() * 4)],
@@ -120,7 +117,8 @@ const VerificationDashboard: React.FC = () => {
 
       setStats(mockStats);
       setLogs(mockLogs);
-    } catch (error) { console.error('Error loading dashboard data:', error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error('Error loading dashboard data:', error);
      } finally {
       setLoading(false);
     }

@@ -1,6 +1,6 @@
 import { Env, ok, error } from '../lib/types';
 
-export async function handleLmsCourses(req: Request, env: Env, studentId: string): Promise<Response> {
+export async function handleLmsCourses(_req: Request, env: Env, studentId: string): Promise<Response> {
   try {
     const courses = await env.PLATFORM_CONTEXT!.lms.getCourses(studentId);
     return ok({ courses });

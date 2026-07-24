@@ -1,4 +1,3 @@
-/* eslint-disable */
 import React, { useCallback, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
@@ -48,7 +47,7 @@ interface SidebarProps {
 interface NavGroup {
   id: string;
   label: string;
-  icon: any;
+  icon: React.ComponentType<{ size?: number }>;
   items: NavItem[];
 }
 
@@ -381,7 +380,7 @@ const Sidebar: React.FC<SidebarProps> = ({
 
           {/* Navigation groups */}
           {filteredGroups.map((group) => {
-            const GroupIcon = group.icon;
+            const GroupIcon = group.icon as React.ElementType;
             const isExpanded = expandedGroups.includes(group.id);
             return (
               <div key={group.id} className="space-y-0.5">

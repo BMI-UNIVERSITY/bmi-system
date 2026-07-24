@@ -1,6 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Program & Enrollment Service
  */
@@ -26,6 +23,7 @@ export async function getPrograms(filters?: {
     const queryString = params.toString();
     const url = `${API_URL}/programs${queryString ? `?${queryString}` : ''}`;
     const response = await authFetch(url);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let data = await parseJsonSafe<any>(response);
     if (data?.success) {
       if (data.data && !Array.isArray(data.data) && Array.isArray(data.data.items)) {
@@ -35,16 +33,20 @@ export async function getPrograms(filters?: {
       }
     }
     return data ?? { success: false, data: [], error: { code: 'PARSE_ERROR', message: 'Failed to parse programs response' } };
-  } catch (error) { return { success: false, data: [], error: { code: 'FETCH_ERROR', message: 'Failed to fetch programs'  } };
+  } catch { return { success: false, data: [], error: { code: 'FETCH_ERROR', message: 'Failed to fetch programs'  } };
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getProgramById(id: string): Promise<ApiResponse<Program & { courses: any[] }>> {
   try {
     const response = await authFetch(`${API_URL}/programs/${id}`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const data = await parseJsonSafe<ApiResponse<Program & { courses: any[] }>>(response);
-    return data ?? { success: false, data: {} as any, error: { code: 'PARSE_ERROR', message: 'Failed to parse program detail response' } };
-  } catch (error) { return { success: false, data: {} as any, error: { code: 'FETCH_ERROR', message: 'Failed to fetch program details'  } };
+    return data ?? { success: false, // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: {} as any, error: { code: 'PARSE_ERROR', message: 'Failed to parse program detail response' } };
+  } catch { return { success: false, // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: {} as any, error: { code: 'FETCH_ERROR', message: 'Failed to fetch program details'  } };
   }
 }
 
@@ -55,8 +57,10 @@ export async function createProgram(data: Partial<Program>): Promise<ApiResponse
       body: JSON.stringify(data),
     });
     const result = await parseJsonSafe<ApiResponse<Program>>(response);
-    return result ?? { success: false, data: {} as any, error: { code: 'PARSE_ERROR', message: 'Failed to parse create program response' } };
-  } catch (error) { return { success: false, data: {} as any, error: { code: 'FETCH_ERROR', message: 'Failed to create program'  } };
+    return result ?? { success: false, // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: {} as any, error: { code: 'PARSE_ERROR', message: 'Failed to parse create program response' } };
+  } catch { return { success: false, // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: {} as any, error: { code: 'FETCH_ERROR', message: 'Failed to create program'  } };
   }
 }
 
@@ -67,8 +71,10 @@ export async function updateProgram(id: string, data: Partial<Program>): Promise
       body: JSON.stringify(data),
     });
     const result = await parseJsonSafe<ApiResponse<Program>>(response);
-    return result ?? { success: false, data: {} as any, error: { code: 'PARSE_ERROR', message: 'Failed to parse update program response' } };
-  } catch (error) { return { success: false, data: {} as any, error: { code: 'FETCH_ERROR', message: 'Failed to update program'  } };
+    return result ?? { success: false, // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: {} as any, error: { code: 'PARSE_ERROR', message: 'Failed to parse update program response' } };
+  } catch { return { success: false, // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: {} as any, error: { code: 'FETCH_ERROR', message: 'Failed to update program'  } };
   }
 }
 
@@ -77,12 +83,13 @@ export async function updateProgram(id: string, data: Partial<Program>): Promise
 export async function getFaculties(): Promise<ApiResponse<Faculty[]>> {
   try {
     const response = await authFetch(`${API_URL}/catalog/faculties`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let data = await parseJsonSafe<any>(response);
     if (data?.success && !Array.isArray(data.data)) {
       data.data = [];
     }
     return data ?? { success: false, data: [] };
-  } catch (error) { return { success: false, data: [] };
+  } catch { return { success: false, data: [] };
   }
 }
 
@@ -94,12 +101,13 @@ export async function getDepartments(facultyId?: string): Promise<ApiResponse<De
     const queryString = params.toString();
     const url = `${API_URL}/catalog/departments${queryString ? `?${queryString}` : ''}`;
     const response = await authFetch(url);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let data = await parseJsonSafe<any>(response);
     if (data?.success && !Array.isArray(data.data)) {
       data.data = [];
     }
     return data ?? { success: false, data: [] };
-  } catch (error) {
+  } catch {
     return { success: false, data: [] };
   }
 }
@@ -107,12 +115,13 @@ export async function getDepartments(facultyId?: string): Promise<ApiResponse<De
 export async function getAcademicTerms(): Promise<ApiResponse<AcademicTerm[]>> {
   try {
     const response = await authFetch(`${API_URL}/catalog/terms`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let data = await parseJsonSafe<any>(response);
     if (data?.success && !Array.isArray(data.data)) {
       data.data = [];
     }
     return data ?? { success: false, data: [] };
-  } catch (error) {
+  } catch {
     return { success: false, data: [] };
   }
 }
@@ -135,7 +144,7 @@ export async function getEnrollments(filters?: {
     const response = await authFetch(url);
     const data = await parseJsonSafe<ApiResponse<Enrollment[]>>(response);
     return data ?? { success: false, data: [] };
-  } catch (error) {
+  } catch {
     return { success: false, data: [] };
   }
 }
@@ -155,8 +164,10 @@ export async function createEnrollment(data: {
       body: JSON.stringify(data),
     });
     const result = await parseJsonSafe<ApiResponse<Enrollment>>(response);
-    return result ?? { success: false, data: {} as any, error: { code: 'PARSE_ERROR', message: 'Failed to parse enrollment response'  } };
-  } catch (error) { return { success: false, data: {} as any, error: { code: 'FETCH_ERROR', message: 'Failed to create enrollment'  } };
+    return result ?? { success: false, // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: {} as any, error: { code: 'PARSE_ERROR', message: 'Failed to parse enrollment response'  } };
+  } catch { return { success: false, // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: {} as any, error: { code: 'FETCH_ERROR', message: 'Failed to create enrollment'  } };
   }
 }
 
@@ -166,9 +177,13 @@ export async function dropEnrollment(id: string): Promise<ApiResponse<Enrollment
       method: 'PATCH',
     });
     const result = await parseJsonSafe<ApiResponse<Enrollment>>(response);
-    return result ?? { success: false, data: {} as any };
-  } catch (error) {
-    return { success: false, data: {} as any };
+    return result ?? { success: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: {} as any };
+  } catch {
+    return { success: false,
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      data: {} as any };
   }
 }
 

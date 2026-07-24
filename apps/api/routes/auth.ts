@@ -315,8 +315,14 @@ export async function handleRefresh(request: Request, env: Env): Promise<Respons
     return error('Invalid or expired session', 401);
   }
 
+  // Fetch current session_version to include in new token
+  const userRow = await env.PLATFORM_CONTEXT!.db.prepare(
+    'SELECT session_version FROM users WHERE id = ?'
+  ).bind(payload.sub).first<{ session_version: number }>();
+  const sv = userRow?.session_version ?? payload.sv ?? 1;
+
   // Issue new token and CSRF token
-  const newToken = await signJWT({ sub: payload.sub, email: payload.email, role: payload.role }, env.JWT_SECRET);
+  const newToken = await signJWT({ sub: payload.sub, email: payload.email, role: payload.role, sv }, env.JWT_SECRET);
   const newCsrfToken = generateCsrfToken();
   const expiresAt = new Date(Date.now() + 60 * 60 * 24 * 7 * 1000).toISOString();
 
@@ -377,13 +383,22 @@ export async function handleLogout(request: Request, env: Env): Promise<Response
   });
 }
 
-export async function handleMe(request: Request, env: Env, userId: string): Promise<Response> {
+export async function handleMe(_request: Request, env: Env, userId: string): Promise<Response> {
   const user = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT id, email, first_name, last_name, role, created_at, is_verified FROM users WHERE id = ?'
   ).bind(userId).first();
 
   if (!user) return error('User not found', 404);
-  return ok(user);
+
+  const csrfToken = generateCsrfToken();
+  const response = ok({ ...user, csrf_token: csrfToken });
+  const headers = new Headers(response.headers);
+  headers.append('Set-Cookie', `csrf_token=${csrfToken}; Path=/; Secure; SameSite=None; Max-Age=${60 * 60 * 24 * 7}`);
+
+  return new Response(response.body, {
+    status: 200,
+    headers,
+  });
 }
 
 export async function handleForgotPassword(request: Request, env: Env): Promise<Response> {
@@ -481,7 +496,7 @@ export async function handleResetPassword(request: Request, env: Env): Promise<R
   return ok({ message: 'Password reset successfully. You can now log in with your new password.' });
 }
 
-export async function handleMfaSetup(request: Request, env: Env, userId: string): Promise<Response> {
+export async function handleMfaSetup(_request: Request, env: Env, userId: string): Promise<Response> {
   const user = await env.PLATFORM_CONTEXT!.db.prepare('SELECT email, first_name, mfa_secret, mfa_enabled FROM users WHERE id = ?').bind(userId).first<{ email: string; first_name: string; mfa_secret: string | null; mfa_enabled: number }>();
   if (!user) return error('User not found', 404);
 
@@ -534,7 +549,7 @@ export async function handleMfaDisable(request: Request, env: Env, userId: strin
   return ok({ message: 'MFA disabled successfully' });
 }
 
-export async function handleOAuthLogin(request: Request, env: Env, provider: OAuthProvider): Promise<Response> {
+export async function handleOAuthLogin(_request: Request, env: Env, provider: OAuthProvider): Promise<Response> {
   const config = getOAuthConfig(provider, env);
   if (!config.clientId || !config.clientSecret) {
     return error('Provider not configured', 501);
@@ -602,8 +617,8 @@ export async function handleOAuthCallback(request: Request, env: Env, provider: 
   }
 
   const user = await env.PLATFORM_CONTEXT!.db.prepare(
-    'SELECT id, email, first_name, last_name, role, mfa_enabled, is_verified FROM users WHERE id = ?'
-  ).bind(userId).first<{ id: string; email: string; first_name: string; last_name: string; role: string; mfa_enabled: number; is_verified: number }>();
+    'SELECT id, email, first_name, last_name, role, mfa_enabled, is_verified, session_version FROM users WHERE id = ?'
+  ).bind(userId).first<{ id: string; email: string; first_name: string; last_name: string; role: string; mfa_enabled: number; is_verified: number; session_version: number }>();
 
   if (!user) {
     return error('User not found', 500);
@@ -617,7 +632,7 @@ export async function handleOAuthCallback(request: Request, env: Env, provider: 
     return ok({ requires_mfa: true, temp_auth: userId });
   }
 
-  const token = await signJWT({ sub: user.id, email: user.email, role: user.role }, env.JWT_SECRET);
+  const token = await signJWT({ sub: user.id, email: user.email, role: user.role, sv: user.session_version }, env.JWT_SECRET);
   const csrfToken = generateCsrfToken();
   const expiresAt = new Date(Date.now() + 60 * 60 * 24 * 7 * 1000).toISOString();
   await env.PLATFORM_CONTEXT!.db.prepare(

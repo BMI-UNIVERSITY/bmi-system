@@ -1,0 +1,78 @@
+name: Preview Deployments
+
+on:
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '24'
+  TURBO_TEAM: bmi
+  TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+
+jobs:
+  preview-portal:
+    name: Preview Portal
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+      - run: npm ci --prefer-offline
+      - run: npx turbo run build --filter=bmi-portal --concurrency=100%
+        env:
+          NODE_ENV: production
+          VITE_API_URL: "https://bmi-api.bmiuniversity107.workers.dev"
+      - uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/portal
+          command: pages deploy dist --project-name=bmi-portal --branch=${{ github.head_ref }}
+
+  preview-ums:
+    name: Preview UMS
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+      - run: npm ci --prefer-offline
+      - run: npx turbo run build --filter=bmi-ums-frontend --concurrency=100%
+        env:
+          NODE_ENV: production
+          VITE_API_URL: "https://bmi-api.bmiuniversity107.workers.dev"
+      - uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: apps/ums
+          command: pages deploy dist --project-name=bmi-ums --branch=${{ github.head_ref }}
+
+  preview-university:
+    name: Preview University
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+      - run: npm ci --prefer-offline
+      - run: npx turbo run build --filter=bmi-university --concurrency=100%
+      - uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: bmi-university
+          command: pages deploy out --project-name=bmi-university --branch=${{ github.head_ref }}

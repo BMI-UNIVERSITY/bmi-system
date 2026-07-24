@@ -1,6 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - API-Backed Data Store for previously localStorage-only modules
  *

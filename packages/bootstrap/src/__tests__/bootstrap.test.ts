@@ -39,15 +39,11 @@ describe('bootstrap', () => {
     }
   });
 
-  it('buildCloudflare: uses unimplemented proxy for identity', async () => {
+  it('buildCloudflare: wires D1IdentityAdapter for identity', () => {
     const env = { PLATFORM_PROVIDER: 'cloudflare', DB: {}, JWT_SECRET: 'test' };
     const ctx = bootstrap(env);
-    try {
-      await ctx.identity.getUser('nonexistent');
-      expect.unreachable('Expected unimplemented proxy to throw');
-    } catch (e: unknown) {
-      expect((e as Error).message).toContain('identity');
-    }
+    expect(typeof ctx.identity.getUser).toBe('function');
+    expect(typeof ctx.identity.createUser).toBe('function');
   });
 
   it('buildCloudflare: uses unimplemented proxy for lms', async () => {

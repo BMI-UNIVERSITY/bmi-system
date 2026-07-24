@@ -54,7 +54,7 @@ export interface Student {
   department_id?: string;
   gpa?: number;
   admissionYear?: string;
-  legacy_identifiers?: Record<string, unknown>;
+  legacy_identifiers?: any;
   careerPath?: string;
   year_of_study?: string;
   graduation_date?: string;
@@ -398,7 +398,7 @@ export interface AuditLog {
   resourceId?: string;
   userId: string;
   userEmail: string;
-  details?: Record<string, unknown>;
+  details?: any;
   ipAddress: string;
   userAgent?: string;
   timestamp: string;

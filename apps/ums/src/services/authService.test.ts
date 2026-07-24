@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import {
   login,
@@ -313,7 +311,7 @@ describe('Auth Service', () => {
         json: async () => mockResponse,
       });
 
-      const result = await resetPassword('token123', 'newpassword', 'newpassword');
+      const result = await resetPassword('token123', 'newpassword');
 
       expect(global.fetch).toHaveBeenCalledWith(
         expect.stringContaining('/auth/reset-password'),

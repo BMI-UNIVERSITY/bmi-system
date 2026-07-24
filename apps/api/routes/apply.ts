@@ -300,7 +300,7 @@ async function sendApplicationNotificationsOptimized(
   await Promise.allSettled(emailPromises);
 }
 
-export async function handleGetMyApplication(request: Request, env: Env, userId: string): Promise<Response> {
+export async function handleGetMyApplication(_request: Request, env: Env, userId: string): Promise<Response> {
   const app = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT a.*, 
        (SELECT json_group_array(json_object('id', d.id, 'doc_type', d.doc_type, 'file_name', d.file_name, 'uploaded_at', d.uploaded_at))
@@ -522,7 +522,7 @@ export async function handleGetLifecycle(
   return ok(events);
 }
 
-export async function handleGetStatusLogs(request: Request, env: Env, appId: string, userId: string, userRole: string): Promise<Response> {
+export async function handleGetStatusLogs(_request: Request, env: Env, appId: string, userId: string, userRole: string): Promise<Response> {
   const app = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id, user_id FROM applications WHERE id = ?')
     .bind(appId).first<{ id: string; user_id: string }>();
 

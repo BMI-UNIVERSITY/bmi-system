@@ -11,7 +11,7 @@ INSERT INTO users (
   mfa_enabled
 ) VALUES (
   'bmiuniversity8@gmail.com',
-  '$2a$10$N9qo8uLOickgx2ZEa6k9PuflRXU63TYnN2Gv/Fs6FqGz4y5K6v0P.',
+  '-- REPLACE_WITH_BCRYPT_HASH_GENERATED_SECURELY --',
   'Admin',
   'User',
   'admin',

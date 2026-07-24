@@ -24,7 +24,7 @@ export class DocumentService {
   private readonly API_BASE: string;
   private readonly STORAGE_KEY = "bmi_documents";
   private readonly AUDIT_KEY = "bmi_document_audit";
-  private readonly TEMPLATES_KEY = "bmi_document_templates";
+//   private readonly TEMPLATES_KEY = "bmi_document_templates";
   private readonly crypto: DocumentCryptoService;
 
   private constructor() {
@@ -40,7 +40,7 @@ export class DocumentService {
     return DocumentService.instance;
   }
 
-  async generateContentHash(data: Record<string, unknown>): Promise<string> {
+  async generateContentHash(data: any): Promise<string> {
     return this.crypto.generateContentHash(data);
   }
 
@@ -75,7 +75,7 @@ export class DocumentService {
   async generateSecurityFeatures(
     type: DocumentType,
     studentId: string,
-    contentData: Record<string, unknown>,
+    contentData: any,
     options?: { expiresAt?: string; includeBlockchain?: boolean },
   ): Promise<DocumentSecurityFeatures> {
     const timestamp = new Date().toISOString();
@@ -238,7 +238,7 @@ export class DocumentService {
     try {
       const html2pdf = await getHtml2Pdf();
       const qualityMap = { low: 1, medium: 1.5, high: 2, maximum: 3 };
-      const pdfBlob = await (html2pdf as (opts?: Record<string, unknown>) => { set: (opts: Record<string, unknown>) => { from: (el: HTMLElement) => { output: (type: string) => Promise<Blob> } } })().set({ margin: 0, filename: options.filename || `${doc.type}_${doc.security.serialNumber}.pdf`, image: { type: "jpeg", quality: 0.98 }, html2canvas: { scale: qualityMap[options.quality || "high"], useCORS: true, logging: false, letterRendering: true, backgroundColor: options.includeBackground !== false ? "#FFFFFF" : null }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" } }).from(element).output("blob");
+      const pdfBlob = await (html2pdf as (opts?: any) => { set: (opts: any) => { from: (el: HTMLElement) => { output: (type: string) => Promise<Blob> } } })().set({ margin: 0, filename: options.filename || `${doc.type}_${doc.security.serialNumber}.pdf`, image: { type: "jpeg", quality: 0.98 }, html2canvas: { scale: qualityMap[options.quality || "high"], useCORS: true, logging: false, letterRendering: true, backgroundColor: options.includeBackground !== false ? "#FFFFFF" : null }, jsPDF: { unit: "mm", format: "a4", orientation: "portrait" } }).from(element).output("blob");
       await this.logAuditEntry(doc.id, "downloaded", "user", { format: "pdf", quality: options.quality });
       return pdfBlob;
     } catch (error) {
@@ -384,7 +384,7 @@ export class DocumentService {
     documentId: string,
     action: DocumentAuditLog["action"],
     performedBy: string,
-    details?: Record<string, unknown>,
+    details?: any,
   ): Promise<void> {
     const logs = this.getAuditLogs();
     const entry: DocumentAuditLog = {
@@ -518,7 +518,7 @@ export class DocumentService {
    */
   async updateDocumentMetadata(
     documentId: string,
-    metadata: Record<string, unknown>,
+    metadata: any,
   ): Promise<boolean> {
     const document = await this.getDocumentById(documentId);
     if (!document) return false;

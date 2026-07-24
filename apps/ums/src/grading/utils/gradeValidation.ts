@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Grade Validation Utilities
  * Validation functions for grades, scores, and GPA calculations
@@ -19,7 +17,7 @@ import { PERCENTAGE_RANGE, GPA_RANGE } from './constants';
  */
 export function validateNumericGrade(
   grade: number,
-  scale: GradingScale
+//   scale: GradingScale
 ): { isValid: boolean; error?: string } {
   // For percentage-based scales
   if (grade < PERCENTAGE_RANGE.MIN || grade > PERCENTAGE_RANGE.MAX) {
@@ -209,7 +207,7 @@ export function validateGrade(
 
   // Validate numeric grade
   if (grade.numericGrade !== undefined) {
-    const numericValidation = validateNumericGrade(grade.numericGrade, scale);
+    const numericValidation = validateNumericGrade(grade.numericGrade);
     if (!numericValidation.isValid) {
       errors.push(numericValidation.error!);
     }

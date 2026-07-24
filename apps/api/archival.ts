@@ -20,7 +20,7 @@ export async function runArchivalJob(env: Env) {
     try {
       // 1. Fetch old rows in batches to avoid D1 limits
       const { results } = await env.PLATFORM_CONTEXT!.db.prepare(
-        `SELECT * FROM ${rule.table} WHERE ${rule.dateCol} < ? LIMIT 1000`
+        `SELECT * FROM ${rule.table} WHERE ${rule.dateCol} < ? ORDER BY ${rule.dateCol} ASC LIMIT 1000`
       ).bind(cutoffIso).all();
       
       if (!results || results.length === 0) continue;

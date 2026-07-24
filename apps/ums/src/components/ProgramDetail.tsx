@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
@@ -23,7 +21,7 @@ const ProgramDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
 
-  const [program, setProgram] = useState<(Program & { courses: any[] }) | null>(null);
+  const [program, setProgram] = useState<(Program & { courses: unknown[] }) | null>(null);
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
@@ -52,7 +50,8 @@ const ProgramDetail: React.FC = () => {
 
         if (facRes.success && facRes.data) setFaculties(facRes.data);
         if (deptRes.success && deptRes.data) setDepartments(deptRes.data);
-      } catch (error) { console.error("Failed to load program details", error);
+      } catch (error) { // eslint-disable-next-line no-console
+      console.error("Failed to load program details", error);
         setError("Network error occurred while fetching catalog.");
        } finally {
         setLoading(false);
@@ -80,7 +79,7 @@ const ProgramDetail: React.FC = () => {
     if (!program || !program.courses) return [];
     
     // Group courses by semester_number
-    const groups: Record<number, any[]> = {};
+    const groups: Record<number, unknown[]> = {};
     
     program.courses.forEach((c: any) => {
       const sem = c.semester_number || 1;
@@ -94,7 +93,7 @@ const ProgramDetail: React.FC = () => {
     return Object.entries(groups)
       .map(([semNum, list]) => ({
         semesterNumber: parseInt(semNum, 10),
-        courses: list.sort((a, b) => a.code.localeCompare(b.code)),
+        courses: list.sort((a: any, b: any) => (a.code || '').localeCompare(b.code || '')),
       }))
       .sort((a, b) => a.semesterNumber - b.semesterNumber);
   }, [program]);
@@ -269,7 +268,7 @@ const ProgramDetail: React.FC = () => {
 
             {/* Curriculum Timeline */}
             <div className="mt-6 space-y-8 relative pl-6 border-l border-gray-100 dark:border-gray-800">
-              {semesterGroups.map((group, idx) => (
+              {semesterGroups.map((group) => (
                 <div key={group.semesterNumber} className="relative">
                   {/* Timeline bullet */}
                   <div className="absolute -left-[31px] top-1.5 w-4 h-4 rounded-full bg-white dark:bg-gray-900 border-4 border-[#4B0082] flex items-center justify-center shadow-sm"></div>
@@ -281,7 +280,7 @@ const ProgramDetail: React.FC = () => {
 
                   {/* Course Cards list */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {group.courses.map((course) => (
+                    {group.courses.map((course: any) => (
                       <div
                         key={course.id}
                         onClick={() => navigate(`/courses?search=${course.code}`)}

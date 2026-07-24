@@ -16,7 +16,7 @@ function getDocumentPrefix(type: DocumentType): string {
   return PREFIXES[type];
 }
 
-async function generateContentHash(data: Record<string, unknown>): Promise<string> {
+async function generateContentHash(data: any): Promise<string> {
   const canonicalString = JSON.stringify(data, Object.keys(data).sort());
   const encoder = new TextEncoder();
   const dataBuffer = encoder.encode(canonicalString);
@@ -26,7 +26,7 @@ async function generateContentHash(data: Record<string, unknown>): Promise<strin
 }
 
 export class DocumentCryptoService {
-  async generateContentHash(data: Record<string, unknown>): Promise<string> {
+  async generateContentHash(data: any): Promise<string> {
     return generateContentHash(data);
   }
 
@@ -78,7 +78,7 @@ export class DocumentCryptoService {
   }
 
   generateVerificationUrl(serialNumber: string, hiddenToken?: string): string {
-    const env = typeof import.meta !== 'undefined' ? (import.meta as unknown as Record<string, unknown>).env as Record<string, string | undefined> : undefined;
+    const env = typeof import.meta !== 'undefined' ? (import.meta as unknown as any).env as Record<string, string | undefined> : undefined;
     const baseUrl = env?.VITE_VERIFY_URL ?? (typeof window !== 'undefined' ? window.location.origin : '');
     if (hiddenToken) {
       return `${baseUrl}/verify?id=${encodeURIComponent(serialNumber)}&t=${encodeURIComponent(hiddenToken)}`;

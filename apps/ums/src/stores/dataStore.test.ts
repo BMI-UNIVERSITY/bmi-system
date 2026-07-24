@@ -1,6 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Data Store Tests
  */
@@ -25,7 +22,6 @@ vi.mock("../services/financeService", () => ({
   createTransaction: vi.fn(),
 }));
 
-import { getStudents } from "../services/studentService";
 
 describe("useDataStore", () => {
   beforeEach(() => {

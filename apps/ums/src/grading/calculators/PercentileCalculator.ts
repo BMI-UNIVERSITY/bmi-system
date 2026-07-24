@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Percentile Calculator
  * Calculates percentile rankings for students
@@ -79,7 +77,7 @@ export function calculatePercentilesWithTies(
  */
 export function updatePercentiles(
   grades: Grade[],
-  updatedGradeId: string
+//   updatedGradeId: string
 ): Map<string, number> {
   // Recalculate all percentiles
   return calculatePercentilesWithTies(grades);

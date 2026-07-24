@@ -3,9 +3,11 @@ import Stripe from 'stripe';
 
 export class StripeAdapter implements IPaymentProvider {
   private stripe: Stripe;
+  private webhookSecret?: string;
 
-  constructor(secretKey: string) {
+  constructor(secretKey: string, webhookSecret?: string) {
     this.stripe = new Stripe(secretKey, { apiVersion: '2023-10-16' });
+    this.webhookSecret = webhookSecret;
   }
 
   async createPaymentIntent(input: CreatePaymentIntentInput): Promise<PaymentIntent> {
@@ -50,10 +52,23 @@ export class StripeAdapter implements IPaymentProvider {
     };
   }
 
-  async handleWebhook(payload: any, signature: string): Promise<PaymentIntent> {
-    // This is a simplified webhook handler.
-    // Real implementation requires verifying the stripe signature against the raw body.
-    const intent = payload.data.object as Stripe.PaymentIntent;
+  async handleWebhook(payload: string, signature: string): Promise<PaymentIntent> {
+    if (!this.webhookSecret) {
+      throw new Error('STRIPE_WEBHOOK_SECRET is not configured');
+    }
+
+    let event: Stripe.Event;
+    try {
+      event = this.stripe.webhooks.constructEvent(payload, signature, this.webhookSecret);
+    } catch (err) {
+      throw new Error(`Webhook signature verification failed: ${err instanceof Error ? err.message : 'unknown error'}`);
+    }
+
+    if (event.type !== 'payment_intent.succeeded' && event.type !== 'payment_intent.payment_failed') {
+      throw new Error(`Unhandled event type: ${event.type}`);
+    }
+
+    const intent = event.data.object as Stripe.PaymentIntent;
     return {
       id: intent.id,
       amount: intent.amount / 100,

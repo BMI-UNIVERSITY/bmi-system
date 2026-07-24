@@ -1,15 +1,13 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useMemo, useEffect } from "react";
 import {
-  Users,
+  
   Search,
   Plus,
   Trash2,
   Edit,
   Mail,
   Phone,
-  Download,
+  
   GraduationCap,
   LayoutGrid,
   List,
@@ -24,7 +22,6 @@ import ImportModal from "./ImportModal";
 import {
   deleteStudent as deleteStudentAPI,
   getStudents,
-  type StudentFilters,
 } from "../services/studentService";
 import { getPrograms } from "../services/catalogService";
 import { BulkEntryModal } from "./BulkEntryModal";
@@ -52,16 +49,14 @@ const Students: React.FC<StudentsProps> = (props) => {
   const { t } = useTranslation();
   const storeStudents = useDataStore((s) => s.students);
   const storeSetStudents = useDataStore((s) => s.setStudents);
-  const storeCourses = useDataStore((s) => s.courses);
 
   const students = props.students ?? storeStudents;
-  const courses = props.courses ?? storeCourses;
 
   // Custom setter that supports both React.SetStateAction and simple array
   const setStudents = (action: React.SetStateAction<Student[]>) => {
     if (props.setStudents) {
       // If parent provided setter, use it directly
-      (props.setStudents as any)(action);
+      (props.setStudents as React.Dispatch<React.SetStateAction<Student[]>>)(action);
     } else {
       // Otherwise use store setter
       if (typeof action === "function") {
@@ -74,12 +69,6 @@ const Students: React.FC<StudentsProps> = (props) => {
     }
   };
 
-  const setCourses = (action: React.SetStateAction<Course[]>) => {
-    if (props.setCourses) {
-      props.setCourses(action);
-    }
-    // Note: storeSetCourses could be added here if needed, but not heavily used
-  };
   const [viewMode, setViewMode] = useState<"grid" | "table">("table");
   const [searchTerm, setSearchTerm] = useState("");
   const [programFilter, setProgramFilter] = useState("All Programs");
@@ -87,7 +76,7 @@ const Students: React.FC<StudentsProps> = (props) => {
     Array<{ id: string; label: string }>
   >([]);
   const [campusFilter, setCampusFilter] = useState("All Study Centers");
-  const [campuses, setCampuses] = useState<StudyCenter[]>([]);
+  const [, setCampuses] = useState<StudyCenter[]>([]);
   const [bulkStudentsOpen, setBulkStudentsOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [academicLevelFilter, setAcademicLevelFilter] = useState("All Levels");
@@ -104,9 +93,9 @@ const Students: React.FC<StudentsProps> = (props) => {
   // ── Server-side filtered+paginated fetch ──────────────────────────────────
   const {
     data: studentResponse,
-    isLoading,
+    
     isFetching,
-    refetch,
+    
   } = useStudentsQuery({
     page,
     perPage,
@@ -146,7 +135,7 @@ const Students: React.FC<StudentsProps> = (props) => {
       const r = await getPrograms();
       if (cancelled || !r.success || !r.data) return;
       setProgramRows(
-        r.data.map((p: Record<string, unknown>) => ({
+        r.data.map((p: any) => ({
           id: String(p.id),
           label: `${String(p.program_code ?? "")} — ${String(p.name ?? "")}`,
         })),
@@ -163,7 +152,8 @@ const Students: React.FC<StudentsProps> = (props) => {
       try {
         const data = await getAllStudyCenters();
         if (!cancelled) setCampuses(data);
-      } catch (error) { console.error("Failed to load study centers:", error);
+      } catch (error) { // eslint-disable-next-line no-console
+        console.error("Failed to load study centers:", error);
        }
     }
     loadStudyCenters();
@@ -258,7 +248,8 @@ const Students: React.FC<StudentsProps> = (props) => {
         } else {
           alert(result.error || "Failed to delete student. Please try again.");
         }
-      } catch (error) { console.error("Error deleting student:", error);
+      } catch (error) { // eslint-disable-next-line no-console
+        console.error("Error deleting student:", error);
         alert("An unexpected error occurred while deleting the student.");
        }
     }
@@ -276,7 +267,7 @@ const Students: React.FC<StudentsProps> = (props) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-BMI-Webhook-Token": "default_test_secret", // Should be from env in production
+          "X-BMI-Webhook-Token": import.meta.env.VITE_WEBHOOK_SECRET || "",
         },
         body: JSON.stringify({
           spreadsheetId: "1Y0oxI5QUpncZ9m5T48czz4F-vi04vTEWSZVz-PW_mzg",
@@ -300,7 +291,9 @@ const Students: React.FC<StudentsProps> = (props) => {
       } else {
         alert("Sync failed: " + data.error);
       }
-    } catch (error) { alert("Sync failed. Check console for details.");
+    } catch (error) {
+      alert("Sync failed. Check console for details.");
+      // eslint-disable-next-line no-console
       console.error(error);
      } finally {
       setIsSyncing(false);
@@ -333,17 +326,17 @@ const Students: React.FC<StudentsProps> = (props) => {
     }
   };
 
-  const handleImportStudents = (
-    newStudents: Student[],
-    newCourses: Partial<Course>[],
-  ) => {
-    setStudents((prev) => [...newStudents, ...prev]);
-    if (setCourses && newCourses.length > 0) {
-      setCourses((prev) => [...(newCourses as Course[]), ...prev]);
-    }
-    // Refresh the view
-    queryClient.invalidateQueries({ queryKey: ["students"] });
-  };
+// //   const _handleImportStudents = (
+// //     newStudents: Student[],
+// //     newCourses: Partial<Course>[],
+// //   ) => {
+// //     setStudents((prev) => [...newStudents, ...prev]);
+// //     if (setCourses && newCourses.length > 0) {
+// //       setCourses((prev) => [...(newCourses as Course[]), ...prev]);
+// //     }
+// //     // Refresh the view
+// //     queryClient.invalidateQueries({ queryKey: ["students"] });
+// //   };
 
   return (
     <div className="h-full flex flex-col animate-fade-in relative">
@@ -795,7 +788,7 @@ const Students: React.FC<StudentsProps> = (props) => {
         onSubmit={async (lines) => {
           try {
             const items = lines.map(
-              (l) => JSON.parse(l) as Record<string, unknown>,
+              (l) => JSON.parse(l) as any,
             );
             const r = await postStudentBatch(items);
             const list = await getStudents({ page: 1, perPage: 50 });
@@ -804,7 +797,7 @@ const Students: React.FC<StudentsProps> = (props) => {
               ok: (r.data?.failureCount ?? 0) === 0,
               message: `Created: ${r.data?.successCount ?? 0}, failed: ${r.data?.failureCount ?? 0}.`,
             };
-          } catch (error) {
+          } catch {
             return { ok: false, message: "Invalid JSON on one or more lines." };
           }
         }}

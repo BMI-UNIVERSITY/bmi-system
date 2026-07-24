@@ -1,12 +1,10 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useMemo, useEffect } from "react";
 import {
   FileSpreadsheet,
   Calendar,
   Clock,
   GraduationCap,
-  CheckCircle,
+  
   AlertTriangle,
   Search,
   Plus,
@@ -14,7 +12,7 @@ import {
   ChevronRight,
   Printer,
   Download,
-  Filter,
+  
   FileText,
   ShieldCheck,
   UserCheck,
@@ -24,7 +22,6 @@ import {
   ClipboardList,
 } from "lucide-react";
 import { PROGRAMS } from "@bmi/shared";
-import { Student, Course } from "../types";
 import ImportModal from "./ImportModal";
 import GradeEntryModal, { GradeFormData } from "./grading/GradeEntryModal";
 import { GradingScaleType } from "../grading/types";
@@ -94,7 +91,7 @@ const Exams: React.FC = () => {
         } else {
           setSavedGrades([]);
         }
-      } catch (error) { setSavedGrades([]);
+      } catch { setSavedGrades([]);
       } finally {
         setIsLoadingGrades(false);
       }
@@ -160,7 +157,8 @@ const Exams: React.FC = () => {
 
       setIsAddGradeOpen(false);
       setEditingGrade(null);
-    } catch (error) { console.error("Error saving grade:", error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error("Error saving grade:", error);
       alert("An error occurred while saving the grade.");
      } finally {
       setIsSavingGrade(false);
@@ -288,8 +286,8 @@ const Exams: React.FC = () => {
 
   const calculateGradeDetails = (midterm: number, final: number) => {
     const total = Math.round((midterm + final) / 2);
-    let grade = "F";
-    let gpa = 0.0;
+    let grade: string;
+    let gpa: number;
 
     if (total >= 90) {
       grade = "A";
@@ -329,7 +327,7 @@ const Exams: React.FC = () => {
     });
 
     // Imported exams are obsolete since they are saved directly to DB now
-    const fromImport: GradeRecord[] = [];
+//     const _fromImport: GradeRecord[] = [];
 
     // Convert saved database grades to grade records
     const fromDatabase: GradeRecord[] = savedGrades.map((grade) => {

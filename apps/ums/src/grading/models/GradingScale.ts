@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - GradingScale Domain Model
  * Implements grading scale configurations for US 4.0, ECTS, Percentage, and Custom scales

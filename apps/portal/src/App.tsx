@@ -1,4 +1,5 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
+
 import { AuthProvider } from './hooks/useAuth';
 import ProtectedRoute from './components/ProtectedRoute';
 import Navbar from './components/Navbar';
@@ -27,129 +28,141 @@ import AlumniDashboard from './pages/alumni/AlumniDashboard';
 
 import { SessionWarning } from './components/SessionWarning';
 
+import { ErrorBoundary } from './components/ErrorBoundary';
 export default function App() {
   return (
-    <AuthProvider>
-      <SessionWarning />
-      <Navbar />
-      <Routes>
-        <Route path="/" element={<Landing />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/verify" element={<VerifyEmail />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />
-        <Route path="/reset-password" element={<ResetPassword />} />
-        <Route
-          path="/mfa/setup"
-          element={
-            <ProtectedRoute>
-              <MfaSetup />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="/recommend/:token" element={<Recommend />} />
-        <Route
-          path="/apply"
-          element={
-            <ProtectedRoute roles={['applicant', 'student', 'staff', 'admin']}>
-              <Apply />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/status"
-          element={
-            <ProtectedRoute>
-              <Status />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/settings"
-          element={
-            <ProtectedRoute>
-              <Settings />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/student/dashboard"
-          element={
-            <ProtectedRoute roles={['student']}>
-              <Dashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/student/documents"
-          element={
-            <ProtectedRoute roles={['student']}>
-              <Documents />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/student/academics"
-          element={
-            <ProtectedRoute roles={['student']}>
-              <Academics />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/student/finances"
-          element={
-            <ProtectedRoute roles={['student']}>
-              <Finances />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/student/support"
-          element={
-            <ProtectedRoute roles={['student']}>
-              <Support />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/student/settings"
-          element={
-            <ProtectedRoute roles={['student']}>
-              <StudentSettings />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/claim"
-          element={<ClaimAccount />}
-        />
-        <Route
-          path="/registration"
-          element={
-            <ProtectedRoute roles={['student']}>
-              <RegistrationWizard />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/documents"
-          element={
-            <ProtectedRoute roles={['student', 'alumni']}>
-              <DocumentRequest />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/alumni"
-          element={
-            <ProtectedRoute roles={['alumni']}>
-              <AlumniDashboard />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <SessionWarning />
+        <Navbar />
+        <Routes>
+          <Route path="/" element={<Landing />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/verify" element={<VerifyEmail />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route
+            path="/mfa/setup"
+            element={
+              <ProtectedRoute>
+                <MfaSetup />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="/recommend/:token" element={<Recommend />} />
+          <Route
+            path="/apply"
+            element={
+              <ProtectedRoute roles={['applicant', 'student', 'staff', 'admin']}>
+                <Apply />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/status"
+            element={
+              <ProtectedRoute>
+                <Status />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Settings />
+              </ProtectedRoute>
+            }
+          />
+          {/* /admin redirects admin/staff to the UMS system (separate app) */}
+          <Route
+            path="/admin"
+            element={
+              <ProtectedRoute roles={['admin', 'staff']}>
+                <Navigate to="/status" replace />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/dashboard"
+            element={
+              <ProtectedRoute roles={['student']}>
+                <Dashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/documents"
+            element={
+              <ProtectedRoute roles={['student']}>
+                <Documents />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/academics"
+            element={
+              <ProtectedRoute roles={['student']}>
+                <Academics />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/finances"
+            element={
+              <ProtectedRoute roles={['student']}>
+                <Finances />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/support"
+            element={
+              <ProtectedRoute roles={['student']}>
+                <Support />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/settings"
+            element={
+              <ProtectedRoute roles={['student']}>
+                <StudentSettings />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/claim"
+            element={<ClaimAccount />}
+          />
+          <Route
+            path="/registration"
+            element={
+              <ProtectedRoute roles={['student']}>
+                <RegistrationWizard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/documents"
+            element={
+              <ProtectedRoute roles={['student', 'alumni']}>
+                <DocumentRequest />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/alumni"
+            element={
+              <ProtectedRoute roles={['alumni']}>
+                <AlumniDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }

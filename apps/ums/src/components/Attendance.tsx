@@ -1,22 +1,19 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useMemo, useEffect } from "react";
 import {
   CheckCircle2,
   XCircle,
   Clock,
   Calendar,
-  Users,
+  
   BookOpen,
   Search,
   Save,
   Check,
   Loader2,
-  X,
-  History,
+  
+  
   Timer,
 } from "lucide-react";
-import { Student } from "../types";
 import { useStudentsQuery } from "../hooks/useEntityQueries";
 import { useApiDataStore } from "../stores/apiDataStore";
 
@@ -105,7 +102,7 @@ const Attendance: React.FC = () => {
         // Find matching student code or id in filtered list
         const s = students.find(stud => stud.reg_no === r.studentId || stud.id === r.studentId);
         if (s) {
-          state[s.id] = r.status.toLowerCase() as any;
+          state[s.id] = r.status.toLowerCase() as "present" | "absent" | "late";
         }
       });
       setAttendance(state);
@@ -135,7 +132,7 @@ const Attendance: React.FC = () => {
     
     const recordsPayload = filteredStudents.map((s) => {
       const rawStatus = attendance[s.id] || "absent";
-      const status = (rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1)) as any;
+      const status = (rawStatus.charAt(0).toUpperCase() + rawStatus.slice(1)) as "Present" | "Absent" | "Late";
       return {
         studentId: s.reg_no || s.id,
         studentName: `${s.first_name} ${s.last_name}`,
@@ -143,7 +140,7 @@ const Attendance: React.FC = () => {
       };
     });
 
-    let success = false;
+    let success: boolean;
     if (existingRecord) {
       const res = await updateAttendanceRecord(existingRecord.id, {
         courseId: selectedCourse,

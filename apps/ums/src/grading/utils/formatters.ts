@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Formatting Utilities
  * Format grades, GPAs, and other grading data for display

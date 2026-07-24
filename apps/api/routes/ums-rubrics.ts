@@ -9,7 +9,7 @@ interface CreateRubricBody {
   total_points?: number;
 }
 
-export async function handleListRubrics(request: Request, env: Env): Promise<Response> {
+export async function handleListRubrics(_request: Request, env: Env): Promise<Response> {
   try {
     const rows = await env.PLATFORM_CONTEXT!.db.prepare(
       `SELECT r.*, c.title as course_name 
@@ -60,7 +60,7 @@ export async function handleCreateRubric(request: Request, env: Env): Promise<Re
   }
 }
 
-export async function handleDeleteRubric(request: Request, env: Env, id: string): Promise<Response> {
+export async function handleDeleteRubric(_request: Request, env: Env, id: string): Promise<Response> {
   try {
     await env.PLATFORM_CONTEXT!.db.prepare(`DELETE FROM rubrics WHERE id = ?`).bind(id).run();
     return ok({ id });

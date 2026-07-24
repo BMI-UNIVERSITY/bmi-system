@@ -12,6 +12,7 @@
     "type-check": "tsc --noEmit",
     "secrets:set": "node scripts/set-secrets.mjs",
     "test": "vitest run --passWithNoTests",
+    "test:integration": "vitest run -c vitest.integration.config.ts",
     "lint": "eslint ."
   },
   "dependencies": {

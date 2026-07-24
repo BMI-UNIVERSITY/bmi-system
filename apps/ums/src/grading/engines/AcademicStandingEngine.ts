@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Academic Standing Engine
  * Determines student academic status based on GPA thresholds
@@ -217,7 +215,7 @@ export function calculateStandingPercentages(
   const distribution = calculateStandingDistribution(standings);
   const total = standings.length;
 
-  const percentages: Record<AcademicStanding, number> = {} as any;
+  const percentages = {} as Record<AcademicStanding, number>;
   for (const [standing, count] of Object.entries(distribution)) {
     percentages[standing as AcademicStanding] = (count / total) * 100;
   }

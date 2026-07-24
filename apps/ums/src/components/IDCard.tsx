@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI University Management System - Modern ID Card Component
  * Secure student identification card with elegant design
@@ -9,21 +7,21 @@
 import React, { useState, useMemo, useCallback } from "react";
 import {
   Search,
-  Printer,
+  
   Download,
-  ShieldCheck,
+  
   User,
   CreditCard,
-  Hash,
-  Calendar,
-  MapPin,
-  Phone,
-  Mail,
+  
+  
+  
+  
+  
   Sparkles,
-  QrCode,
+  
   Fingerprint,
-  BadgeCheck,
-  Contact,
+  
+  
   IdCardIcon,
 } from "lucide-react";
 import { Student } from "../types";
@@ -65,18 +63,18 @@ export const IDCard: React.FC<IDCardProps> = ({ students, logo }) => {
   >("modern");
 
   const getFirstName = (student: Student) =>
-    student.first_name || (student as any).firstName || "";
+    student.first_name || (student as unknown as Record<string, string>).firstName || "";
   const getLastName = (student: Student) =>
-    student.last_name || (student as any).lastName || "";
+    student.last_name || (student as unknown as Record<string, string>).lastName || "";
   const getProgram = (student: Student) =>
-    student.program_code || (student as any).program || "";
+    student.program_code || (student as unknown as Record<string, string>).program || "";
   const getFaculty = (student: Student) =>
-    (student as any).faculty || student.program_code;
+    (student as unknown as Record<string, string>).faculty || student.program_code;
   const getDepartment = (student: Student) =>
-    (student as any).department || student.program_code;
+    (student as unknown as Record<string, string>).department || student.program_code;
   const getStudentNumber = (student: Student) =>
-    (student as any).student_number ||
-    (student as any).studentNumber ||
+    (student as unknown as Record<string, string>).student_number ||
+    (student as unknown as Record<string, string>).studentNumber ||
     student.id;
 
 
@@ -139,7 +137,7 @@ export const IDCard: React.FC<IDCardProps> = ({ students, logo }) => {
       const card = await documentService.createDocument<StudentIDCardType>(
         "id_card",
         student.id,
-        cardDataTyped as any,
+        cardDataTyped as unknown as Parameters<typeof documentService.createDocument<StudentIDCardType>>[2],
         {
           createdBy: "admin",
         },
@@ -158,7 +156,8 @@ export const IDCard: React.FC<IDCardProps> = ({ students, logo }) => {
       setGeneratedCard(card);
       setSecurityFeatures(security);
       setShowCard(true);
-    } catch (error) { console.error("ID Card generation failed:", error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error("ID Card generation failed:", error);
      } finally {
       setIsGenerating(false);
     }
@@ -181,7 +180,8 @@ export const IDCard: React.FC<IDCardProps> = ({ students, logo }) => {
       };
 
       await html2pdf().set(opt).from(element).save();
-    } catch (error) { console.error("PDF generation failed:", error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error("PDF generation failed:", error);
      }
   };
 
@@ -310,7 +310,7 @@ export const IDCard: React.FC<IDCardProps> = ({ students, logo }) => {
                   ].map((d) => (
                     <button
                       key={d.id}
-                      onClick={() => setActiveDesign(d.id as any)}
+                      onClick={() => setActiveDesign(d.id as "modern" | "classic" | "minimal")}
                       className={`p-3 rounded-xl border-2 transition-all ${activeDesign === d.id ? "border-violet-500 bg-violet-50" : "border-slate-100 hover:border-slate-200"}`}
                     >
                       <div

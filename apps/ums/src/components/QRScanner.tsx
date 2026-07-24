@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS — Real QR Code Scanner
  *
@@ -73,7 +71,7 @@ const QRScanner: React.FC<QRScannerProps> = ({ onScan, onClose, isOpen }) => {
         await videoRef.current.play();
         setScanning(true);
       }
-    } catch (error) { setHasPermission(false);
+    } catch { setHasPermission(false);
       setError("Camera access denied. Please allow camera access and try again.");
     }
   }, [facingMode, stopCamera]);

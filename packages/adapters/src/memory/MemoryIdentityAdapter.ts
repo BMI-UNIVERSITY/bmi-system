@@ -56,7 +56,7 @@ export class MemoryIdentityAdapter implements IIdentityProvider {
     return { type, secret, qrCodeUrl: `https://example.com/qr?secret=${secret}` };
   }
 
-  async verifyMfa(userId: string, code: string): Promise<boolean> {
+  async verifyMfa(_userId: string, code: string): Promise<boolean> {
     return code === '123456';
   }
 

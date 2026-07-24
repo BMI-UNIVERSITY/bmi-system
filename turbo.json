@@ -6,6 +6,11 @@
       "outputs": ["dist/**", ".next/**", "out/**", ".turbo/**"],
       "cache": true
     },
+    "dev": {
+      "dependsOn": ["^build"],
+      "cache": false,
+      "persistent": true
+    },
     "type-check": {
       "dependsOn": ["^build"],
       "cache": true

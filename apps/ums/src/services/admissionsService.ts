@@ -1,4 +1,3 @@
-/* eslint-disable */
 /**
  * BMI UMS - Admissions Service
  * Handles application lifecycle management for admins

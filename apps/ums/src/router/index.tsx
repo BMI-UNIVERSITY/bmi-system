@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - React Router Configuration
  * Replaces the switch/case ViewRenderer with proper URL-based routing.

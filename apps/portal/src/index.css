@@ -24,6 +24,10 @@
   --warning: #f59e0b;
   --danger: #ef4444;
   --info: #3b82f6;
+  /* Alias tokens used by student/* pages */
+  --primary: #d4af37;      /* maps to --gold */
+  --primary-dark: #b8952e; /* maps to --gold-dark */
+  --surface: #ffffff;      /* maps to --bg-card */
   --radius: 12px;
   --radius-sm: 8px;
   --radius-lg: 20px;
@@ -100,6 +104,11 @@ input, select, textarea, button { font-family: inherit; }
 .btn-danger { background: var(--danger); color: white; }
 .btn-sm { padding: 0.5rem 1rem; font-size: 0.85rem; }
 .btn-full { width: 100%; justify-content: center; }
+/* Alias button variants used in student pages */
+.btn-primary { background: var(--gold); color: var(--navy); }
+.btn-primary:hover:not(:disabled) { background: var(--gold-light); transform: translateY(-1px); box-shadow: 0 4px 12px rgba(212, 175, 55, 0.4); }
+.btn-secondary { background: var(--bg); color: var(--navy); border: 2px solid var(--border); }
+.btn-secondary:hover:not(:disabled) { border-color: var(--navy); }
 
 /* ─── Form Elements ─── */
 .form-group { display: flex; flex-direction: column; gap: 0.5rem; }

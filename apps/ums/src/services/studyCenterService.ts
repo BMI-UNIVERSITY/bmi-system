@@ -1,6 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
-/* eslint-disable */
 // Study Center Service
 import { authFetch } from './authService';
 import { API_URL } from './config';
@@ -90,12 +87,14 @@ export async function getStudyCenterStats(id: string): Promise<StudyCenterStats 
 export async function getStudyCenterStudents(
   id: string,
   params?: { page?: number; perPage?: number }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<{ data: any[]; meta: { page: number; perPage: number; total: number } }> {
   const query = new URLSearchParams();
   if (params?.page) query.append('page', params.page.toString());
   if (params?.perPage) query.append('perPage', params.perPage.toString());
 
   const response = await authFetch(`${API_URL}/study-centers/${id}/students${query.toString() ? `?${query.toString()}` : ''}`);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data = await parseJsonSafe<StudyCenterResponse<any[]>>(response);
   
   return {
@@ -110,12 +109,14 @@ export async function getStudyCenterStudents(
 export async function getStudyCenterStaff(
   id: string,
   params?: { page?: number; perPage?: number }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<{ data: any[]; meta: { page: number; perPage: number; total: number } }> {
   const query = new URLSearchParams();
   if (params?.page) query.append('page', params.page.toString());
   if (params?.perPage) query.append('perPage', params.perPage.toString());
 
   const response = await authFetch(`${API_URL}/study-centers/${id}/staff${query.toString() ? `?${query.toString()}` : ''}`);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data = await parseJsonSafe<StudyCenterResponse<any[]>>(response);
   
   return {
@@ -130,12 +131,14 @@ export async function getStudyCenterStaff(
 export async function getStudyCenterCourses(
   id: string,
   params?: { page?: number; perPage?: number }
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<{ data: any[]; meta: { page: number; perPage: number; total: number } }> {
   const query = new URLSearchParams();
   if (params?.page) query.append('page', params.page.toString());
   if (params?.perPage) query.append('perPage', params.perPage.toString());
 
   const response = await authFetch(`${API_URL}/study-centers/${id}/courses${query.toString() ? `?${query.toString()}` : ''}`);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const data = await parseJsonSafe<StudyCenterResponse<any[]>>(response);
   
   return {

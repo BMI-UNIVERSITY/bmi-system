@@ -78,7 +78,7 @@ export async function handleRequestRecommendation(request: Request, env: Env, ap
   return ok({ id: reqId, status: 'requested' });
 }
 
-export async function handleGetRecommendationInfo(request: Request, env: Env, token: string): Promise<Response> {
+export async function handleGetRecommendationInfo(_request: Request, env: Env, token: string): Promise<Response> {
   const req = await env.PLATFORM_CONTEXT!.db.prepare(`
     SELECT r.id, r.referee_name, r.status, r.requested_at,
            u.first_name, u.last_name, a.program
@@ -173,7 +173,7 @@ export async function handleUploadRecommendation(request: Request, env: Env, tok
   return ok({ success: true });
 }
 
-export async function handleListRecommendations(request: Request, env: Env, applicationId: string, userId: string): Promise<Response> {
+export async function handleListRecommendations(_request: Request, env: Env, applicationId: string, userId: string): Promise<Response> {
   const app = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id FROM applications WHERE id = ? AND user_id = ?')
     .bind(applicationId, userId).first();
 

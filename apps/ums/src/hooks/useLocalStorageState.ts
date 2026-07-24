@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import { useEffect, useState, type Dispatch, type SetStateAction } from 'react';
 
 function safeReadLocalStorage(key: string): unknown | undefined {
@@ -8,7 +6,7 @@ function safeReadLocalStorage(key: string): unknown | undefined {
     const raw = window.localStorage.getItem(key);
     if (!raw) return undefined;
     return JSON.parse(raw);
-  } catch (error) {
+  } catch {
     return undefined;
   }
 }
@@ -26,7 +24,7 @@ export function useLocalStorageState<T>(
   useEffect(() => {
     try {
       window.localStorage.setItem(key, JSON.stringify(state));
-    } catch (error) {
+    } catch {
       // Ignore write errors (e.g., quota exceeded)
     }
   }, [key, state]);

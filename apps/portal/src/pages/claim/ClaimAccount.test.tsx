@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import ClaimAccount from './ClaimAccount';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import React from 'react';
+
 
 import { api } from '../../lib/api';
 

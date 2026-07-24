@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Save, FileText, ChevronRight } from 'lucide-react';
 import { authFetch } from '../../services/authService';
@@ -37,7 +35,8 @@ const RubricBuilder: React.FC = () => {
         const data = await res.json();
         if (data.success) setRubrics(data.data);
       }
-    } catch (error) { console.error(error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error(error);
      }
   };
 
@@ -68,7 +67,8 @@ const RubricBuilder: React.FC = () => {
         setActiveRubric(null);
         loadRubrics();
       }
-    } catch (error) { console.error(error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error(error);
      } finally {
       setIsLoading(false);
     }

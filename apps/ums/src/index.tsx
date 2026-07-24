@@ -1,4 +1,3 @@
-/* eslint-disable */
 import React from 'react';
 import * as Sentry from '@sentry/react';
 
@@ -136,6 +135,7 @@ const queryClient = new QueryClient({
 const rootElement = document.getElementById('root');
 
 if (!rootElement) {
+  // eslint-disable-next-line no-console
   console.error("CRITICAL ERROR: Institutional mounting node 'root' not found in DOM registry.");
   throw new Error("BMI System initialization failed.");
 }
@@ -153,6 +153,7 @@ const removePreloader = () => {
 };
 
 // Institutional Metadata Console Log
+// eslint-disable-next-line no-console
 console.log(
   "%c BMI UNIVERSITY ERP %c v3.0.0 %c Router + Zustand + Accessibility ",
   "background:#4B0082; color:#FFD700; font-weight:bold; padding:4px 8px; border-radius:4px 0 0 4px;",

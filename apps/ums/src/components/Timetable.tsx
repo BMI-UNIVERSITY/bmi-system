@@ -1,7 +1,5 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useEffect, useState } from 'react';
-import { Calendar, Clock, MapPin, User, BookOpen, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { MapPin, User, Plus } from 'lucide-react';
 import { authFetch } from '../services/authService';
 import { API_URL } from '../services/config';
 
@@ -22,7 +20,7 @@ const HOURS = Array.from({ length: 12 }, (_, i) => `${i + 8}:00`);
 
 const Timetable: React.FC = () => {
   const [schedules, setSchedules] = useState<Schedule[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [, setIsLoading] = useState(true);
 
   useEffect(() => {
     const load = async () => {
@@ -32,7 +30,8 @@ const Timetable: React.FC = () => {
           const data = await res.json();
           if (data.success) setSchedules(data.data);
         }
-      } catch (error) { console.error(error);
+      } catch (error) { // eslint-disable-next-line no-console
+        console.error(error);
        } finally {
         setIsLoading(false);
       }

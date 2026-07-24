@@ -1,13 +1,11 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Grade Appeal Review Component
  * Allows instructors to review and respond to grade appeals
  */
 
 import React, { useState, useEffect } from 'react';
-import { X, CheckCircle, XCircle, Clock, FileText, User, Calendar } from 'lucide-react';
-import { GradeAppeal, AppealStatus, Grade } from '../../grading/types';
+import { X, CheckCircle, XCircle, FileText, Calendar } from 'lucide-react';
+import { GradeAppeal, AppealStatus } from '../../grading/types';
 
 interface GradeAppealReviewProps {
   isOpen: boolean;
@@ -63,7 +61,8 @@ const GradeAppealReview: React.FC<GradeAppealReviewProps> = ({
       setReviewNotes('');
       setRevisedGrade('');
       // Refresh appeals list
-    } catch (error) { console.error('Failed to approve appeal:', error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error('Failed to approve appeal:', error);
      } finally {
       setIsProcessing(false);
     }
@@ -81,7 +80,8 @@ const GradeAppealReview: React.FC<GradeAppealReviewProps> = ({
       setSelectedAppeal(null);
       setReviewNotes('');
       // Refresh appeals list
-    } catch (error) { console.error('Failed to deny appeal:', error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error('Failed to deny appeal:', error);
      } finally {
       setIsProcessing(false);
     }

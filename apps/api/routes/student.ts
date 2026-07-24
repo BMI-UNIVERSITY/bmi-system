@@ -5,7 +5,7 @@ import { error, ok, typedJson } from '../lib/types';
 import type { Env } from '../lib/types';
 import { percentageToGrade } from '@bmi/shared';
 
-export async function handleGetDashboard(request: Request, env: Env, userId: string): Promise<Response> {
+export async function handleGetDashboard(_request: Request, env: Env, userId: string): Promise<Response> {
   const { results: invoices } = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT id, amount, due_date, status FROM invoices WHERE student_id = ? ORDER BY due_date DESC'
   ).bind(userId).all();
@@ -95,7 +95,7 @@ export async function handleEnroll(request: Request, env: Env, userId: string): 
   }
 }
 
-export async function handleGetFinances(request: Request, env: Env, userId: string): Promise<Response> {
+export async function handleGetFinances(_request: Request, env: Env, userId: string): Promise<Response> {
   const { results: invoices } = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT id, amount, due_date, status, created_at FROM invoices WHERE student_id = ? ORDER BY due_date DESC'
   ).bind(userId).all();
@@ -108,7 +108,7 @@ export async function handleGetFinances(request: Request, env: Env, userId: stri
   });
 }
 
-export async function handlePayInvoice(request: Request, env: Env, userId: string, invoiceId: string): Promise<Response> {
+export async function handlePayInvoice(_request: Request, env: Env, userId: string, invoiceId: string): Promise<Response> {
   const invoice = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id, amount, status FROM invoices WHERE id = ? AND student_id = ?').bind(invoiceId, userId).first();
   if (!invoice) return error('Invoice not found', 404);
   if (invoice.status === 'paid') return error('Invoice is already paid', 400);
@@ -140,7 +140,7 @@ export async function handlePayInvoice(request: Request, env: Env, userId: strin
   }
 }
 
-export async function handleDropCourse(request: Request, env: Env, userId: string, courseId: string): Promise<Response> {
+export async function handleDropCourse(_request: Request, env: Env, userId: string, courseId: string): Promise<Response> {
   const result = await env.PLATFORM_CONTEXT!.db.prepare(
     'UPDATE enrollments SET status = "dropped" WHERE course_id = ? AND student_id = ? AND status = "enrolled"'
   ).bind(courseId, userId).run();
@@ -151,7 +151,7 @@ export async function handleDropCourse(request: Request, env: Env, userId: strin
   return ok({ success: true, message: 'Course dropped successfully' });
 }
 
-export async function handleGetTranscript(request: Request, env: Env, userId: string): Promise<Response> {
+export async function handleGetTranscript(_request: Request, env: Env, userId: string): Promise<Response> {
   const { results: classes } = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT c.code, c.title, c.credits, c.term, e.id as enrollment_id, e.status,
             (SELECT AVG(g.score * 100.0 / NULLIF(g.max_score, 0))
@@ -182,7 +182,7 @@ export async function handleGetTranscript(request: Request, env: Env, userId: st
   return ok({ classes: withGrades, gpa });
 }
 
-export async function handleGetSettings(request: Request, env: Env, userId: string): Promise<Response> {
+export async function handleGetSettings(_request: Request, env: Env, userId: string): Promise<Response> {
   let settings = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT directory_release, communications_opt_in FROM student_settings WHERE student_id = ?'
   ).bind(userId).first();
@@ -218,7 +218,7 @@ export async function handleUpdateSettings(request: Request, env: Env, userId: s
   return ok({ success: true, message: 'Settings updated' });
 }
 
-export async function handleGetTickets(request: Request, env: Env, userId: string): Promise<Response> {
+export async function handleGetTickets(_request: Request, env: Env, userId: string): Promise<Response> {
   const { results: tickets } = await env.PLATFORM_CONTEXT!.db.prepare(
     'SELECT id, subject, status, created_at FROM support_tickets WHERE student_id = ? ORDER BY created_at DESC'
   ).bind(userId).all();

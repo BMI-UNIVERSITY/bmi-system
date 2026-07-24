@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI University Management System - Document Components Index
  * Centralized exports for all document-related components

@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useEffect } from 'react';
 import { 
   Activity, 
@@ -44,7 +42,7 @@ const SystemHealth: React.FC = () => {
       } else {
         setError(result.error || 'Failed to fetch diagnostics');
       }
-    } catch (error) { 
+    } catch { 
       setError('Network error fetching diagnostics');
     } finally {
       setLoading(false);

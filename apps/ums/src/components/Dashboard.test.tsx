@@ -1,15 +1,14 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * Dashboard — smoke tests
  */
-import React from 'react';
+import 'react';
 import { render, screen } from '@testing-library/react';
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 
 // ── Store mocks ───────────────────────────────────────────────────────────────
 vi.mock('../stores/authStore', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   useAuthStore: vi.fn((selector: any) =>
     selector({ user: { name: 'Test User', role: 'admin' } }),
   ),
@@ -23,6 +22,7 @@ vi.mock('../services/authService', () => ({
 }));
 
 vi.mock('../stores/dataStore', () => ({
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   useDataStore: vi.fn((selector: any) =>
     selector({
       addStudent: vi.fn(),

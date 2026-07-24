@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Authentication Service
  * Handles login/logout and token management using pro best practices:
@@ -83,10 +81,11 @@ export async function login(email: string, password: string, rememberMe: boolean
       };
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     let data: any;
     try {
       data = JSON.parse(text);
-    } catch (error) {
+    } catch {
       return {
         success: false,
         error: 'Invalid server response. Please try again.',
@@ -94,7 +93,6 @@ export async function login(email: string, password: string, rememberMe: boolean
     }
 
     if (data.success) {
-      // Handle MFA case
       if (data.requires_mfa || data.data?.requires_mfa) {
         return {
           success: true,
@@ -120,6 +118,7 @@ export async function login(email: string, password: string, rememberMe: boolean
         role: apiUser.role,
         isActive: true,
       };
+      // eslint-disable-next-line no-console
       console.log('[authService] Login success - User object:', user);
       localStorage.setItem(USER_KEY, JSON.stringify(user));
       localStorage.setItem(REMEMBER_KEY, JSON.stringify(rememberMe));
@@ -127,6 +126,7 @@ export async function login(email: string, password: string, rememberMe: boolean
       localStorage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString());
       _memoryToken = data.data?.csrf_token || data.csrf_token; // Store CSRF token in memory
 
+      // eslint-disable-next-line no-console
       console.log('[authService] Returning success with user role:', user.role);
       return {
         success: true,
@@ -141,8 +141,6 @@ export async function login(email: string, password: string, rememberMe: boolean
         error: data.error || 'Login failed',
       };
     }
-
-    return data;
   } catch (error) {
     // Distinguish between network errors and other errors
     if (error instanceof TypeError && error.message.includes('fetch')) {
@@ -173,6 +171,7 @@ export async function logout(): Promise<void> {
   try {
     await fetchWithTimeout(`${API_URL.replace('/v1', '')}/auth/logout`, { method: 'DELETE' }, 3000);
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Logout request failed:', error);
   } finally {
     // Clear memory token
@@ -236,7 +235,7 @@ export function getCurrentUser(): User | null {
   if (!userJson) return null;
   try {
     return JSON.parse(userJson) as User;
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -249,10 +248,28 @@ export function isAuthenticated(): boolean {
 }
 
 /**
- * Refresh the access token (not used with cookie auth)
+ * Refresh the access token by re-validating the existing HttpOnly cookie.
+ * The BMI API uses cookie-based auth, so we simply re-hit /auth/me to get
+ * a fresh CSRF token.  If the cookie has expired, the request will 401 and
+ * we return null so the caller can redirect to login.
  */
 export async function refreshAccessToken(): Promise<string | null> {
-  return null;
+  try {
+    const response = await fetchWithTimeout(
+      `${API_URL.replace('/v1', '')}/auth/me`,
+      { method: 'GET' },
+      5000,
+    );
+    if (!response.ok) return null;
+    const data = await response.json();
+    if (data.success && data.data?.csrf_token) {
+      _memoryToken = data.data.csrf_token;
+      return _memoryToken;
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 /**
@@ -300,7 +317,7 @@ export async function authFetch(url: string, options: RequestInit = {}, timeoutM
   } catch (error) {
     clearTimeout(timeoutId);
     if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error('Request timeout - server not responding');
+      throw new Error('Request timeout - server not responding', { cause: error });
     }
     throw error;
   }
@@ -328,7 +345,7 @@ async function fetchWithTimeout(
   } catch (error) {
     clearTimeout(timeoutId);
     if (error instanceof Error && error.name === 'AbortError') {
-      throw new Error('Request timeout - server not responding');
+      throw new Error('Request timeout - server not responding', { cause: error });
     }
     throw error;
   }
@@ -357,12 +374,14 @@ export async function verifySession(): Promise<boolean> {
         role: apiUser.role,
         isActive: true,
       };
+      // eslint-disable-next-line no-console
       console.log('[authService] Session verified - User object:', user);
       localStorage.setItem(USER_KEY, JSON.stringify(user));
       return true;
     }
     return false;
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.warn('Session verification failed:', error);
     return false;
   }
@@ -384,7 +403,7 @@ export async function isBackendAvailable(): Promise<boolean> {
       2000
     );
     return response.ok;
-  } catch (error) {
+  } catch {
     return false;
   }
 }
@@ -495,7 +514,7 @@ export async function requestPasswordReset(email: string): Promise<AuthResponse>
 export async function resetPassword(
   token: string,
   password: string,
-  passwordConfirm: string
+//   passwordConfirm: string
 ): Promise<AuthResponse> {
   try {
     const response = await fetchWithTimeout(`${API_URL.replace('/v1', '')}/auth/reset-password`, {

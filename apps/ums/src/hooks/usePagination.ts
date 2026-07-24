@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * usePagination — lightweight hook that owns page state and produces
  * the query-string params needed to call a paginated API endpoint.

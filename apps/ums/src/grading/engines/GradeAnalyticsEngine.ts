@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Grade Analytics Engine
  * Generates statistical analysis and visualizations of grade distributions

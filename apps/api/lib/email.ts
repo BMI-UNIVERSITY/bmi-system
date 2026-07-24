@@ -15,22 +15,25 @@ export interface EmailPayload {
 export async function sendEmail(env: Env, payload: EmailPayload): Promise<boolean> {
   if (!env.RESEND_API_KEY) return false;
   
+  const logId = crypto.randomUUID();
+  const queuedPayload = { ...payload, logId };
+
   try {
-    // 1. Insert into email_logs as 'pending'
-    const logId = crypto.randomUUID();
-    await env.PLATFORM_CONTEXT!.db.prepare(
-      `INSERT INTO email_logs (id, to_address, subject, status) VALUES (?, ?, ?, 'pending')`
-    ).bind(logId, payload.to, payload.subject).run();
-
-    // 2. Enqueue the message for background processing
-    const queuedPayload = { ...payload, logId };
     await env.PLATFORM_CONTEXT!.queue.send(queuedPayload);
-
-    return true;
   } catch (err) {
     console.error('Failed to enqueue email:', err);
     return false;
   }
+
+  try {
+    await env.PLATFORM_CONTEXT!.db.prepare(
+      `INSERT INTO email_logs (id, to_address, subject, status) VALUES (?, ?, ?, 'queued')`
+    ).bind(logId, payload.to, payload.subject).run();
+  } catch (err) {
+    console.error('Failed to write email_log (email was queued):', err);
+  }
+
+  return true;
 }
 
 import type { PlatformContext } from '@bmi/bootstrap';

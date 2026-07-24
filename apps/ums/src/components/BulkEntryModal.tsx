@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState } from 'react';
 import { X } from 'lucide-react';
 

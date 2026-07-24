@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Retake Policy Domain Model
  * Handles retaken course logic and GPA calculations
@@ -103,7 +101,7 @@ export function applyRetakePolicy(
   const result: Grade[] = [];
 
   // Apply policy for each course
-  for (const [key, courseGrades] of courseMap) {
+  for (const [, courseGrades] of courseMap) {
     if (courseGrades.length === 1) {
       // No retakes, include the grade
       result.push(courseGrades[0]);
@@ -285,8 +283,7 @@ export function getTranscriptGrades(
 ): Grade[] {
   if (config.showAllAttemptsOnTranscript) {
     // Show all attempts, mark which one counts for GPA
-    const gradesForGPA = applyRetakePolicy(grades, config.policy);
-    const gpaGradeIds = new Set(gradesForGPA.map(g => g.id));
+    applyRetakePolicy(grades, config.policy);
 
     return grades.map(g => ({
       ...g,

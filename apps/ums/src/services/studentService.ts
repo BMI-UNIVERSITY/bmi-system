@@ -1,6 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Student Service
  * Handles all student-related API operations
@@ -36,6 +33,7 @@ export interface StudentFilters {
   program?: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 type StudentLike = Partial<Student> & Record<string, any>;
 
 function normalizeStudent(student: StudentLike): Student {
@@ -80,6 +78,7 @@ function normalizeStudent(student: StudentLike): Student {
   } as Student;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 function toStudentApiPayload(studentData: StudentLike): Record<string, any> {
   return {
     ...studentData,
@@ -229,9 +228,11 @@ export async function deleteStudent(id: string): Promise<StudentResponse> {
 /**
  * Get student statistics
  */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getStudentStats(): Promise<any> {
   try {
     const response = await authFetch(`${API_URL}/students/stats/overview`, {}, 5000);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const data = await parseJsonSafe<any>(response);
     return data ?? { success: false, error: 'Invalid API response from student stats endpoint' };
   } catch (error) { return {

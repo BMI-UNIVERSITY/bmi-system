@@ -4,6 +4,18 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="BMI University Application Portal — Apply, track your status, and manage your admissions journey." />
+    <!-- Content-Security-Policy: tightened to allow only known origins for scripts, styles, fonts -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' https://browser.sentry-cdn.com;
+      style-src 'self' 'unsafe-inline' https://fonts.googleapis.com;
+      font-src 'self' https://fonts.gstatic.com;
+      img-src 'self' data: blob: https:;
+      connect-src 'self' http://localhost:8787 https://bmi-api.bmiuniversity107.workers.dev https://*.sentry.io https://o*.ingest.sentry.io;
+      frame-ancestors 'none';
+      base-uri 'self';
+      form-action 'self';
+    " />
     <title>BMI University Portal</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />

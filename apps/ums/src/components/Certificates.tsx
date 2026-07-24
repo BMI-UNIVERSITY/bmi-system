@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useMemo } from "react";
 import {
   Search,
@@ -109,7 +107,7 @@ function formatDate(iso: string): string {
 }
 
 // ── BMI University Seal (the provided seal image) ────────────────────────────
-const BMI_SEAL = "/BMI.svg"; // fallback logo
+// const _BMI_SEAL = "/BMI.svg"; // fallback logo
 // We'll use the actual seal provided by the user as a CSS-rendered element
 
 // ── Micro-text security border ────────────────────────────────────────────────
@@ -202,8 +200,8 @@ const CertificateDocument: React.FC<CertDocProps> = ({
   const timestamp =
     new Date(cert.issue_date).toISOString().replace("T", " ").substring(0, 19) +
     "Z";
-  const verifyUrl =
-    qrData?.url || `${MARKETING_URL}/verify?id=${cert.serial_number}`;
+//   const _verifyUrl =
+  //     qrData?.url || `${MARKETING_URL}/verify?id=${cert.serial_number}`;
 
   const isLandscape = orientation === "landscape";
 
@@ -645,6 +643,7 @@ const Certificates: React.FC = () => {
 
       await html2pdf().set(opt).from(el).save();
     } catch (error: unknown) { 
+      // eslint-disable-next-line no-console
       console.error("PDF generation failed:", error);
       alert("PDF generation failed. Please try again.");
     }

@@ -62,7 +62,8 @@ const RESPONSE_TIME_THRESHOLDS = {
  */
 export async function executeWithMonitoring<T = unknown>(
   query: IPreparedStatement,
-  operation: string = 'unknown'
+  operation: string = 'unknown',
+  method: 'run' | 'all' = 'run'
 ): Promise<{ result: T; metrics: QueryMetrics }> {
   const startTime = performance.now();
   const timestamp = new Date().toISOString();
@@ -72,10 +73,17 @@ export async function executeWithMonitoring<T = unknown>(
   let rowsAffected: number | undefined;
 
   try {
-    type RunResult = { success: boolean; meta?: { changes?: number }; changes?: number };
-    const queryResult = await query.run() as unknown as RunResult;
-    result = queryResult as unknown as T;
-    rowsAffected = queryResult?.changes ?? queryResult?.meta?.changes;
+    if (method === 'all') {
+      type AllResult = { results: T[]; success: boolean; meta?: { changes?: number }; changes?: number };
+      const queryResult = await query.all() as unknown as AllResult;
+      result = queryResult as unknown as T;
+      rowsAffected = queryResult?.changes ?? queryResult?.meta?.changes;
+    } else {
+      type RunResult = { success: boolean; meta?: { changes?: number }; changes?: number };
+      const queryResult = await query.run() as unknown as RunResult;
+      result = queryResult as unknown as T;
+      rowsAffected = queryResult?.changes ?? queryResult?.meta?.changes;
+    }
   } catch (e) {
     success = false;
     error = e instanceof Error ? e.message : String(e);
@@ -210,7 +218,7 @@ export async function executeBatch(
     for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
       const chunk = chunks[chunkIndex];
       try {
-        await db.transaction(async (tx) => {
+        await db.transaction(async (_tx) => {
           for (const stmt of chunk) {
             await stmt.run();
           }

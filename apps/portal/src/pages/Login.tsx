@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { api } from '../lib/api';
+import { Button, Input, Card, CardContent } from '@bmi/ui';
 
 export default function Login() {
   const { setUser } = useAuth();
@@ -62,51 +63,70 @@ export default function Login() {
             {requiresMfa ? 'Enter your two-factor authentication code' : 'Sign in to your account'}
           </p>
         </div>
-        <div className="card">
-          {error && (
-            <div className="alert alert-danger" style={{ marginBottom: '1.5rem' }}>
-              {error}
-              {showResend && (
-                <> <Link to="/register" style={{ color: '#d4af37', fontWeight: 600 }}>Resend verification email</Link></>
-              )}
-            </div>
-          )}
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
-            {!requiresMfa ? (
-              <>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="login-email">Email Address</label>
-                  <input id="login-email" className="form-input" type="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="your@email.com" autoFocus />
-                </div>
-                <div className="form-group">
-                  <label className="form-label" htmlFor="login-password">Password</label>
-                  <input id="login-password" className="form-input" type="password" required value={password} onChange={e => setPassword(e.target.value)} placeholder="Your password" />
-                </div>
-                <div style={{ textAlign: 'right' }}>
-                  <Link to="/forgot-password" style={{ color: 'var(--gold)', fontSize: '0.9rem' }}>Forgot Password?</Link>
-                </div>
-              </>
-            ) : (
-              <div className="form-group">
-                <label className="form-label" htmlFor="mfa-token">6-Digit Code</label>
-                <input id="mfa-token" className="form-input" type="text" required value={mfaToken} onChange={e => setMfaToken(e.target.value)} placeholder="123456" maxLength={6} autoFocus />
+        <Card className="border-0 shadow-xl">
+          <CardContent>
+            {error && (
+              <div className="bg-red-50 text-red-700 p-4 rounded-md mb-6 text-sm">
+                {error}
+                {showResend && (
+                  <> <Link to="/register" className="font-semibold underline ml-1">Resend verification email</Link></>
+                )}
               </div>
             )}
-            <button type="submit" className="btn btn-gold btn-full" disabled={loading} style={{ marginTop: '0.5rem' }}>
-              {loading ? <><span className="spinner" style={{ width: 18, height: 18, borderWidth: 2 }} /> Signing In...</> : requiresMfa ? 'Verify Code →' : 'Sign In →'}
-            </button>
-            {requiresMfa && (
-              <button type="button" className="btn btn-secondary btn-full" onClick={() => { setRequiresMfa(false); setTempLoginData(null); setMfaToken(''); }} style={{ marginTop: 0 }}>
-                Back
-              </button>
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+              {!requiresMfa ? (
+                <>
+                  <Input 
+                    label="Email Address" 
+                    type="email" 
+                    required 
+                    value={email} 
+                    onChange={e => setEmail(e.target.value)} 
+                    placeholder="your@email.com" 
+                    autoFocus 
+                  />
+                  <div className="relative">
+                    <Input 
+                      label="Password" 
+                      type="password" 
+                      required 
+                      value={password} 
+                      onChange={e => setPassword(e.target.value)} 
+                      placeholder="Your password" 
+                    />
+                    <div className="absolute right-0 top-0">
+                      <Link to="/forgot-password" style={{ color: 'var(--gold)', fontSize: '0.75rem', fontWeight: 600 }}>Forgot Password?</Link>
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <Input 
+                  label="6-Digit Code" 
+                  type="text" 
+                  required 
+                  value={mfaToken} 
+                  onChange={e => setMfaToken(e.target.value)} 
+                  placeholder="123456" 
+                  maxLength={6} 
+                  autoFocus 
+                />
+              )}
+              <Button type="submit" variant="primary" isLoading={loading} className="mt-2 w-full bg-[#d4af37] hover:bg-[#b8962c] text-white">
+                {requiresMfa ? 'Verify Code →' : 'Sign In →'}
+              </Button>
+              {requiresMfa && (
+                <Button type="button" variant="outline" className="w-full" onClick={() => { setRequiresMfa(false); setTempLoginData(null); setMfaToken(''); }}>
+                  Back
+                </Button>
+              )}
+            </form>
+            {!requiresMfa && (
+              <p className="text-center mt-6 text-sm text-gray-500">
+                Don't have an account? <Link to="/register" style={{ color: 'var(--gold)', fontWeight: 600 }}>Apply Now</Link>
+              </p>
             )}
-          </form>
-          {!requiresMfa && (
-            <p style={{ textAlign: 'center', marginTop: '1.5rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-              Don't have an account? <Link to="/register" style={{ color: 'var(--gold)', fontWeight: 600 }}>Apply Now</Link>
-            </p>
-          )}
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

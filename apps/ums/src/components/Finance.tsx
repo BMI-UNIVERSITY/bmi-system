@@ -1,34 +1,34 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useMemo, useEffect } from "react";
+import { ReceiptModal } from "./finance/ReceiptModal";
+import { NewTransactionModal } from "./finance/NewTransactionModal";
 import {
-  Download,
+  
   Plus,
   Search,
   Filter,
-  TrendingUp,
-  DollarSign,
-  Clock,
+  
+  
+  
   FileText,
   X,
-  CheckCircle2,
-  AlertCircle,
+  
+  
   History,
-  Printer,
+  
   Users,
   Briefcase,
-  Wallet,
+  
   ShieldAlert,
   Send,
   Mail,
   Check,
   Edit2,
-  Calendar,
-  Share2,
-  MessageCircle,
+  
+  
+  
   CreditCard,
 } from "lucide-react";
-import { Transaction, Student, StaffMember } from "../types";
+import { Transaction, Student } from "../types";
 import { getPrograms } from "../services/catalogService";
 import {
   getTransactions,
@@ -39,21 +39,19 @@ import { BulkEntryModal } from "./BulkEntryModal";
 import { postTransactionBatch } from "../services/batchService";
 import { useDataStore } from "../stores/dataStore";
 import { useTransactionsQuery, useStudentsQuery, useStaffQuery } from "../hooks/useEntityQueries";
-import { usePagination } from "../hooks/usePagination";
 
 const Finance: React.FC = () => {
-  const { page, perPage, setPage, setMeta, meta } = usePagination(50);
 
   // Fetch data using TanStack Query
-  const { data: studentsRes, isLoading: isLoadingStudents } = useStudentsQuery({
-    page: 1,
-    perPage: 1000, // Fetch more for ledger until server-side aggregation is ready
-  });
-  const { data: staffRes, isLoading: isLoadingStaff } = useStaffQuery({
+  const { data: studentsRes } = useStudentsQuery({
     page: 1,
     perPage: 1000,
   });
-  const { data: transactionsRes, isLoading: isLoadingTransactions } = useTransactionsQuery({
+  const { data: staffRes } = useStaffQuery({
+    page: 1,
+    perPage: 1000,
+  });
+  const { data: transactionsRes } = useTransactionsQuery({
     page: 1,
     perPage: 1000,
   });
@@ -79,7 +77,7 @@ const Finance: React.FC = () => {
   );
   const [searchTerm, setSearchTerm] = useState("");
   const [isNewTxModalOpen, setIsNewTxModalOpen] = useState(false);
-  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
+//   const [, setSelectedTx] = useState<Transaction | null>(null);
   const [selectedStudent, setSelectedStudent] = useState<
     (Student & { paid: number; pending: number; txCount: number }) | null
   >(null);
@@ -102,7 +100,7 @@ const Finance: React.FC = () => {
       const r = await getPrograms();
       if (cancelled || !r.success || !r.data) return;
       setProgramRows(
-        r.data.map((p: Record<string, unknown>) => ({
+        r.data.map((p: any) => ({
           id: String(p.id),
           label: `${String(p.program_code ?? "")} — ${String(p.name ?? "")}`,
         })),
@@ -113,22 +111,6 @@ const Finance: React.FC = () => {
     };
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      const r = await getPrograms();
-      if (cancelled || !r.success || !r.data) return;
-      setProgramRows(
-        r.data.map((p: Record<string, unknown>) => ({
-          id: String(p.id),
-          label: `${String(p.program_code ?? '')} — ${String(p.name ?? '')}`,
-        }))
-      );
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const [newTx, setNewTx] = useState<{
     name: string;
@@ -264,10 +246,10 @@ const Finance: React.FC = () => {
         setEditingTx(null);
         setToastMsg("Transaction updated locally (no server id)");
       } else {
+        const randomValues = new Uint32Array(1);
+        crypto.getRandomValues(randomValues);
         const res = await createTransaction({
-          ref: `TRX-${Math.floor(Math.random() * 10000)
-            .toString()
-            .padStart(4, "0")}`,
+          ref: `TRX-${(randomValues[0] % 10000).toString().padStart(4, "0")}`,
           name: newTx.name,
           desc: newTx.desc,
           date: newTx.date,
@@ -305,7 +287,8 @@ const Finance: React.FC = () => {
 
       setShowToast(true);
       setTimeout(() => setShowToast(false), 3000);
-    } catch (error) { console.error(error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error(error);
       setToastMsg("Network error saving transaction");
       setShowToast(true);
      }
@@ -815,394 +798,7 @@ const Finance: React.FC = () => {
         )}
 
         {/* ... Other Modals ... */}
-        {showReceipt &&
-          (() => {
-            const { student, totalPaid, balance } = getReceiptData(showReceipt);
-            return (
-              <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/95 backdrop-blur-3xl p-4">
-                {/* Receipt Content */}
-                <div className="bg-white w-full max-w-2xl shadow-[0_35px_60px_-15px_rgba(0,0,0,0.5)] flex flex-col border-[12px] border-white overflow-hidden animate-slide-up">
-                  {/* ... Same as original ... */}
-                  <div className="relative p-12 border-b-2 border-gray-900 overflow-hidden">
-                    {/* ... Header ... */}
-                    <div className="absolute top-0 right-0 p-4 font-mono text-[9px] text-gray-300 select-none uppercase tracking-widest">
-                      Digital Authentication Matrix Active
-                    </div>
-                    <div className="flex justify-between items-start relative z-10">
-                      <div className="flex items-center gap-6">
-                        <img
-                          src="/BMI.svg"
-                          className="w-24 h-24 object-contain bg-white p-2 border border-gray-100 shadow-sm"
-                          alt="Logo"
-                        />
-                        <div>
-                          <h1 className="text-4xl font-black text-gray-900 tracking-tighter uppercase leading-none">
-                            BMI UNIVERSITY
-                          </h1>
-                          <p className="text-[10px] font-bold text-gray-500 uppercase tracking-[0.3em] mt-2">
-                            Institutional Finance Division
-                          </p>
-                          <div className="mt-4 space-y-0.5 text-[9px] font-semibold text-gray-400 uppercase tracking-widest">
-                            <p>980-259-3680 • hkmministries.org</p>
-                            <p>East Africa Hub: +254 704 500 872</p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <h2 className="text-2xl font-black text-gray-900 tracking-tight uppercase leading-none">
-                          PAYMENT RECEIPT
-                        </h2>
-                        <p className="text-xs font-bold text-[#4B0082] mt-2">
-                          REF: {showReceipt.ref}
-                        </p>
-                        <p className="text-[10px] text-gray-400 font-bold uppercase mt-1">
-                          ISSUED: {showReceipt.date}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex-1 p-12 relative overflow-hidden bg-[#FAFAFA]">
-                    {/* ... Body ... */}
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-[0.03] rotate-[-25deg] select-none scale-[1.5]">
-                      <h1 className="text-[120px] font-black uppercase text-gray-900">
-                        BMI UNIVERSITY
-                      </h1>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-12 relative z-10">
-                      <div className="space-y-6">
-                        <div>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">
-                            RECIPIENT DOMAIN
-                          </p>
-                          <h3 className="text-xl font-black text-gray-900 uppercase tracking-tight">
-                            {showReceipt.name}
-                          </h3>
-                          <p className="text-xs font-bold text-[#4B0082] mt-1 italic">
-                            {student?.id || "BMI-EXT-USR"}
-                          </p>
-                          <p className="text-[10px] font-bold text-gray-500 uppercase mt-0.5">
-                            {student?.program_code || "External Audit"}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">
-                            PAYMENT SPECIFICATION
-                          </p>
-                          <p className="text-sm font-bold text-gray-700 uppercase tracking-tight">
-                            {showReceipt.desc}
-                          </p>
-                          <p className="text-[10px] font-bold text-gray-400 mt-0.5">
-                            VIA: ELECTRONIC LEDGER TRANSFER
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="bg-white border-2 border-gray-900 p-8 flex flex-col justify-between">
-                        <div className="space-y-4">
-                          <div className="flex justify-between border-b border-gray-100 pb-2">
-                            <span className="text-[10px] font-black text-gray-400 uppercase">
-                              AMOUNT COMMITTED
-                            </span>
-                            <span className="text-sm font-black text-gray-900">
-                              ${showReceipt.amt.toLocaleString()}
-                            </span>
-                          </div>
-                          <div className="flex justify-between border-b border-gray-100 pb-2">
-                            <span className="text-[10px] font-black text-gray-400 uppercase">
-                              CUMULATIVE PAID
-                            </span>
-                            <span className="text-sm font-black text-emerald-600">
-                              ${totalPaid.toLocaleString()}
-                            </span>
-                          </div>
-                        </div>
-                        <div className="pt-6">
-                          <div className="flex justify-between items-end">
-                            <div>
-                              <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
-                                OUTSTANDING BALANCE
-                              </p>
-                              <p className="text-3xl font-black text-red-600 leading-none mt-1">
-                                ${balance.toLocaleString()}
-                              </p>
-                            </div>
-                            <div className="p-2 bg-gray-900 text-white rounded-none">
-                              <ShieldAlert size={16} />
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="mt-16 flex justify-between items-end relative z-10">
-                      <div className="max-w-xs">
-                        <p className="text-[9px] font-bold text-gray-400 uppercase leading-relaxed">
-                          This document serves as an official electronic
-                          confirmation of funds received into BMI University
-                          accounts. Any discrepancy should be reported within 48
-                          hours to the Bursary Office.
-                        </p>
-                      </div>
-                      <div className="text-center">
-                        <div className="mb-2 font-['Brush_Script_MT',cursive] text-2xl text-[#4B0082] italic transform -rotate-2 select-none">
-                          Institutional Registrar
-                        </div>
-                        <div className="w-48 h-[2px] bg-gray-900 mx-auto"></div>
-                        <p className="text-[9px] font-black uppercase text-gray-900 mt-2 tracking-widest">
-                          DIGITAL AUTHENTICATION SIGNATURE
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="p-10 border-t-2 border-gray-900 flex flex-wrap gap-4 items-center justify-between bg-white">
-                    <div className="flex gap-4">
-                      <button
-                        onClick={() => {
-                          setShowReceipt(null);
-                          sendReceipt(
-                            showReceipt.name,
-                            "single",
-                            showReceipt.amt,
-                          );
-                        }}
-                        className="flex items-center gap-2 px-6 py-3 bg-[#4B0082] text-white text-[10px] font-black uppercase tracking-widest hover:bg-black transition-all"
-                      >
-                        <Mail size={16} /> Dispatch via Email
-                      </button>
-                      <button
-                        onClick={() => {
-                          setShowReceipt(null);
-                          setShowToast(true);
-                          setToastMsg(
-                            `Receipt Matrix shared to WhatsApp: ${showReceipt.ref}`,
-                          );
-                          setTimeout(() => setShowToast(false), 3000);
-                        }}
-                        className="flex items-center gap-2 px-6 py-3 bg-[#25D366] text-white text-[10px] font-black uppercase tracking-widest hover:bg-emerald-600 transition-all"
-                      >
-                        <MessageCircle size={16} /> Share via WhatsApp
-                      </button>
-                    </div>
-                    <button
-                      onClick={() => setShowReceipt(null)}
-                      className="p-3 bg-gray-100 hover:bg-red-500 hover:text-white transition-all rounded-none text-gray-400"
-                    >
-                      <X size={20} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            );
-          })()}
-
-        {isNewTxModalOpen && (
-          <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#1a0033]/90 backdrop-blur-3xl p-4">
-            {/* New Transaction Modal Content ... */}
-            <div className="bg-white dark:bg-gray-900 shadow-2xl w-full max-w-lg border border-[#FFD700]/30 animate-slide-up overflow-hidden flex flex-col">
-              <div className="bg-gray-900 p-8 border-b-2 border-[#FFD700] flex justify-between items-center text-white">
-                <div>
-                  <h3 className="text-xl font-bold uppercase tracking-tight">
-                    {editingTx
-                      ? "Update Entry"
-                      : financeView === "students"
-                        ? "Fee Collection Portal"
-                        : "Payroll Disbursement"}
-                  </h3>
-                  <p className="text-[10px] font-bold text-[#FFD700] uppercase tracking-widest mt-1">
-                    BMI Financial Gateway Node
-                  </p>
-                </div>
-                <button
-                  onClick={() => {
-                    setIsNewTxModalOpen(false);
-                    setEditingTx(null);
-                  }}
-                  className="p-2 hover:bg-red-500 transition-all"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-
-              <form onSubmit={handleAddTx} className="p-10 space-y-8">
-                {/* ... Form Fields ... */}
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black uppercase text-gray-500 tracking-[0.2em]">
-                    {financeView === "students"
-                      ? "Select Student Registry"
-                      : "Select Employee Entity"}
-                  </label>
-                  <select
-                    required
-                    value={newTx.name}
-                    onChange={(e) =>
-                      setNewTx({ ...newTx, name: e.target.value })
-                    }
-                    className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-none outline-none font-bold text-sm focus:ring-1 focus:ring-[#4B0082] appearance-none cursor-pointer"
-                  >
-                    <option value="">
-                      {financeView === "students"
-                        ? "--- Select Student ---"
-                        : "--- Select Staff ---"}
-                    </option>
-                    {financeView === "students"
-                      ? students
-                          .sort((a, b) =>
-                            `${a.first_name} ${a.last_name}`.localeCompare(
-                              `${b.first_name} ${b.last_name}`,
-                            ),
-                          )
-                          .map((s) => (
-                            <option
-                              key={s.id}
-                              value={`${s.first_name} ${s.last_name}`}
-                            >
-                              {s.id} | {s.first_name} {s.last_name}
-                            </option>
-                          ))
-                      : staff
-                          .sort((a, b) =>
-                            (a.name ?? "").localeCompare(b.name ?? ""),
-                          )
-                          .map((st) => (
-                            <option key={st.id} value={st.name}>
-                              {st.id} | {st.name}
-                            </option>
-                          ))}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-gray-500 tracking-[0.2em]">
-                      Transaction Code
-                    </label>
-                    <select
-                      value={newTx.desc}
-                      onChange={(e) =>
-                        setNewTx({ ...newTx, desc: e.target.value })
-                      }
-                      className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-none outline-none font-bold text-xs uppercase tracking-tight"
-                    >
-                      {financeView === "students" ? (
-                        <>
-                          <option>Tuition Payment</option>
-                          <option>Hostel Fee</option>
-                          <option>Library Fine</option>
-                          <option>Exam Retake Fee</option>
-                        </>
-                      ) : (
-                        <>
-                          <option>Salary Disbursement</option>
-                          <option>Institutional Grant</option>
-                          <option>Academic Research Allowance</option>
-                          <option>Overtime Wage</option>
-                        </>
-                      )}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-gray-500 tracking-[0.2em]">
-                      Transaction Status
-                    </label>
-                    <select
-                      value={newTx.status}
-                      onChange={(e) =>
-                        setNewTx({ ...newTx, status: e.target.value as any })
-                      }
-                      className="w-full px-5 py-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-none outline-none font-bold text-xs uppercase tracking-tight"
-                    >
-                      <option value="Paid">Committed (Paid)</option>
-                      <option value="Pending">Await Validation</option>
-                      <option value="Failed">Declined / Error</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-gray-500 tracking-[0.2em]">
-                      Amount In USD ($)
-                    </label>
-                    <div className="relative">
-                      <DollarSign
-                        size={20}
-                        className="absolute left-5 top-1/2 -translate-y-1/2 text-[#4B0082]"
-                      />
-                      <input
-                        required
-                        type="number"
-                        step="0.01"
-                        value={newTx.amt}
-                        onChange={(e) =>
-                          setNewTx({ ...newTx, amt: e.target.value })
-                        }
-                        placeholder="0.00"
-                        className="w-full pl-12 pr-5 py-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-none outline-none font-black text-xl text-[#4B0082]"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black uppercase text-gray-500 tracking-[0.2em]">
-                      Effective Date
-                    </label>
-                    <div className="relative">
-                      <Calendar
-                        size={18}
-                        className="absolute left-5 top-1/2 -translate-y-1/2 text-gray-400"
-                      />
-                      <input
-                        required
-                        type="date"
-                        value={newTx.date}
-                        onChange={(e) =>
-                          setNewTx({ ...newTx, date: e.target.value })
-                        }
-                        className="w-full pl-12 pr-5 py-4 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-none outline-none font-bold text-xs dark:text-white uppercase tracking-tight"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                <div className="flex flex-col gap-5 pt-4">
-                  <button
-                    type="submit"
-                    className="w-full py-5 bg-[#4B0082] text-white rounded-none shadow-2xl font-black uppercase tracking-[0.2em] text-xs border border-[#FFD700]/30 hover:bg-black transition-all flex items-center justify-center gap-4"
-                  >
-                    <CheckCircle2 size={18} className="text-[#FFD700]" />
-                    {editingTx
-                      ? "Update Ledger Commit"
-                      : financeView === "students"
-                        ? "Record Payment Entry"
-                        : "Authorize Payroll"}
-                  </button>
-
-                  {!editingTx && (
-                    <div className="flex items-center justify-center gap-3">
-                      <input
-                        type="checkbox"
-                        id="keepOpen"
-                        checked={keepOpen}
-                        onChange={(e) => setKeepOpen(e.target.checked)}
-                        className="w-4 h-4 cursor-pointer accent-[#4B0082]"
-                      />
-                      <label
-                        htmlFor="keepOpen"
-                        className="text-[10px] font-black uppercase text-gray-500 tracking-widest cursor-pointer select-none"
-                      >
-                        Stay in Gateway after submission (Batch Processing)
-                      </label>
-                    </div>
-                  )}
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {showToast && (
+        <ReceiptModal showReceipt={showReceipt} setShowReceipt={setShowReceipt} getReceiptData={getReceiptData} sendReceipt={sendReceipt} setShowToast={setShowToast} setToastMsg={setToastMsg} />\n        <NewTransactionModal isNewTxModalOpen={isNewTxModalOpen} setIsNewTxModalOpen={setIsNewTxModalOpen} editingTx={editingTx} setEditingTx={setEditingTx} financeView={financeView} newTx={newTx} setNewTx={setNewTx} handleAddTx={handleAddTx} students={students} staff={staff} keepOpen={keepOpen} setKeepOpen={setKeepOpen} />\n        {showToast && (
           <div className="fixed bottom-12 left-1/2 transform -translate-x-1/2 z-[150] animate-fade-in">
             <div className="bg-gray-900 text-[#FFD700] px-10 py-5 rounded-none shadow-2xl flex items-center gap-4 border-2 border-[#FFD700] backdrop-blur-xl">
               <Check size={24} className="animate-pulse" />
@@ -1222,7 +818,7 @@ const Finance: React.FC = () => {
           onSubmit={async (lines) => {
             try {
               const items = lines.map(
-                (l) => JSON.parse(l) as Record<string, unknown>,
+                (l) => JSON.parse(l) as any,
               );
               const r = await postTransactionBatch(items);
               const list = await getTransactions({ perPage: 500 });
@@ -1231,7 +827,7 @@ const Finance: React.FC = () => {
                 ok: (r.data?.failureCount ?? 0) === 0,
                 message: `Created: ${r.data?.successCount ?? 0}, failed: ${r.data?.failureCount ?? 0}.`,
               };
-            } catch (error) {
+} catch {
               return {
                 ok: false,
                 message: "Invalid JSON on one or more lines.",

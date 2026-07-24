@@ -89,7 +89,7 @@ export async function handleUpdateCourse(request: Request, env: Env, courseId: s
 
 // ─── delete course ────────────────────────────────────────────────────────────
 
-export async function handleDeleteCourse(request: Request, env: Env, courseId: string): Promise<Response> {
+export async function handleDeleteCourse(_request: Request, env: Env, courseId: string): Promise<Response> {
   const result = await env.PLATFORM_CONTEXT!.db.prepare(`DELETE FROM courses WHERE id = ?`).bind(courseId).run();
   if (!result.meta.changes) return error('Course not found', 404);
   return ok({ deleted: true });
@@ -115,7 +115,7 @@ export async function handleListPrograms(request: Request, env: Env): Promise<Re
 
 // ─── list faculties ───────────────────────────────────────────────────────────
 
-export async function handleListFaculties(request: Request, env: Env): Promise<Response> {
+export async function handleListFaculties(_request: Request, env: Env): Promise<Response> {
   const rows = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT * FROM faculties ORDER BY name ASC`).all();
   return ok(rows.results);
 }
@@ -139,7 +139,7 @@ export async function handleListDepartments(request: Request, env: Env): Promise
 
 // ─── list academic terms ──────────────────────────────────────────────────────
 
-export async function handleListTerms(request: Request, env: Env): Promise<Response> {
+export async function handleListTerms(_request: Request, env: Env): Promise<Response> {
   const rows = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT * FROM academic_terms ORDER BY start_date DESC`).all();
   return ok(rows.results);
 }

@@ -8,11 +8,11 @@ export class ResendEmailAdapter implements IEmailProvider {
     this.apiKey = apiKey;
   }
 
-  async createMailbox(userId: string, email: string, password: string): Promise<Mailbox> {
+  async createMailbox(_userId: string, _email: string, _password: string): Promise<Mailbox> {
     throw new Error('Resend does not support mailbox creation directly. Use a separate email service like Mailcow or Google Workspace for mailboxes.');
   }
 
-  async deleteMailbox(email: string): Promise<void> {
+  async deleteMailbox(_email: string): Promise<void> {
     throw new Error('Resend does not support mailbox management.');
   }
 
@@ -41,7 +41,7 @@ export class ResendEmailAdapter implements IEmailProvider {
     }
   }
 
-  async resetMailboxPassword(email: string, newPassword: string): Promise<void> {
+  async resetMailboxPassword(_email: string, _newPassword: string): Promise<void> {
     throw new Error('Resend does not support mailbox password management.');
   }
 }

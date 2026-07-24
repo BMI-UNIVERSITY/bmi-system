@@ -1,4 +1,3 @@
-/* eslint-disable */
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Lock, Eye, EyeOff, CheckCircle, AlertCircle, Loader2, ShieldCheck } from 'lucide-react';
@@ -85,7 +84,7 @@ const ResetPasswordPage: React.FC = () => {
     }
 
     setLoading(true);
-    const result = await resetPassword(token, password, passwordConfirm);
+    const result = await resetPassword(token, password);
     setLoading(false);
 
     if (result.success) {

@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI University Management System - Modern Good Standing Letter Component
  * Official letter certifying student status with elegant design
@@ -8,11 +6,10 @@
 
 import React, { useState, useMemo, useCallback } from 'react';
 import { 
-  Search, Printer, Download, Shield, ShieldCheck, X, Calendar,
-  CheckCircle, Sparkles, FileText, Award, BadgeCheck, UserCheck,
-  Hash, Building2, AwardIcon
+  Search, Printer, Download, Shield, ShieldCheck, 
+  Sparkles, Award
 } from 'lucide-react';
-import { MARKETING_URL, MARKETING_URL_WWW } from '@bmi/shared';
+import { MARKETING_URL_WWW } from '@bmi/shared';
 import { Student } from '../types';
 import { documentService } from '../services/documentService';
 import { getHtml2Pdf } from '../services/pdfService';
@@ -42,9 +39,9 @@ export const GoodStandingLetter: React.FC<GoodStandingLetterProps> = ({ students
     purpose: 'Employment Application',
   });
 
-  const getFirstName = (student: Student) => student.first_name || (student as any).firstName || '';
-  const getLastName = (student: Student) => student.last_name || (student as any).lastName || '';
-  const getProgram = (student: Student) => student.program_code || (student as any).program || '';
+  const getFirstName = (student: Student) => student.first_name || (student as any).firstName as string || '';
+  const getLastName = (student: Student) => student.last_name || (student as any).lastName as string || '';
+  const getProgram = (student: Student) => student.program_code || (student as any).program as string || '';
 
   const filteredStudents = useMemo(() => {
     return students.filter(s => {
@@ -90,7 +87,8 @@ export const GoodStandingLetter: React.FC<GoodStandingLetterProps> = ({ students
       setGeneratedLetter(letter);
       setSecurityFeatures(security);
       setShowLetter(true);
-    } catch (error) { console.error('Letter generation failed:', error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error('Letter generation failed:', error);
      } finally {
       setIsGenerating(false);
     }
@@ -118,7 +116,8 @@ export const GoodStandingLetter: React.FC<GoodStandingLetterProps> = ({ students
       };
       
       await html2pdf().set(opt).from(element).save();
-    } catch (error) { console.error('PDF generation failed:', error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error('PDF generation failed:', error);
      }
   };
 
@@ -199,6 +198,7 @@ export const GoodStandingLetter: React.FC<GoodStandingLetterProps> = ({ students
                   <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">Standing Type</label>
                   <select
                     value={letterConfig.letterType}
+                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
                     onChange={(e) => setLetterConfig({ ...letterConfig, letterType: e.target.value as any })}
                     className={THEME.input}
                   >

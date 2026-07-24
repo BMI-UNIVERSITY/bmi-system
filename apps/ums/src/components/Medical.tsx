@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useMemo, useEffect } from "react";
 import {
   Stethoscope,
@@ -20,7 +18,7 @@ import {
   Trash2,
   History,
 } from "lucide-react";
-import { MedicalVisit, Student } from "../types";
+import { MedicalVisit } from "../types";
 import { useDataStore } from "../stores/dataStore";
 import { useApiDataStore } from "../stores/apiDataStore";
 
@@ -83,7 +81,7 @@ export const Medical: React.FC = () => {
       bloodType: newVisit.bloodType || "O+",
       date: new Date().toISOString().split("T")[0],
       attendingStaff: newVisit.attendingStaff || "Sr. Mary",
-      status: newVisit.status as any,
+      status: newVisit.status as "Normal" | "Urgent" | "Follow-up",
       vitals: {
         temp: newVisit.vitals?.temp || "36.5",
         bp: newVisit.vitals?.bp || "120/80",
@@ -445,7 +443,7 @@ export const Medical: React.FC = () => {
                       onChange={(e) =>
                         setNewVisit({
                           ...newVisit,
-                          status: e.target.value as any,
+                          status: e.target.value as "Normal" | "Urgent" | "Follow-up",
                         })
                       }
                       className="w-full px-5 py-4 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none outline-none font-black text-xs uppercase tracking-widest focus:border-[#4B0082]"

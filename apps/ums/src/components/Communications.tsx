@@ -1,6 +1,4 @@
-/* eslint-disable */
-/* eslint-disable */
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Send,
   Mail,
@@ -11,20 +9,20 @@ import {
   CheckCircle,
   Clock,
   AlertCircle,
-  Plus,
+  
   Bot,
-  Sparkles,
+  
   Paperclip,
   FileText,
-  ChevronRight,
+  
   Trash2,
   Layout,
   Loader2,
   Check,
   ShieldCheck,
   Zap,
-  Info,
-  User,
+  
+  
   ShieldAlert,
   ArrowRight,
   MessageSquare,

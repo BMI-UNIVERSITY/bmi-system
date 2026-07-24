@@ -118,7 +118,7 @@ export async function handleSaveRegistrationStep(req: Request, env: Env, userId:
   }
 }
 
-export async function handleGetRegistrationStatus(req: Request, env: Env, userId: string): Promise<Response> {
+export async function handleGetRegistrationStatus(_req: Request, env: Env, userId: string): Promise<Response> {
   try {
     const existing = await env.PLATFORM_CONTEXT!.db.prepare(
       `SELECT value FROM metadata WHERE id = ? AND key = 'registration_data'`
@@ -139,7 +139,7 @@ export async function handleGetRegistrationStatus(req: Request, env: Env, userId
   }
 }
 
-export async function handleCompleteRegistration(req: Request, env: Env, userId: string, ctx?: ExecutionContext): Promise<Response> {
+export async function handleCompleteRegistration(_req: Request, env: Env, userId: string, ctx?: ExecutionContext): Promise<Response> {
   try {
     const existing = await env.PLATFORM_CONTEXT!.db.prepare(
       `SELECT value FROM metadata WHERE id = ? AND key = 'registration_data'`
@@ -252,7 +252,7 @@ export async function handleCompleteRegistration(req: Request, env: Env, userId:
   }
 }
 
-export async function handleGetAvailableModules(req: Request, env: Env, userId: string): Promise<Response> {
+export async function handleGetAvailableModules(_req: Request, env: Env, userId: string): Promise<Response> {
   try {
     const progMeta = await env.PLATFORM_CONTEXT!.db.prepare(
       `SELECT value FROM metadata WHERE id = ? AND key = 'registration_data'`

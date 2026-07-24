@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
@@ -17,7 +15,9 @@ i18n
     supportedLngs: ['en', 'en-US', 'en-GB', 'sw', 'es', 'fr', 'ar'],
     
     interpolation: {
-      escapeValue: false, // React already safes from xss
+      // React handles XSS escaping in JSX expressions, so i18next double-escaping
+      // is unnecessary and would render HTML entities literally. Keep false.
+      escapeValue: false,
     },
     
     backend: {

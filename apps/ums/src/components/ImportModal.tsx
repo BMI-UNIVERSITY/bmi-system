@@ -1,8 +1,6 @@
-/* eslint-disable */
-/* eslint-disable */
-import React, { useState } from "react";
+import { useState } from "react";
 import {
-  Upload,
+  
   X,
   FileSpreadsheet,
   CheckCircle,
@@ -22,9 +20,9 @@ export function ImportModal({ isOpen, onClose, onSuccess }: ImportModalProps) {
   const [step, setStep] = useState<"upload" | "preview" | "importing" | "done">(
     "upload",
   );
-  const [file, setFile] = useState<File | null>(null);
+  const [, setFile] = useState<File | null>(null);
   const [parsedData, setParsedData] = useState<V2ImportData | null>(null);
-  const [importResults, setImportResults] = useState<any>(null);
+  const [importResults, setImportResults] = useState<unknown>(null);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
@@ -210,7 +208,7 @@ export function ImportModal({ isOpen, onClose, onSuccess }: ImportModalProps) {
             </div>
           )}
 
-          {step === "done" && importResults && (
+          {step === "done" && !!importResults && (
             <div className="space-y-6 text-center py-8">
               <CheckCircle className="mx-auto text-green-500 mb-4" size={48} />
               <h3 className="text-xl font-black uppercase tracking-widest text-gray-900 dark:text-white">
@@ -218,7 +216,7 @@ export function ImportModal({ isOpen, onClose, onSuccess }: ImportModalProps) {
               </h3>
               <div className="text-sm text-gray-600 dark:text-gray-400 bg-gray-50 dark:bg-gray-800 p-4 inline-block text-left">
                 <ul className="space-y-1">
-                  {Object.entries(importResults).map(([key, count]) => (
+                  {Object.entries(importResults as Record<string, any>).map(([key, count]) => (
                     <li
                       key={key}
                       className="flex justify-between gap-8 border-b border-gray-200 dark:border-gray-700 pb-1"

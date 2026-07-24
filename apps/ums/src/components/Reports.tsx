@@ -1,29 +1,27 @@
-/* eslint-disable */
-/* eslint-disable */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { 
-  FileBarChart, 
-  TrendingUp, 
+  
+  
   Users, 
   Wallet, 
-  Calendar, 
-  Download, 
-  Filter, 
-  Target, 
-  ChevronRight, 
-  Award, 
-  PieChart as PieChartIcon, 
-  BarChart3, 
-  Activity, 
+  
+  
+  
+  
+  
+  
+  PieChart as 
+  
+  
   Zap, 
   Bot, 
   Loader2, 
-  ShieldCheck,
-  Printer,
-  Maximize2,
+  
+  
+  
   Sparkles,
-  Layers,
+  
   Clock
 } from 'lucide-react';
 import { 
@@ -83,7 +81,7 @@ const Reports: React.FC = () => {
     try {
         const response = await getAIResponse(prompt, 'Institutional Data Analyst');
         setAiReport(response);
-    } catch (error) {
+    } catch {
         setAiReport("Analysis generation failed. Please check network connectivity.");
     }
     setIsGeneratingAiReport(false);

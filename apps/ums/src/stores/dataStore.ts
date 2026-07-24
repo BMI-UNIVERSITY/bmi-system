@@ -1,10 +1,14 @@
-/* eslint-disable */
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Core Data Store (Zustand)
  * Centralizes all entity data (students, staff, courses, transactions, library).
  * Replaces the massive prop-drilling from App.tsx through ViewRenderer to every component.
+ *
+ * @deprecated Use TanStack Query hooks from `useEntityQueries.ts` instead.
+ * - students: useStudentsQuery()
+ * - staff: useStaffQuery()
+ * - courses: useCoursesQuery()
+ * - transactions: useTransactionsQuery()
+ * - library: useLibraryQuery()
  *
  * Features:
  * - Single source of truth for all entity collections

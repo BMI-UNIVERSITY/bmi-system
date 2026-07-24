@@ -1,7 +1,5 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useEffect, useState } from "react";
-import { ShieldCheck, XCircle, CheckCircle2, Award, Calendar, BookOpen, MapPin, Clock, Activity, GraduationCap } from "lucide-react";
+import { ShieldCheck, XCircle, CheckCircle2, Award, Calendar, BookOpen, MapPin, Clock, GraduationCap } from "lucide-react";
 import { Student } from "../types";
 
 interface VerifyProps {
@@ -17,9 +15,9 @@ const Verify: React.FC<VerifyProps> = ({ students }) => {
   const [docType, setDocType] = useState<string>("");
 
   const getFirstName = (value: Student | null) =>
-    value?.first_name || (value as any)?.firstName || "";
+    value?.first_name || (value as unknown as Record<string, string>)?.firstName || "";
   const getLastName = (value: Student | null) =>
-    value?.last_name || (value as any)?.lastName || "";
+    value?.last_name || (value as unknown as Record<string, string>)?.lastName || "";
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
@@ -60,7 +58,7 @@ const Verify: React.FC<VerifyProps> = ({ students }) => {
         } else {
           setStatus("invalid");
         }
-      } catch (error) {
+      } catch {
         setStatus("invalid");
       }
     }, 1500);
@@ -113,13 +111,13 @@ const Verify: React.FC<VerifyProps> = ({ students }) => {
     }
   };
 
-  const getCurrentAcademicYear = (student: Student | null) => {
-    if (!student) return "";
-    const admissionYear = student.admissionYear ? parseInt(student.admissionYear) : 2022;
-    const yearOfStudy = student.year_of_study ? parseInt(student.year_of_study) : 1;
-    const currentAcademicYearStart = admissionYear + (yearOfStudy - 1);
-    return `${currentAcademicYearStart}/${currentAcademicYearStart + 1}`;
-  };
+// //   const _getCurrentAcademicYear = (student: Student | null) => {
+// //     if (!student) return "";
+// //     const admissionYear = student.admissionYear ? parseInt(student.admissionYear) : 2022;
+// //     const yearOfStudy = student.year_of_study ? parseInt(student.year_of_study) : 1;
+// //     const currentAcademicYearStart = admissionYear + (yearOfStudy - 1);
+// //     return `${currentAcademicYearStart}/${currentAcademicYearStart + 1}`;
+// //   };
 
   const normalizeDepartment = (dept?: string) => {
      if (!dept) return "Biblical Studies and Applied Ministry";

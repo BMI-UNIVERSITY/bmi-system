@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI University Management System - Modern Registration Card Component
  * Course registration document with elegant design
@@ -13,18 +11,18 @@ import {
   Download,
   ClipboardList,
   ShieldCheck,
-  X,
+  
   Calendar,
   CheckCircle,
   Sparkles,
   BookOpen,
-  GraduationCap,
-  Clock,
-  Hash,
-  User,
-  Building2,
-  FileSpreadsheet,
-  Award,
+  
+  
+  
+  
+  
+  
+  
 } from "lucide-react";
 import { Student, Course } from "../types";
 import { documentService } from "../services/documentService";
@@ -51,13 +49,13 @@ const THEME = {
     "inline-flex items-center gap-2 px-5 py-2.5 bg-white text-slate-700 border border-slate-200 rounded-xl font-semibold hover:bg-slate-50 transition-all",
 };
 
-const GRADE_COLORS: Record<string, string> = {
-  A: "bg-emerald-100 text-emerald-700",
-  B: "bg-blue-100 text-blue-700",
-  C: "bg-amber-100 text-amber-700",
-  D: "bg-orange-100 text-orange-700",
-  F: "bg-red-100 text-red-700",
-};
+// const _GRADE_COLORS: Record<string, string> = {
+//   A: "bg-emerald-100 text-emerald-700",
+//   B: "bg-blue-100 text-blue-700",
+//   C: "bg-amber-100 text-amber-700",
+//   D: "bg-orange-100 text-orange-700",
+//   F: "bg-red-100 text-red-700",
+// };
 
 export const RegistrationCard: React.FC<RegistrationCardProps> = ({
   students,
@@ -74,14 +72,14 @@ export const RegistrationCard: React.FC<RegistrationCardProps> = ({
     useState<DocumentSecurityFeatures | null>(null);
 
   const getFirstName = (student: Student) =>
-    student.first_name || (student as any).firstName || "";
+    student.first_name || (student as unknown as Record<string, string>).firstName || "";
   const getLastName = (student: Student) =>
-    student.last_name || (student as any).lastName || "";
+    student.last_name || (student as unknown as Record<string, string>).lastName || "";
   const getFaculty = (student: Student) =>
-    (student as any).faculty || student.program_code;
+    (student as unknown as Record<string, string>).faculty || student.program_code;
   const getDepartment = (student: Student) =>
-    (student as any).department || student.program_code;
-  const getGpa = (student: Student) => (student as any).gpa;
+    (student as unknown as Record<string, string>).department || student.program_code;
+  const getGpa = (student: Student) => (student as unknown as Record<string, number>).gpa;
 
 
 
@@ -114,7 +112,7 @@ export const RegistrationCard: React.FC<RegistrationCardProps> = ({
         name: c.title,
         credits: c.credit_hours,
         hours: c.credit_hours * 3,
-        lecturer: (c as any).instructor ?? "TBA",
+        lecturer: (c as unknown as Record<string, string>).instructor ?? "TBA",
         schedule: "Mon/Wed 10:00-12:00",
         venue: "Main Campus",
         status: "registered" as const,
@@ -179,7 +177,8 @@ export const RegistrationCard: React.FC<RegistrationCardProps> = ({
       setGeneratedCard(card);
       setSecurityFeatures(security);
       setShowCard(true);
-    } catch (error) { console.error("Registration card generation failed:", error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error("Registration card generation failed:", error);
      } finally {
       setIsGenerating(false);
     }
@@ -208,7 +207,8 @@ export const RegistrationCard: React.FC<RegistrationCardProps> = ({
       };
 
       await html2pdf().set(opt).from(element).save();
-    } catch (error) { console.error("PDF generation failed:", error);
+    } catch (error) { // eslint-disable-next-line no-console
+      console.error("PDF generation failed:", error);
      }
   };
 

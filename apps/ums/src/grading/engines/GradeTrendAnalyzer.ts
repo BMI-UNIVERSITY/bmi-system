@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Grade Trend Analyzer
  * Analyzes GPA trends over multiple semesters

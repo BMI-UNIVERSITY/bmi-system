@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Skip Navigation Component
  * Provides keyboard-accessible skip links for screen reader users,
@@ -7,7 +5,7 @@
  *
  * WCAG 2.1 Level A: 2.4.1 Bypass Blocks
  */
-import React from 'react';
+import 'react';
 
 export default function SkipNavigation() {
   return (

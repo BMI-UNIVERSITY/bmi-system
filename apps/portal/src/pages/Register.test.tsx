@@ -4,7 +4,7 @@ import Register from './Register';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { api } from '../lib/api';
-import React from 'react';
+
 
 vi.mock('../lib/api', () => ({
   api: {

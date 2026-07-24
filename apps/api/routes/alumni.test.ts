@@ -10,9 +10,9 @@ describe('Alumni routes — handleTransitionToAlumni', () => {
     const req = new Request('http://localhost/api/alumni/transition', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ student_id: 'student-456' }),
     });
-    const res = await handleTransitionToAlumni(req, env, 'user-123');
+    const res = await handleTransitionToAlumni(req, env, 'admin-123');
     const body = await res.json();
 
     expect(res.status).toBe(200);
@@ -28,9 +28,9 @@ describe('Alumni routes — handleTransitionToAlumni', () => {
     const req = new Request('http://localhost/api/alumni/transition', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ forwardEmail: 'jane@gmail.com' }),
+      body: JSON.stringify({ student_id: 'student-456', forwardEmail: 'jane@gmail.com' }),
     });
-    const res = await handleTransitionToAlumni(req, env, 'user-123');
+    const res = await handleTransitionToAlumni(req, env, 'admin-123');
 
     expect(res.status).toBe(200);
   });
@@ -42,9 +42,9 @@ describe('Alumni routes — handleTransitionToAlumni', () => {
     const req = new Request('http://localhost/api/alumni/transition', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ student_id: 'student-456' }),
     });
-    const res = await handleTransitionToAlumni(req, env, 'user-123');
+    const res = await handleTransitionToAlumni(req, env, 'admin-123');
 
     expect(res.status).toBe(200);
   });
@@ -64,9 +64,9 @@ describe('Alumni routes — handleTransitionToAlumni', () => {
     const req = new Request('http://localhost/api/alumni/transition', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ student_id: 'student-456' }),
     });
-    const res = await handleTransitionToAlumni(req, env, 'user-123');
+    const res = await handleTransitionToAlumni(req, env, 'admin-123');
     const body = await res.json();
 
     expect(res.status).toBe(500);

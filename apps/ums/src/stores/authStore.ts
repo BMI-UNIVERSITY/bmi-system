@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Authentication Store (Zustand)
  * Centralizes auth state: token, user, login status.
@@ -36,7 +34,7 @@ interface AuthState {
   refreshToken: () => Promise<string | null>;
 }
 
-export const useAuthStore = create<AuthState>((set, get) => ({
+export const useAuthStore = create<AuthState>((set) => ({
   isLoggedIn: false,
   isAuthenticating: true,
   user: null,

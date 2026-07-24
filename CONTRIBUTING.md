@@ -10,7 +10,7 @@ Thank you for contributing to the BMI University SIS! This guide covers everythi
 |------|---------|---------|
 | Node.js | 24.x | [nodejs.org](https://nodejs.org) |
 | npm | 10.x (bundled with Node 24) | — |
-| Wrangler CLI | 3.x | `npm install -g wrangler` |
+| Wrangler CLI | 4.x | `npm install -g wrangler` |
 | Git | Latest | — |
 
 ---
@@ -28,8 +28,8 @@ npm install
 # 3. Authenticate with Cloudflare (required for wrangler dev)
 wrangler login
 
-# 4. Start a worker locally (example: bmi-auth)
-cd apps/workers/auth
+# 4. Start the API worker locally
+cd apps/api
 npm run dev
 # → Available at: http://localhost:8787
 

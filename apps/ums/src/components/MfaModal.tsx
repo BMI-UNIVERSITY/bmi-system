@@ -1,7 +1,5 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useEffect } from 'react';
-import { Shield, Smartphone, Key, AlertCircle, Loader2, CheckCircle, Copy } from 'lucide-react';
+import { Shield, Smartphone, AlertCircle, Loader2, CheckCircle, Copy } from 'lucide-react';
 import { setupMfa, enableMfa, verifyMfa, AuthResponse } from '../services/authService';
 
 interface MfaModalProps {

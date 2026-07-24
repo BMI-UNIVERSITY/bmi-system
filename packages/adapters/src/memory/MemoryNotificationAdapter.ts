@@ -1,5 +1,5 @@
 
-import { INotificationService, Notification, SendNotificationInput, NotificationType } from '@bmi/ports';
+import { INotificationService, Notification, SendNotificationInput } from '@bmi/ports';
 
 export class MemoryNotificationAdapter implements INotificationService {
   private notifications: Map<string, Notification> = new Map();

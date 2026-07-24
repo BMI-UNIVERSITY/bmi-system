@@ -1,7 +1,5 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, Save, User, BookOpen, Calculator, CheckCircle, Hash } from 'lucide-react';
+import { X, Save, User, BookOpen, Calculator } from 'lucide-react';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

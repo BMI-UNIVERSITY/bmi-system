@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -93,7 +91,8 @@ const Programs: React.FC = () => {
         if (progRes.success && progRes.data) setPrograms(progRes.data);
         if (facRes.success && facRes.data) setFaculties(facRes.data);
         if (deptRes.success && deptRes.data) setDepartments(deptRes.data);
-      } catch (error) { console.error("Failed to load academic catalog", error);
+      } catch (error) { // eslint-disable-next-line no-console
+        console.error("Failed to load academic catalog", error);
        } finally {
         setLoading(false);
       }

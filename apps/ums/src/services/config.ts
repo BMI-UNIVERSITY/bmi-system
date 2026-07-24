@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 
 import { PORTAL_URL, UMS_URL, API_WORKER_URL } from '@bmi/shared';
 
@@ -15,10 +13,10 @@ import { PORTAL_URL, UMS_URL, API_WORKER_URL } from '@bmi/shared';
 // The production fallback is sourced from @bmi/shared so there is exactly
 // one place to update the API URL. Override locally via apps/ums/.env.
 const DEFAULT_API_URL =
-  ((import.meta as any).env?.PROD ? API_WORKER_URL : '');
+  ((import.meta as unknown as { env: Record<string, boolean | string> }).env?.PROD ? API_WORKER_URL : '');
 
 export const API_URL =
-  ((import.meta as any).env.VITE_API_URL || DEFAULT_API_URL) + '/api/v1';
+  ((import.meta as unknown as { env: Record<string, string> }).env.VITE_API_URL || DEFAULT_API_URL) + '/api/v1';
 
 export const API_TIMEOUT = 30000; // 30 seconds
 export const MAX_RETRIES = 2;

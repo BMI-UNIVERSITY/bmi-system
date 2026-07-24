@@ -1,6 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Staff Service
  */
@@ -45,7 +42,7 @@ export async function getStaff(filters?: {
     const response = await authFetch(url);
     const data = await parseJsonSafe<StaffListResponse>(response);
     return data ?? { success: false, error: 'Failed to parse staff response' };
-  } catch (error) { return { success: false, error: 'Failed to fetch staff'  };
+  } catch { return { success: false, error: 'Failed to fetch staff'  };
   }
 }
 
@@ -57,7 +54,7 @@ export async function createStaff(data: Partial<StaffMember>): Promise<StaffResp
     });
     const result = await parseJsonSafe<StaffResponse>(response);
     return result ?? { success: false, error: 'Failed to parse create staff response' };
-  } catch (error) { return { success: false, error: 'Failed to create staff'  };
+  } catch { return { success: false, error: 'Failed to create staff'  };
   }
 }
 
@@ -69,7 +66,7 @@ export async function updateStaff(id: string, data: Partial<StaffMember>): Promi
     });
     const result = await parseJsonSafe<StaffResponse>(response);
     return result ?? { success: false, error: 'Failed to parse update staff response' };
-  } catch (error) { return { success: false, error: 'Failed to update staff'  };
+  } catch { return { success: false, error: 'Failed to update staff'  };
   }
 }
 
@@ -78,16 +75,18 @@ export async function deleteStaff(id: string): Promise<StaffResponse> {
     const response = await authFetch(`${API_URL}/staff/${id}`, { method: 'DELETE' });
     const result = await parseJsonSafe<StaffResponse>(response);
     return result ?? { success: false, error: 'Failed to parse delete staff response' };
-  } catch (error) { return { success: false, error: 'Failed to delete staff'  };
+  } catch { return { success: false, error: 'Failed to delete staff'  };
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getStaffStats(): Promise<any> {
   try {
     const response = await authFetch(`${API_URL}/staff/stats/overview`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const data = await parseJsonSafe<any>(response);
     return data ?? { success: false, error: 'Failed to parse staff statistics response' };
-  } catch (error) { return { success: false, error: 'Failed to fetch staff statistics'  };
+  } catch { return { success: false, error: 'Failed to fetch staff statistics'  };
   }
 }
 

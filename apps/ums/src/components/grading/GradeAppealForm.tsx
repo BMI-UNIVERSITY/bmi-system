@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Grade Appeal Form Component
  * Allows students to submit grade appeals with written explanations
@@ -7,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { X, AlertCircle, FileText, Send } from 'lucide-react';
-import { Grade, AppealStatus } from '../../grading/types';
+import { Grade } from '../../grading/types';
 
 interface GradeAppealFormProps {
   grade: Grade;

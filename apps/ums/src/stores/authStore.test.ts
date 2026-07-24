@@ -1,6 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Auth Store Tests
  */
@@ -18,7 +15,7 @@ vi.mock('../services/authService', () => ({
   isTokenExpired: vi.fn(),
 }));
 
-import { login, logout, verifySession, getToken, getCurrentUser } from '../services/authService';
+import { login, verifySession, getToken, getCurrentUser } from '../services/authService';
 
 describe('useAuthStore', () => {
   beforeEach(() => {

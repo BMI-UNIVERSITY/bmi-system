@@ -6,5 +6,6 @@ export default defineConfig({
     // Workers pool can be enabled locally if needed for integration testing
     environment: 'node',
     globals: true,
+    testTimeout: 30000,
   },
 });

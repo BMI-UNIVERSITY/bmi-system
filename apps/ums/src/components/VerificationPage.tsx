@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS — Unified Document Verification Portal
  *
@@ -30,19 +28,19 @@ import {
   AlertCircle,
   GraduationCap,
   Scroll,
-  CalendarDays,
+  
   Building2,
   Hash,
-  Star,
+  
   RefreshCcw,
   Copy,
   Check,
   Calendar,
-  BookOpen,
+  
   MapPin,
   Clock,
-  Activity,
-  Award,
+  
+  
 } from "lucide-react";
 import { ADMIN_EMAIL } from '@bmi/shared';
 import QRScanner from "./QRScanner";
@@ -66,7 +64,7 @@ function formatDate(iso?: string) {
       month: "long",
       day: "numeric",
     });
-  } catch (error) { return iso;
+  } catch { return iso;
   }
 }
 
@@ -136,7 +134,7 @@ const VerificationPage: React.FC<VerificationPageProps> = ({ logo }) => {
     setIsVerifying(true);
     verifyDocument(req)
       .then(setResult)
-      .catch((error) =>
+      .catch((_error) =>
         setResult({
           valid: false,
           error: "Verification service unavailable.",
@@ -155,7 +153,7 @@ const VerificationPage: React.FC<VerificationPageProps> = ({ logo }) => {
     try {
       const res = await verifyDocument({ serial: clean });
       setResult(res);
-    } catch (error) { setResult({
+    } catch { setResult({
         valid: false,
         error: "Verification service unavailable.",
         code: "SERVICE_ERROR",
@@ -182,7 +180,7 @@ const VerificationPage: React.FC<VerificationPageProps> = ({ logo }) => {
     try {
       const res = await verifyQRScan(qrContent);
       setResult(res);
-    } catch (error) { setResult({
+    } catch { setResult({
         valid: false,
         error: "QR verification failed.",
         code: "QR_ERROR",
@@ -203,7 +201,7 @@ const VerificationPage: React.FC<VerificationPageProps> = ({ logo }) => {
     if (!result?.document?.serial_number) return;
     await navigator.clipboard
       .writeText(result.document.serial_number)
-      .catch((error) => {});
+      .catch(() => {});
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
@@ -216,12 +214,14 @@ const VerificationPage: React.FC<VerificationPageProps> = ({ logo }) => {
         ? "Graduation Certificate"
         : "BMI University Document";
 
+/*
   const docTypeIcon =
     result?.documentType === "transcript" ? (
       <Scroll size={20} />
     ) : (
       <GraduationCap size={20} />
     );
+*/
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] dark:bg-[#0a0015]">

@@ -1,12 +1,10 @@
-/* eslint-disable */
-/* eslint-disable */
 import React, { useState, useEffect } from "react";
 import {
   X,
-  BookOpen,
+  
   Layers,
-  GraduationCap,
-  FileText,
+  
+  
   CheckCircle2,
   Award,
   Info,
@@ -27,6 +25,7 @@ const CourseModal: React.FC<CourseModalProps> = ({
   onSave,
   editData,
 }) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [formData, setFormData] = useState<Record<string, any>>({
     title: "",
     code: "",
@@ -240,6 +239,7 @@ const CourseModal: React.FC<CourseModalProps> = ({
                   <select
                     value={formData.level}
                     onChange={(e) =>
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       setFormData({ ...formData, level: e.target.value as any })
                     }
                     className="w-full px-4 py-3 bg-white dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-none text-[10px] font-black uppercase tracking-widest focus:ring-1 focus:ring-[#4B0082] outline-none cursor-pointer"
@@ -311,6 +311,7 @@ const CourseModal: React.FC<CourseModalProps> = ({
                           value={s}
                           checked={formData.status === s}
                           onChange={() =>
+                            // eslint-disable-next-line @typescript-eslint/no-explicit-any
                             setFormData({ ...formData, status: s as any })
                           }
                           className="w-4 h-4 accent-[#4B0082]"

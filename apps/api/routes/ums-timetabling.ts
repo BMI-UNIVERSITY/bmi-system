@@ -1,7 +1,7 @@
 import { Env } from '../lib/types';
 import { ok } from '../lib/types';
 
-export async function handleListTimetabling(request: Request, env: Env): Promise<Response> {
+export async function handleListTimetabling(_request: Request, env: Env): Promise<Response> {
   const rows = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT t.*, 
             c.code as course_code, c.title as course_name,

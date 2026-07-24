@@ -1,9 +1,7 @@
-/* eslint-disable */
-/* eslint-disable */
 /**
  * ErrorBoundary — smoke test
  */
-import React from 'react';
+import 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import ErrorBoundary from './ErrorBoundary';
@@ -50,7 +48,7 @@ describe('ErrorBoundary', () => {
 
   it('resets and shows children again after clicking Try Again', () => {
     const spy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    const { rerender } = render(
+    render(
       <ErrorBoundary>
         <Bomb shouldThrow />
       </ErrorBoundary>,

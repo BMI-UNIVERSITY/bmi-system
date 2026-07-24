@@ -3,7 +3,7 @@ import { AuthProvider, useAuth } from './useAuth';
 import { api } from '../lib/api';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { waitFor } from '@testing-library/react';
-import React from 'react';
+
 
 vi.mock('../lib/api', () => ({
   api: {

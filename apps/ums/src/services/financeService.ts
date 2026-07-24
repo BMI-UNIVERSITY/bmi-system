@@ -1,6 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
-/* eslint-disable */
 /**
  * BMI UMS - Finance Service
  */
@@ -27,6 +24,7 @@ export interface TransactionListResponse {
   error?: string;
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getTransactions(filters?: any): Promise<TransactionListResponse> {
   try {
     const params = new URLSearchParams();
@@ -40,7 +38,7 @@ export async function getTransactions(filters?: any): Promise<TransactionListRes
     const response = await authFetch(url);
     const data = await parseJsonSafe<TransactionListResponse>(response);
     return data ?? { success: false, error: 'Failed to parse transactions response' };
-  } catch (error) { return { success: false, error: 'Failed to fetch transactions'  };
+  } catch { return { success: false, error: 'Failed to fetch transactions'  };
   }
 }
 
@@ -52,7 +50,7 @@ export async function createTransaction(data: Partial<Transaction>): Promise<Tra
     });
     const result = await parseJsonSafe<TransactionResponse>(response);
     return result ?? { success: false, error: 'Failed to parse create transaction response' };
-  } catch (error) { return { success: false, error: 'Failed to create transaction'  };
+  } catch { return { success: false, error: 'Failed to create transaction'  };
   }
 }
 
@@ -64,7 +62,7 @@ export async function updateTransaction(id: string, data: Partial<Transaction>):
     });
     const result = await parseJsonSafe<TransactionResponse>(response);
     return result ?? { success: false, error: 'Failed to parse update transaction response' };
-  } catch (error) { return { success: false, error: 'Failed to update transaction'  };
+  } catch { return { success: false, error: 'Failed to update transaction'  };
   }
 }
 
@@ -73,16 +71,18 @@ export async function deleteTransaction(id: string): Promise<TransactionResponse
     const response = await authFetch(`${API_URL}/finance/transactions/${id}`, { method: 'DELETE' });
     const result = await parseJsonSafe<TransactionResponse>(response);
     return result ?? { success: false, error: 'Failed to parse delete transaction response' };
-  } catch (error) { return { success: false, error: 'Failed to delete transaction'  };
+  } catch { return { success: false, error: 'Failed to delete transaction'  };
   }
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export async function getFinanceStats(): Promise<any> {
   try {
     const response = await authFetch(`${API_URL}/finance/stats`);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const data = await parseJsonSafe<any>(response);
     return data ?? { success: false, error: 'Failed to parse finance statistics response' };
-  } catch (error) { return { success: false, error: 'Failed to fetch finance statistics'  };
+  } catch { return { success: false, error: 'Failed to fetch finance statistics'  };
   }
 }
 

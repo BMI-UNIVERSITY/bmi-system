@@ -1,4 +1,3 @@
-/* eslint-disable */
 /**
  * BMI UMS — Academic Records Service
  * ─────────────────────────────────────────────────────────────────────────────
@@ -109,6 +108,7 @@ export interface AcademicRecordsFilters {
 
 // ─── Normaliser ───────────────────────────────────────────────────────────────
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function flattenRecord(r: AcademicRecord | any): AcademicRecordFlat {
   // Expand relations (present when backend returns expanded records)
   const student  = r.expand?.student_id;

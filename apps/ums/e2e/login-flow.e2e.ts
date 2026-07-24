@@ -15,7 +15,7 @@ test.describe('Login & Dashboard Flow', () => {
     // Wait for the form to be ready
     await page.waitForSelector('input[type="email"]');
     await page.fill('input[type="email"]', 'test.student@hkmministries.org');
-    await page.fill('input[type="password"]', 'SecurePass123!');
+    await page.fill('input[type="password"]', process.env.E2E_PASSWORD || 'SecurePass123!');
 
     // 3. Submit
     await page.click('button[type="submit"]');

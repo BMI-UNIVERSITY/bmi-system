@@ -1,5 +1,3 @@
-/* eslint-disable */
-/* eslint-disable */
 import { useEffect, useRef } from 'react';
 
 /**
@@ -20,7 +18,7 @@ export function useCoreDataPolling(
       if (cancelled) return;
       try {
         await cb.current();
-      } catch (error) {
+      } catch {
         /* ignore */
       }
     };
