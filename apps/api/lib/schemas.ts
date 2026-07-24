@@ -220,6 +220,7 @@ export const CreateStudentSchema = z.object({
   gpa: z.string().max(10).optional(),
   year_of_study: z.string().max(10).optional(),
   degree_level: z.string().max(50).optional(),
+  photo: z.string().max(300000).optional(), // base64 JPEG data URI, max ~200KB
   password_hash: z.string().max(512).default('RESET_REQUIRED'),
 });
 
@@ -240,6 +241,7 @@ export const UpdateStudentSchema = z
     year_of_study: z.string().max(10).optional(),
     degree_level: z.string().max(50).optional(),
     graduation_date: z.string().max(30).optional(),
+    photo: z.string().max(300000).optional(), // base64 JPEG data URI, max ~200KB
   })
   .strict(); // Reject any unknown keys to prevent field-injection attacks
 

@@ -210,6 +210,11 @@ const StudentRegistrationModal: React.FC<StudentRegistrationModalProps> = ({
         avatar_color: formData.avatar_color,
       };
 
+      // Include photo if one was set (cropped or existing)
+      if (formData.photo) {
+        payload.photo = formData.photo;
+      }
+
       if (formData.study_center_id) {
         payload.study_center_id = String(formData.study_center_id);
       }

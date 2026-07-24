@@ -108,7 +108,7 @@ export async function handleCreateStudent(request: Request, env: Env): Promise<R
     email, first_name, last_name, phone, password_hash,
     reg_no, gender, date_of_birth, nationality, admission_date, program,
     status, avatar_color, study_center_id,
-    gpa, year_of_study, degree_level,
+    gpa, year_of_study, degree_level, photo,
   } = parsed;
 
   // Check if user exists already
@@ -129,14 +129,14 @@ export async function handleCreateStudent(request: Request, env: Env): Promise<R
   const studentId = buildId(); // Generate stable student_id
   await env.PLATFORM_CONTEXT!.db.prepare(
     `INSERT INTO students (user_id, student_id, reg_no, gender, date_of_birth, nationality, admission_date,
-       program, status, avatar_color, study_center_id, gpa, year_of_study, degree_level)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       program, status, avatar_color, study_center_id, gpa, year_of_study, degree_level, photo)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(user_id) DO UPDATE SET
        reg_no = excluded.reg_no, updated_at = datetime('now')`
   ).bind(
     userId, studentId, reg_no, gender || null, date_of_birth || null, nationality || null,
     admission_date, program, status, avatar_color, study_center_id || null,
-    gpa || null, year_of_study || null, degree_level || null
+    gpa || null, year_of_study || null, degree_level || null, photo || null
   ).run();
 
   const created = await env.PLATFORM_CONTEXT!.db.prepare(
@@ -161,7 +161,7 @@ export async function handleUpdateStudent(request: Request, env: Env, studentId:
 
   const uid = student.user_id;
   const allowed = ['gender','date_of_birth','nationality','admission_date',
-    'status','avatar_color','study_center_id','gpa','year_of_study','degree_level','graduation_date'];
+    'status','avatar_color','study_center_id','gpa','year_of_study','degree_level','graduation_date','photo'];
   // NOTE: 'program' is managed via the student_programs table, not directly on students
 
   const bodyRecord = body as unknown as Record<string, unknown>;
