@@ -377,6 +377,9 @@ export async function verifySession(): Promise<boolean> {
       // eslint-disable-next-line no-console
       console.log('[authService] Session verified - User object:', user);
       localStorage.setItem(USER_KEY, JSON.stringify(user));
+      if (data.csrf_token || data.data?.csrf_token) {
+        _memoryToken = data.data?.csrf_token || data.csrf_token;
+      }
       return true;
     }
     return false;
