@@ -1,0 +1,1 @@
+﻿src/app/ViewRenderer.tsx(122,12): error TS1005: ',' expected.

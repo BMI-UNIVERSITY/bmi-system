@@ -1,0 +1,90 @@
+﻿src/App.tsx(1,8): error TS6133: 'React' is declared but its value is never read.
+src/app/ViewRenderer.tsx(117,9): error TS6133: '_stats' is declared but its value is never read.
+src/app/ViewRenderer.tsx(121,9): error TS6133: '_onNavigate' is declared but its value is never read.
+src/components/AdmissionLetter.tsx(9,49): error TS6133: 'X' is declared but its value is never read.
+src/components/AdmissionLetter.tsx(10,3): error TS6133: 'CheckCircle' is declared but its value is never read.
+src/components/AdmissionLetter.tsx(10,36): error TS6133: 'Building2' is declared but its value is never read.
+src/components/AdmissionLetter.tsx(11,25): error TS6133: 'Hash' is declared but its value is never read.
+src/components/AdmissionLetter.tsx(11,31): error TS6133: 'Send' is declared but its value is never read.
+src/components/Alumni.tsx(491,31): error TS6133: 'e' is declared but its value is never read.
+src/components/Certificates.tsx(110,7): error TS6133: '_BMI_SEAL' is declared but its value is never read.
+src/components/Certificates.tsx(203,9): error TS6133: '_verifyUrl' is declared but its value is never read.
+src/components/Courses.tsx(55,9): error TS6133: '_queryClient' is declared but its value is never read.
+src/components/Dashboard.tsx(62,9): error TS6133: '_addTransaction' is declared but its value is never read.
+src/components/Dashboard.tsx(212,9): error TS6133: '_handleCloseModal' is declared but its value is never read.
+src/components/Dashboard.tsx(213,5): error TS2349: This expression is not callable.
+  No constituent of type '"attendance" | "sms" | "transaction"' is callable.
+src/components/Dashboard.tsx(213,5): error TS2721: Cannot invoke an object which is possibly 'null'.
+src/components/Dashboard.tsx(214,5): error TS2349: This expression is not callable.
+  Type '{ studentName: string; transactionAmount: string; smsMessage: string; attendanceCourse: string; }' has no call signatures.
+src/components/Dashboard.tsx(220,5): error TS2349: This expression is not callable.
+  Type 'Boolean' has no call signatures.
+src/components/Exams.tsx(25,1): error TS6192: All imports in import declaration are unused.
+src/components/Exams.tsx(330,11): error TS6133: '_fromImport' is declared but its value is never read.
+src/components/Finance.tsx(45,9): error TS6198: All destructured elements are unused.
+src/components/Finance.tsx(82,12): error TS6133: 'setSelectedTx' is declared but its value is never read.
+src/components/GoodStandingLetter.tsx(9,51): error TS6133: 'X' is declared but its value is never read.
+src/components/GoodStandingLetter.tsx(10,3): error TS6133: 'CheckCircle' is declared but its value is never read.
+src/components/GoodStandingLetter.tsx(10,26): error TS6133: 'FileText' is declared but its value is never read.
+src/components/GoodStandingLetter.tsx(10,43): error TS6133: 'BadgeCheck' is declared but its value is never read.
+src/components/GoodStandingLetter.tsx(11,3): error TS6133: 'Hash' is declared but its value is never read.
+src/components/GoodStandingLetter.tsx(11,9): error TS6133: 'Building2' is declared but its value is never read.
+src/components/Grades.tsx(37,1): error TS6192: All imports in import declaration are unused.
+src/components/grading/CourseGradeDistribution.tsx(49,9): error TS2349: This expression is not callable.
+  Type 'Grade[]' has no call signatures.
+src/components/ImportModal.tsx(32,5): error TS2349: This expression is not callable.
+  Type 'File' has no call signatures.
+src/components/ImportModal.tsx(32,5): error TS2721: Cannot invoke an object which is possibly 'null'.
+src/components/ImportModal.tsx(44,5): error TS2349: This expression is not callable.
+  Type 'File' has no call signatures.
+src/components/ImportModal.tsx(44,5): error TS2721: Cannot invoke an object which is possibly 'null'.
+src/components/Library.tsx(48,40): error TS6133: 'isLoadingLibrary' is declared but its value is never read.
+src/components/Library.tsx(58,9): error TS6133: '_courses' is declared but its value is never read.
+src/components/RegistrationCard.tsx(52,7): error TS6133: '_GRADE_COLORS' is declared but its value is never read.
+src/components/Staff.tsx(84,9): error TS6133: '_queryClient' is declared but its value is never read.
+src/components/Staff.tsx(120,25): error TS2349: This expression is not callable.
+  Type 'StudyCenter[]' has no call signatures.
+src/components/StudentRegistrationModal.tsx(74,11): error TS2349: This expression is not callable.
+  Type 'StudyCenter[]' has no call signatures.
+src/components/Students.tsx(55,9): error TS6133: '_courses' is declared but its value is never read.
+src/components/Students.tsx(162,25): error TS2349: This expression is not callable.
+  Type 'StudyCenter[]' has no call signatures.
+src/components/Students.tsx(333,9): error TS6133: '_handleImportStudents' is declared but its value is never read.
+src/components/Timetable.tsx(35,9): error TS2349: This expression is not callable.
+  Type 'Boolean' has no call signatures.
+src/components/Transcripts.tsx(85,41): error TS6133: 'isLoadingStudents' is declared but its value is never read.
+src/components/Transcripts.tsx(95,9): error TS6133: '_courses' is declared but its value is never read.
+src/components/Transcripts.tsx(141,9): error TS6133: '_terms' is declared but its value is never read.
+src/components/Transcripts.tsx(250,7): error TS2349: This expression is not callable.
+  Type 'Boolean' has no call signatures.
+src/components/Transcripts.tsx(273,9): error TS2349: This expression is not callable.
+  Type 'Boolean' has no call signatures.
+src/components/Transcripts.tsx(536,9): error TS6133: '_getDeanName' is declared but its value is never read.
+src/components/Transcripts.tsx(536,25): error TS6133: 'program_code' is declared but its value is never read.
+src/components/Transcripts.tsx(615,9): error TS6133: '_TABLE_ROW_MM' is declared but its value is never read.
+src/components/Transcripts.tsx(616,9): error TS6133: '_availableTableMm' is declared but its value is never read.
+src/components/Transcripts.tsx(709,9): error TS6133: '_buildPrintHTML' is declared but its value is never read.
+src/components/Transcripts.tsx(1132,9): error TS6133: '_handleDownloadWord' is declared but its value is never read.
+src/components/Transcripts.tsx(1136,9): error TS6133: '_handleDownloadSVG' is declared but its value is never read.
+src/components/VerificationPage.tsx(137,15): error TS6133: 'error' is declared but its value is never read.
+src/components/VerificationPage.tsx(204,15): error TS6133: 'error' is declared but its value is never read.
+src/components/VerificationPage.tsx(217,9): error TS6133: '_docTypeIcon' is declared but its value is never read.
+src/components/Verify.tsx(114,9): error TS6133: '_getCurrentAcademicYear' is declared but its value is never read.
+src/components/Visitors.tsx(25,11): error TS6196: 'Visitor' is declared but never used.
+src/grading/calculators/GPACalculator.ts(223,19): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Grade'.
+src/grading/calculators/GPACalculator.ts(226,38): error TS2339: Property 'sort' does not exist on type 'string'.
+src/grading/calculators/GPACalculator.ts(226,44): error TS7006: Parameter 'a' implicitly has an 'any' type.
+src/grading/calculators/GPACalculator.ts(226,47): error TS7006: Parameter 'b' implicitly has an 'any' type.
+src/grading/calculators/PercentileCalculator.ts(80,3): error TS6133: 'updatedGradeId' is declared but its value is never read.
+src/grading/models/Grade.ts(179,3): error TS6133: 'gradingScale' is declared but its value is never read.
+src/grading/models/RetakePolicy.ts(107,19): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Grade'.
+src/grading/models/RetakePolicy.ts(110,49): error TS2345: Argument of type 'string' is not assignable to parameter of type 'Grade[]'.
+src/grading/models/RetakePolicy.ts(287,11): error TS6133: '_gpaGradeIds' is declared but its value is never read.
+src/grading/services/GradeAutomationService.ts(126,5): error TS6133: 'courseId' is declared but its value is never read.
+src/grading/services/GradeAutomationService.ts(127,5): error TS6133: 'studentId' is declared but its value is never read.
+src/grading/services/GradeMigrationService.ts(23,9): error TS6133: '_startTime' is declared but its value is never read.
+src/grading/utils/gradeValidation.ts(20,3): error TS6133: 'scale' is declared but its value is never read.
+src/services/authService.ts(512,3): error TS6133: 'passwordConfirm' is declared but its value is never read.
+src/services/documentService.ts(27,20): error TS6133: 'TEMPLATES_KEY' is declared but its value is never read.
+src/services/importService.ts(105,19): error TS6133: 'error' is declared but its value is never read.
+src/services/transcriptExportService.ts(1,1): error TS6192: All imports in import declaration are unused.

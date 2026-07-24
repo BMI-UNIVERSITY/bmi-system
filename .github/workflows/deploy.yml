@@ -40,25 +40,25 @@ jobs:
             api:
               - 'apps/api/**'
               - 'packages/**'
-              - 'package-lock.json'
+              - 'pnpm-lock.yaml'
               - 'package.json'
               - '.github/workflows/deploy.yml'
             portal:
               - 'apps/portal/**'
               - 'packages/shared/**'
-              - 'package-lock.json'
+              - 'pnpm-lock.yaml'
               - 'package.json'
               - '.github/workflows/deploy.yml'
             ums:
               - 'apps/ums/**'
               - 'packages/shared/**'
-              - 'package-lock.json'
+              - 'pnpm-lock.yaml'
               - 'package.json'
               - '.github/workflows/deploy.yml'
             university:
               - 'bmi-university/**'
               - 'packages/shared/**'
-              - 'package-lock.json'
+              - 'pnpm-lock.yaml'
               - 'package.json'
               - '.github/workflows/deploy.yml'
 
@@ -79,25 +79,29 @@ jobs:
         with:
           fetch-depth: 2 # Turbo needs HEAD^ to compute affected packages
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: 'package-lock.json'
+          cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
 
-      # Populate node_modules from cache (speeds up npm install by restoring
-      # previously-installed packages).  npm install always runs — stale caches
+      # Populate node_modules from cache (speeds up pnpm install --frozen-lockfile by restoring
+      # previously-installed packages).  pnpm install --frozen-lockfile always runs — stale caches
       # are repaired automatically.  The setup-node global npm cache makes
-      # subsequent npm install runs fast even on a cold node_modules directory.
+      # subsequent pnpm install --frozen-lockfile runs fast even on a cold node_modules directory.
       - name: Restore node_modules cache
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: nm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Install dependencies
-        run: npm install --prefer-offline
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       # Restore Turborepo local filesystem cache so already-built packages
       # are replayed instantly without re-running their tasks.
@@ -111,7 +115,7 @@ jobs:
       # Single Turbo command — Turbo fans out all tasks in topological order,
       # parallelises within each layer and skips packages with cache hits.
       - name: Run CI (build + lint + typecheck + test)
-        run: npx turbo run build lint type-check test --concurrency=100%
+        run: pnpm exec turbo run build lint type-check test --concurrency=100%
 
       # Persist the Turbo cache so deploy jobs (and future CI runs) can hit it.
       - name: Save Turborepo cache
@@ -129,29 +133,33 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: 'package-lock.json'
+          cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
 
       - name: Restore node_modules cache
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: nm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
 
       - name: Install dependencies
-        run: npm install --prefer-offline
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Install Playwright Browsers
         working-directory: apps/ums
-        run: npx playwright install --with-deps chromium
+        run: pnpm exec playwright install --with-deps chromium
 
       - name: Run E2E tests
         working-directory: apps/ums
-        run: npm run test:e2e
+        run: pnpm run test:e2e
 
   # ─── Deploy Unified API Worker ────────────────────────────────────────────────
   deploy-api:
@@ -164,22 +172,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: 'package-lock.json'
+          cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
 
       - name: Restore node_modules cache
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: nm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: nm-${{ runner.os }}-
 
       - name: Install dependencies
-        run: npm install --prefer-offline
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       # Restore Turborepo cache — build artifacts from ci-checks are replayed
       # immediately, meaning this build step finishes in ~1 second on a hit.
@@ -191,7 +203,7 @@ jobs:
           restore-keys: turbo-${{ runner.os }}-
 
       - name: Build API (from Turbo cache)
-        run: npx turbo run build --filter=@bmi/api --concurrency=100%
+        run: pnpm exec turbo run build --filter=@bmi/api --concurrency=100%
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v4
@@ -212,22 +224,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: 'package-lock.json'
+          cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
 
       - name: Restore node_modules cache
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: nm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: nm-${{ runner.os }}-
 
       - name: Install dependencies
-        run: npm install --prefer-offline
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Restore Turborepo cache
         uses: actions/cache@v4
@@ -237,7 +253,7 @@ jobs:
           restore-keys: turbo-${{ runner.os }}-
 
       - name: Build Portal (from Turbo cache)
-        run: npx turbo run build --filter=bmi-portal --concurrency=100%
+        run: pnpm exec turbo run build --filter=bmi-portal --concurrency=100%
         env:
           NODE_ENV: production
           VITE_API_URL: "https://bmi-api.bmiuniversity107.workers.dev"
@@ -261,22 +277,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: 'package-lock.json'
+          cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
 
       - name: Restore node_modules cache
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: nm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: nm-${{ runner.os }}-
 
       - name: Install dependencies
-        run: npm install --prefer-offline
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Restore Turborepo cache
         uses: actions/cache@v4
@@ -286,7 +306,7 @@ jobs:
           restore-keys: turbo-${{ runner.os }}-
 
       - name: Build UMS (from Turbo cache)
-        run: npx turbo run build --filter=bmi-ums-frontend --concurrency=100%
+        run: pnpm exec turbo run build --filter=bmi-ums-frontend --concurrency=100%
         env:
           NODE_ENV: production
           VITE_API_URL: "https://bmi-api.bmiuniversity107.workers.dev"
@@ -310,22 +330,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: 'package-lock.json'
+          cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
 
       - name: Restore node_modules cache
         uses: actions/cache@v4
         with:
           path: node_modules
-          key: nm-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+          key: nm-${{ runner.os }}-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: nm-${{ runner.os }}-
 
       - name: Install dependencies
-        run: npm install --prefer-offline
+        run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Restore Turborepo cache
         uses: actions/cache@v4
@@ -335,7 +359,7 @@ jobs:
           restore-keys: turbo-${{ runner.os }}-
 
       - name: Build University (from Turbo cache)
-        run: npx turbo run build --filter=bmi-university --concurrency=100%
+        run: pnpm exec turbo run build --filter=bmi-university --concurrency=100%
 
       - name: Verify build output
         run: |
@@ -351,3 +375,4 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: bmi-university
           command: pages deploy out --project-name=bmi-university --branch=main
+

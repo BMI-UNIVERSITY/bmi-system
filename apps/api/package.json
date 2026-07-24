@@ -16,10 +16,11 @@
     "lint": "eslint ."
   },
   "dependencies": {
-    "@bmi/adapters": "file:../../packages/adapters",
-    "@bmi/bootstrap": "file:../../packages/bootstrap",
-    "@bmi/ports": "file:../../packages/ports",
-    "@bmi/shared": "file:../../packages/shared",
+    "@bmi/adapters": "workspace:*",
+    "@bmi/api-middleware": "workspace:*",
+    "@bmi/bootstrap": "workspace:*",
+    "@bmi/ports": "workspace:*",
+    "@bmi/shared": "workspace:*",
     "@sentry/cloudflare": "10.62.0",
     "better-sqlite3": "^12.11.1",
     "jpeg-js": "^0.4.4",

@@ -1,41 +1,20 @@
 {
   "name": "bmi-system",
   "private": true,
-  "packageManager": "npm@11.13.0",
+  "packageManager": "pnpm@9.12.0",
   "engines": {
     "node": ">=24.0.0"
   },
-  "workspaces": [
-    "apps/*",
-    "packages/*",
-    "bmi-university"
-  ],
   "scripts": {
-    "prepare": "husky && npm run build --workspace=@bmi/ports && npm run build --workspace=@bmi/adapters && npm run build --workspace=@bmi/bootstrap && npm run build --workspace=@bmi/shared && npm run build --workspace=@bmi/api-middleware",
+    "prepare": "husky",
     "ci:build": "turbo run build --filter=./packages/*",
     "ci:typecheck": "turbo run type-check typecheck",
     "ci:test": "turbo run test",
     "ci:lint": "turbo run lint",
     "ci:all": "turbo run build lint type-check test --concurrency=100%"
   },
-  "overrides": {
-    "cookie": "^0.7.0",
-    "esbuild": "^0.25.0",
-    "postcss": "$postcss",
-    "undici": "^6.26.1",
-    "uuid": "^11.1.1",
-    "ws": "^8.20.2",
-    "sharp": "0.35.2",
-    "next": {
-      "postcss": "$postcss",
-      "sharp": "0.35.2"
-    },
-    "exceljs": {
-      "uuid": "^11.1.1"
-    }
-  },
+
   "optionalDependencies": {
-    "@next/swc-linux-x64-gnu": "^15.1.7",
     "@tailwindcss/oxide-linux-x64-gnu": "^4.3.2",
     "lightningcss-linux-x64-gnu": "1.32.0"
   },

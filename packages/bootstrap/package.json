@@ -18,8 +18,8 @@
     "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
-    "@bmi/ports": "*",
-    "@bmi/adapters": "*"
+    "@bmi/ports": "workspace:*",
+    "@bmi/adapters": "workspace:*"
   },
   "devDependencies": {
     "typescript": "^5.8.2",

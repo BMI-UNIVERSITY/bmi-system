@@ -11,7 +11,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@bmi/shared": "file:../packages/shared",
+    "@bmi/shared": "workspace:*",
     "next": "^16.2.11",
     "postcss": "^8.4.31",
     "react": "^19.2.8",

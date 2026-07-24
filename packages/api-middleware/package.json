@@ -13,8 +13,9 @@
   },
   "dependencies": {
     "@asteasolutions/zod-to-openapi": "^8.5.0",
-    "@bmi/ports": "file:../ports",
-    "@bmi/shared": "*",
+    "@bmi/ports": "workspace:*",
+    "@bmi/shared": "workspace:*",
+    "openapi3-ts": "4.6.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
