@@ -212,6 +212,7 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/api
           command: deploy
+          packageManager: pnpm
 
   # ─── Deploy Portal Frontend ───────────────────────────────────────────────────
   deploy-portal:
@@ -265,6 +266,7 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/portal
           command: pages deploy dist --project-name=bmi-portal
+          packageManager: pnpm
 
   # ─── Deploy UMS Frontend ──────────────────────────────────────────────────────
   deploy-ums:
@@ -318,6 +320,7 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: apps/ums
           command: pages deploy dist --project-name=bmi-ums
+          packageManager: pnpm
 
   # ─── Deploy University Frontend ───────────────────────────────────────────────
   deploy-university:
@@ -375,4 +378,5 @@ jobs:
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: bmi-university
           command: pages deploy out --project-name=bmi-university --branch=main
+          packageManager: pnpm
 
