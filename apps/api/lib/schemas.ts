@@ -232,7 +232,7 @@ export const UpdateStudentSchema = z
     date_of_birth: z.string().max(30).optional(),
     nationality: z.string().max(LIMITS.SHORT).optional(),
     admission_date: z.string().max(30).optional(),
-    program: z.string().max(LIMITS.MEDIUM).optional(),
+    // Note: 'program' is managed via student_programs table — not updatable here
     status: z.string().max(50).optional(),
     avatar_color: z.string().max(LIMITS.SHORT).optional(),
     study_center_id: z.string().max(LIMITS.UUID).optional(),

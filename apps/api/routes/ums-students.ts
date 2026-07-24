@@ -160,8 +160,9 @@ export async function handleUpdateStudent(request: Request, env: Env, studentId:
   if (!student) return error('Student not found', 404);
 
   const uid = student.user_id;
-  const allowed = ['gender','date_of_birth','nationality','admission_date','program',
+  const allowed = ['gender','date_of_birth','nationality','admission_date',
     'status','avatar_color','study_center_id','gpa','year_of_study','degree_level','graduation_date'];
+  // NOTE: 'program' is managed via the student_programs table, not directly on students
 
   const bodyRecord = body as unknown as Record<string, unknown>;
   const updates: string[] = [];
