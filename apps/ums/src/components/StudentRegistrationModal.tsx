@@ -197,12 +197,42 @@ const StudentRegistrationModal: React.FC<StudentRegistrationModalProps> = ({
     try {
       let result;
       
+      const payload: any = {
+        first_name: formData.first_name,
+        last_name: formData.last_name,
+        phone: formData.phone || undefined,
+        gender: formData.gender,
+        date_of_birth: formData.date_of_birth || undefined,
+        nationality: formData.nationality || undefined,
+        admission_date: formData.admission_date,
+        program: formData.program || formData.program_code, // fallback to program_code if program is not set
+        status: formData.status,
+        avatar_color: formData.avatar_color,
+      };
+
+      if (formData.study_center_id) {
+        payload.study_center_id = String(formData.study_center_id);
+      }
+      if (formData.gpa !== undefined && formData.gpa !== null) {
+        payload.gpa = String(formData.gpa);
+      }
+      if (formData.year_of_study !== undefined && formData.year_of_study !== null) {
+        payload.year_of_study = String(formData.year_of_study);
+      }
+      if (formData.degree_level) {
+        payload.degree_level = formData.degree_level;
+      }
+      if (formData.graduation_date) {
+        payload.graduation_date = formData.graduation_date;
+      }
+
       if (initialData) {
         // Update existing student
-        result = await updateStudent(initialData.id, formData);
+        result = await updateStudent(initialData.id, payload);
       } else {
         // Create new student
-        result = await createStudent(formData);
+        payload.reg_no = formData.reg_no || `STD${Date.now()}`; // Fallback reg_no
+        result = await createStudent(payload);
       }
 
       if (result.success && result.data) {
