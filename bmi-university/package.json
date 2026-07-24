@@ -13,10 +13,10 @@
   "dependencies": {
     "@bmi/shared": "workspace:*",
     "next": "^16.2.11",
-    "postcss": "^8.4.31",
+    "postcss": "^8.5.23",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "sharp": "^0.35.2"
+    "sharp": "^0.35.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
