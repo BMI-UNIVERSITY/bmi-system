@@ -1,2 +1,0 @@
-﻿src/components/Transcripts.tsx(623,3): error TS1109: Expression expected.
-src/components/Transcripts.tsx(2623,1): error TS1128: Declaration or statement expected.

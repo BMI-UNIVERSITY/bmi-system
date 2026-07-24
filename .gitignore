@@ -28,3 +28,8 @@ apps/api/tmpdb/
 apps/api/tmpdb2/
 apps/api/test-migrations/
 apps/api/*.sql.bak
+
+# Scratch / debug output files
+apps/*/tsc-*.txt
+apps/*/out.txt
+apps/*/*.txt

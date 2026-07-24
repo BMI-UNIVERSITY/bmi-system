@@ -1,3 +1,0 @@
-﻿src/components/AdminDocuments.tsx(27,9): error TS6133: '_t' is declared but its value is never read.
-src/components/ErrorBoundary.test.tsx(51,11): error TS6133: '_' is declared but its value is never read.
-src/grading/services/GradeAPIService.ts(215,7): error TS6133: '_unused' is declared but its value is never read.
