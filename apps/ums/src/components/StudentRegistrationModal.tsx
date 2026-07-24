@@ -205,7 +205,7 @@ const StudentRegistrationModal: React.FC<StudentRegistrationModalProps> = ({
         date_of_birth: formData.date_of_birth || undefined,
         nationality: formData.nationality || undefined,
         admission_date: formData.admission_date,
-        program: formData.program || formData.program_code, // fallback to program_code if program is not set
+        // NOTE: 'program' is NOT sent on update — backend manages it via student_programs table
         status: formData.status,
         avatar_color: formData.avatar_color,
       };
