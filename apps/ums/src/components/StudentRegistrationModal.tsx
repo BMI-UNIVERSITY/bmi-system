@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, UserPlus, Upload, User, CheckCircle2, Loader2 } from 'lucide-react';
+import { X, UserPlus, Upload, User, CheckCircle2, Loader2, Crop as CropIcon } from 'lucide-react';
+import ReactCrop, { type Crop, type PixelCrop } from 'react-image-crop';
+import 'react-image-crop/dist/ReactCrop.css';
 import { Student } from '../types';
 import { createStudent, updateStudent } from '../services/studentService';
 import { authFetch } from '../services/authService';
@@ -48,6 +50,11 @@ const StudentRegistrationModal: React.FC<StudentRegistrationModalProps> = ({
   });
   
   const [photoPreview, setPhotoPreview] = useState<string | undefined>(undefined);
+  const [crop, setCrop] = useState<Crop>();
+  const [completedCrop, setCompletedCrop] = useState<PixelCrop | null>(null);
+  const [isCropping, setIsCropping] = useState(false);
+  const imgRef = React.useRef<HTMLImageElement>(null);
+  
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -117,10 +124,41 @@ const StudentRegistrationModal: React.FC<StudentRegistrationModalProps> = ({
       reader.onloadend = () => {
         const result = reader.result as string;
         setPhotoPreview(result);
-        handleChange('photo', result);
+        setIsCropping(true);
       };
       reader.readAsDataURL(file);
     }
+  };
+
+  const finalizeCrop = () => {
+    if (!completedCrop || !imgRef.current || completedCrop.width <= 0 || completedCrop.height <= 0) {
+      setIsCropping(false);
+      return;
+    }
+    const canvas = document.createElement('canvas');
+    const scaleX = imgRef.current.naturalWidth / imgRef.current.width;
+    const scaleY = imgRef.current.naturalHeight / imgRef.current.height;
+    canvas.width = completedCrop.width;
+    canvas.height = completedCrop.height;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    ctx.drawImage(
+      imgRef.current,
+      completedCrop.x * scaleX,
+      completedCrop.y * scaleY,
+      completedCrop.width * scaleX,
+      completedCrop.height * scaleY,
+      0,
+      0,
+      completedCrop.width,
+      completedCrop.height
+    );
+
+    const base64Image = canvas.toDataURL('image/jpeg');
+    setPhotoPreview(base64Image);
+    handleChange('photo', base64Image);
+    setIsCropping(false);
   };
 
   const handleSubmit = async () => {
@@ -235,6 +273,54 @@ const StudentRegistrationModal: React.FC<StudentRegistrationModalProps> = ({
                     <input type="file" accept="image/*" onChange={handlePhotoUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
                  </div>
               </div>
+
+              {/* Crop Modal Overlay */}
+              {isCropping && photoPreview && (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/80 p-6">
+                  <div className="bg-white dark:bg-gray-900 p-6 max-w-lg w-full flex flex-col shadow-2xl relative">
+                    <h4 className="text-lg font-black uppercase mb-4 text-[#4B0082] dark:text-[#FFD700] flex items-center gap-2">
+                      <CropIcon size={20} /> Adjust Photo
+                    </h4>
+                    <div className="relative flex justify-center bg-gray-100 dark:bg-gray-800 overflow-hidden max-h-[50vh]">
+                      <ReactCrop
+                        crop={crop}
+                        onChange={(_, percentCrop) => setCrop(percentCrop)}
+                        onComplete={(c) => setCompletedCrop(c)}
+                        aspect={1}
+                        circularCrop
+                      >
+                        <img
+                          ref={imgRef}
+                          src={photoPreview}
+                          alt="Crop me"
+                          className="max-h-[50vh] object-contain"
+                          onLoad={(e) => {
+                            const { width, height } = e.currentTarget;
+                            const size = Math.min(width, height) * 0.8;
+                            const x = (width - size) / 2;
+                            const y = (height - size) / 2;
+                            setCrop({ unit: 'px', x, y, width: size, height: size });
+                          }}
+                        />
+                      </ReactCrop>
+                    </div>
+                    <div className="mt-6 flex justify-end gap-3">
+                      <button
+                        onClick={() => setIsCropping(false)}
+                        className="px-6 py-2 border-2 border-gray-300 dark:border-gray-600 text-xs font-bold uppercase hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={finalizeCrop}
+                        className="px-6 py-2 bg-[#4B0082] text-white text-xs font-bold uppercase hover:bg-black transition-colors"
+                      >
+                        Crop & Save
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
               
               <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-6">
                  <div className="space-y-1">

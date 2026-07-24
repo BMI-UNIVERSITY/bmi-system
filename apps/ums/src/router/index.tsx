@@ -20,7 +20,6 @@ const Staff = lazy(() => import("../components/Staff"));
 const Attendance = lazy(() => import("../components/Attendance"));
 const Finance = lazy(() => import("../components/Finance"));
 const Courses = lazy(() => import("../components/Courses"));
-const Exams = lazy(() => import("../components/Exams"));
 const Grades = lazy(() => import("../components/Grades"));
 const Transcripts = lazy(() =>
   import("../components/Transcripts").then((m) => ({ default: m.Transcripts })),
@@ -151,14 +150,7 @@ export function AppRoutes() {
         <Route path="/timetable" element={<Timetable />} />
         <Route path="/programs" element={<Programs />} />
         <Route path="/programs/:id" element={<ProgramDetail />} />
-        <Route
-          path="/exams"
-          element={
-            <RoleGuard allowedRoles={["registrar", "faculty"]}>
-              <Exams />
-            </RoleGuard>
-          }
-        />
+        <Route path="/exams" element={<Navigate to="/grades" replace />} />
         <Route
           path="/grades"
           element={

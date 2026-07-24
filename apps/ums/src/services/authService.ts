@@ -276,7 +276,7 @@ export async function refreshAccessToken(): Promise<string | null> {
  * Fetch with authentication and automatic retry on 401 (Token Refresh)
  */
 export async function authFetch(url: string, options: RequestInit = {}, timeoutMs: number = 5000): Promise<Response> {
-  const csrfToken = getToken();
+  const csrfToken = _memoryToken;
   
   const headers: Record<string, string> = {
     ...(options.body ? { 'Content-Type': 'application/json' } : {}),

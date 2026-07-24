@@ -7,16 +7,16 @@ import React, { useState, useEffect, useMemo } from "react";
 import {
   Plus,
   Search,
-  
   Download,
   Upload,
-  
   Eye,
   User,
   BarChart2,
   FileText,
   X,
   CheckCircle,
+  Calendar,
+  BookOpen,
 } from "lucide-react";
 import GradeEntryModal, { GradeFormData } from "./grading/GradeEntryModal";
 import GradeDetailsView from "./grading/GradeDetailsView";
@@ -24,6 +24,7 @@ import StudentGradeReport from "./grading/StudentGradeReport";
 import CourseGradeDistribution from "./grading/CourseGradeDistribution";
 import GradeAppealForm, { AppealFormData } from "./grading/GradeAppealForm";
 import GradeAppealReview from "./grading/GradeAppealReview";
+import ExamsPanel from "./ExamsPanel";
 import {
   createGrade,
   updateGrade,
@@ -39,6 +40,7 @@ import { postGradeBatch } from "../services/batchService";
 import { useStudentsQuery, useCoursesQuery } from "../hooks/useEntityQueries";
 
 const Grades: React.FC = () => {
+  const [mainTab, setMainTab] = useState<"exams" | "records">("records");
   const { data: studentsRes } = useStudentsQuery({ page: 1, perPage: 1000 });
   const { data: coursesRes } = useCoursesQuery({ page: 1, perPage: 1000 });
 
@@ -332,60 +334,88 @@ const Grades: React.FC = () => {
   );
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Success notification */}
-      {gradeSuccess && (
-        <div
-          role="status"
-          aria-live="polite"
-          className="flex items-center justify-between gap-3 px-4 py-3 bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 text-green-800 dark:text-green-300"
-        >
-          <div className="flex items-center gap-2">
-            <CheckCircle size={18} className="flex-shrink-0" />
-            <span className="text-sm font-bold">{gradeSuccess}</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => setGradeSuccess(null)}
-            aria-label="Dismiss success message"
-            className="p-1 hover:bg-green-200 dark:hover:bg-green-800 transition-colors"
-          >
-            <X size={16} />
-          </button>
-        </div>
-      )}
+    <div className="h-full flex flex-col animate-fade-in">
 
-      {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-black uppercase tracking-tight text-gray-900 dark:text-white">
-            Grade Management
-          </h1>
-          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            Manage student grades with weighted assessments
+      {/* Page Header */}
+      <div className="flex-shrink-0 sticky top-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 px-6 py-3 flex flex-col md:flex-row justify-between items-center gap-3 shadow-sm">
+        <div className="flex flex-col">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
+            Assessments &amp; Grades
+          </h2>
+          <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+            Exam scheduling, grade entry and official grade records
           </p>
         </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setBulkOpen(true)}
-            className="px-4 py-3 bg-white dark:bg-gray-800 border-2 border-[#4B0082] text-[#4B0082] dark:text-[#FFD700] font-black text-xs uppercase tracking-widest hover:bg-gray-50 dark:hover:bg-gray-700 transition-all"
-          >
-            Bulk JSON
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setEditingGrade(null);
-              setIsModalOpen(true);
-            }}
-            className="px-6 py-3 bg-[#4B0082] text-white font-black text-xs uppercase tracking-widest hover:bg-black transition-all flex items-center gap-2 shadow-lg"
-          >
-            <Plus size={16} />
-            Add Grade
-          </button>
+        {mainTab === "records" && (
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setBulkOpen(true)}
+              className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-semibold text-sm hover:bg-gray-50 transition-all shadow-sm"
+            >
+              Bulk JSON
+            </button>
+            <button
+              type="button"
+              onClick={() => { setEditingGrade(null); setIsModalOpen(true); }}
+              className="flex items-center gap-2 px-4 py-2 bg-[#4B0082] text-white rounded-lg shadow-md hover:bg-[#380062] transition-all font-semibold text-sm"
+            >
+              <Plus size={16} /> Add Grade
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Top Tab Bar */}
+      <div className="flex-shrink-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6">
+        <div className="flex gap-1">
+          {[
+            { id: "exams" as const, label: "Exam Schedule & Entry", icon: Calendar },
+            { id: "records" as const, label: "Grade Records", icon: BookOpen },
+          ].map(({ id, label, icon: Icon }) => (
+            <button
+              key={id}
+              onClick={() => setMainTab(id)}
+              className={`flex items-center gap-2 px-5 py-3.5 text-sm font-semibold border-b-2 transition-all ${
+                mainTab === id
+                  ? "border-[#4B0082] text-[#4B0082] dark:text-purple-400"
+                  : "border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:border-gray-300"
+              }`}
+            >
+              <Icon size={16} />
+              {label}
+            </button>
+          ))}
         </div>
       </div>
+
+      {/* Tab Content */}
+      <div className="flex-1 overflow-y-auto">
+        {mainTab === "exams" ? (
+          <ExamsPanel />
+        ) : (
+      <div className="p-6 space-y-6">
+        {/* Success notification */}
+        {gradeSuccess && (
+          <div
+            role="status"
+            aria-live="polite"
+            className="flex items-center justify-between gap-3 px-4 py-3 bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700 text-green-800 dark:text-green-300 rounded-lg"
+          >
+            <div className="flex items-center gap-2">
+              <CheckCircle size={18} className="flex-shrink-0" />
+              <span className="text-sm font-bold">{gradeSuccess}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setGradeSuccess(null)}
+              aria-label="Dismiss success message"
+              className="p-1 hover:bg-green-200 dark:hover:bg-green-800 rounded transition-colors"
+            >
+              <X size={16} />
+            </button>
+          </div>
+        )}
 
       {/* Filters */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -795,6 +825,9 @@ const Grades: React.FC = () => {
           }
         }}
       />
+        </div>
+        )}
+      </div>
     </div>
   );
 };
