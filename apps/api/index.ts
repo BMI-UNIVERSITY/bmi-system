@@ -4,7 +4,7 @@ import { handleSubmitApplication, handleGetMyApplication, handleListApplications
 import { handleUploadDocument, handleDownloadDocument, handleDeleteDocument, handleListDocuments } from './routes/documents';
 import { handleRequestRecommendation, handleGetRecommendationInfo, handleUploadRecommendation, handleListRecommendations } from './routes/recommendations';
 import { requireAuth, rateLimit, withCors, getCorsHeaders, createLogger, requestLogger } from '@bmi/api-middleware';
-import { handleGetDashboard, handleGetCourses, handleEnroll, handleGetFinances, handlePayInvoice, handleDropCourse, handleGetTranscript, handleGetSettings, handleUpdateSettings, handleGetTickets, handleCreateTicket } from './routes/student';
+import { handleGetDashboard, handleGetCourses, handleEnroll, handleGetFinances, handlePayInvoice, handleDropCourse, handleGetTranscript, handleGetSettings, handleUpdateSettings, handleUpdatePhoto, handleGetTickets, handleCreateTicket } from './routes/student';
 import { handleAdminSetup, handleListUsers, handleUpdateUserRole, handleDeleteUser, handleAdminResetPassword, handleGetAuditLogs, handleBulkEmails, handleListContactSubmissions, handleListNewsletterSubscribers } from './routes/admin';
 import { handleListTimetabling, handleCreateTimetabling } from './routes/ums-timetabling';
 import { handleListRubrics, handleCreateRubric, handleDeleteRubric } from './routes/ums-rubrics';
@@ -120,8 +120,9 @@ const ROUTES: Route[] = [
   { method: 'POST', path: /^\/api\/student\/enroll$/, roles: ['student'], handler: async (req, env, _p, auth) =>handleEnroll(req, env, auth!.user.sub) },
   { method: 'POST', path: /^\/api\/student\/courses\/([^/]+)\/drop$/, roles: ['student'], handler: async (req, env, p, auth) =>handleDropCourse(req, env, auth!.user.sub, p[1]) },
   { method: 'GET', path: /^\/api\/student\/transcript$/, roles: ['student'], handler: async (req, env, _p, auth) =>handleGetTranscript(req, env, auth!.user.sub) },
-  { method: 'GET', path: /^\/api\/student\/settings$/, roles: ['student'], handler: async (req, env, _p, auth) =>handleGetSettings(req, env, auth!.user.sub) },
-  { method: 'PUT', path: /^\/api\/student\/settings$/, roles: ['student'], handler: async (req, env, _p, auth) =>handleUpdateSettings(req, env, auth!.user.sub) },
+  { method: 'GET', path: /^\/api\/student\/settings$/, roles: ['student'], handler: async (req, env, _p, auth) => handleGetSettings(req, env, auth!.user.sub) },
+  { method: 'PUT', path: /^\/api\/student\/settings$/, roles: ['student'], handler: async (req, env, _p, auth) => handleUpdateSettings(req, env, auth!.user.sub) },
+  { method: 'PUT', path: /^\/api\/student\/photo$/, roles: ['student'], handler: async (req, env, _p, auth) => handleUpdatePhoto(req, env, auth!.user.sub) },
   { method: 'GET', path: /^\/api\/student\/support$/, roles: ['student'], handler: async (req, env, _p, auth) =>handleGetTickets(req, env, auth!.user.sub) },
   { method: 'POST', path: /^\/api\/student\/support$/, roles: ['student'], handler: async (req, env, _p, auth) =>handleCreateTicket(req, env, auth!.user.sub) },
   { method: 'GET', path: /^\/api\/student\/finances$/, roles: ['student'], handler: async (req, env, _p, auth) =>handleGetFinances(req, env, auth!.user.sub) },

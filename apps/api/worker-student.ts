@@ -1,7 +1,7 @@
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-nocheck
 import { createWorker, Route } from './lib/worker-factory';
-import { handleGetDashboard, handleGetCourses, handleEnroll, handleGetFinances, handlePayInvoice, handleDropCourse, handleGetTranscript, handleGetSettings, handleUpdateSettings, handleGetTickets, handleCreateTicket } from './routes/student';
+import { handleGetDashboard, handleGetCourses, handleEnroll, handleGetFinances, handlePayInvoice, handleDropCourse, handleGetTranscript, handleGetSettings, handleUpdateSettings, handleUpdatePhoto, handleGetTickets, handleCreateTicket } from './routes/student';
 import { handleGetOnboardingStatus, handleUploadStudentDocument } from './routes/onboarding';
 import { handleGetMyHolds, handleGetProgramCurriculum, handleAutoEnrollMandatory, handleGetElectiveGroups, handleSubmitElectives, handleGetRegistrationProgress, handleCompleteOrientation, handleGenerateProgramInvoice } from './routes/enrollment';
 
@@ -13,6 +13,7 @@ const routes: Route[] = [
   { method: 'GET', path: /^\/api\/student\/transcript$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleGetTranscript(req, env, auth!.user.sub) },
   { method: 'GET', path: /^\/api\/student\/settings$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleGetSettings(req, env, auth!.user.sub) },
   { method: 'PUT', path: /^\/api\/student\/settings$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleUpdateSettings(req, env, auth!.user.sub) },
+  { method: 'PUT', path: /^\/api\/student\/photo$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleUpdatePhoto(req, env, auth!.user.sub) },
   { method: 'GET', path: /^\/api\/student\/support$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleGetTickets(req, env, auth!.user.sub) },
   { method: 'POST', path: /^\/api\/student\/support$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleCreateTicket(req, env, auth!.user.sub) },
   { method: 'GET', path: /^\/api\/student\/finances$/, roles: ['student'], handler: async (req, env, p, auth, ctx) => handleGetFinances(req, env, auth!.user.sub) },

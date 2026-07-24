@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { api } from '../../lib/api';
+import { ProfilePhotoUpload } from '../../components/ProfilePhotoUpload';
 
 export default function Settings() {
   const [loading, setLoading] = useState(true);
@@ -8,7 +9,8 @@ export default function Settings() {
   
   const [settings, setSettings] = useState({
     directory_release: true,
-    communications_opt_in: true
+    communications_opt_in: true,
+    photo: null as string | null
   });
 
   useEffect(() => {
@@ -16,7 +18,8 @@ export default function Settings() {
       .then(data => {
         setSettings({
           directory_release: Boolean(data.directory_release),
-          communications_opt_in: Boolean(data.communications_opt_in)
+          communications_opt_in: Boolean(data.communications_opt_in),
+          photo: data.photo || null
         });
       })
       .catch(e => {
@@ -36,6 +39,17 @@ export default function Settings() {
       setAlert({ type: 'danger', msg: e.message || 'Failed to update settings' });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handlePhotoUpload = async (base64: string) => {
+    try {
+      await api.student.updatePhoto(base64);
+      setSettings(s => ({ ...s, photo: base64 }));
+      setAlert({ type: 'success', msg: 'Profile photo updated successfully.' });
+    } catch (e: any) {
+      setAlert({ type: 'danger', msg: e.message || 'Failed to update photo.' });
+      throw e; // so ProfilePhotoUpload stops loading
     }
   };
 
@@ -59,6 +73,15 @@ export default function Settings() {
             <button onClick={() => setAlert({ type: '', msg: '' })} style={{ float: 'right', background: 'none', border: 'none', cursor: 'pointer' }} aria-label="Close alert">✕</button>
           </div>
         )}
+
+        <div className="card" style={{ marginBottom: '1.5rem' }}>
+          <h2 style={{ fontSize: '1.25rem', marginBottom: '1rem', borderBottom: '1px solid var(--border)', paddingBottom: '0.5rem' }}>Profile Photo</h2>
+          <ProfilePhotoUpload 
+            currentPhoto={settings.photo} 
+            onUpload={handlePhotoUpload} 
+            buttonClass="btn btn-outline btn-sm"
+          />
+        </div>
 
         <div className="card">
           <form onSubmit={handleSave}>

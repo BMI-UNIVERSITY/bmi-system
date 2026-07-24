@@ -192,7 +192,14 @@ export async function handleGetSettings(_request: Request, env: Env, userId: str
     settings = { directory_release: 1, communications_opt_in: 1 };
   }
   
-  return ok(settings);
+  const studentInfo = await env.PLATFORM_CONTEXT!.db.prepare(
+    'SELECT photo FROM students WHERE user_id = ?'
+  ).bind(userId).first<{ photo: string | null }>();
+  
+  return ok({
+    ...settings,
+    photo: studentInfo?.photo || null
+  });
 }
 
 export async function handleUpdateSettings(request: Request, env: Env, userId: string): Promise<Response> {
@@ -216,6 +223,30 @@ export async function handleUpdateSettings(request: Request, env: Env, userId: s
   ).bind(userId, dirRelease, commOptIn).run();
   
   return ok({ success: true, message: 'Settings updated' });
+}
+
+export async function handleUpdatePhoto(request: Request, env: Env, userId: string): Promise<Response> {
+  let body: { photo: string };
+  try {
+    body = await typedJson<{ photo: string }>(request);
+  } catch {
+    return error('Invalid JSON');
+  }
+
+  if (!body.photo) {
+    return error('Photo is required', 400);
+  }
+
+  // Basic validation for base64 data URI
+  if (!body.photo.startsWith('data:image/') || body.photo.length > 300 * 1024) {
+    return error('Invalid photo format or size (max 300KB)', 400);
+  }
+
+  await env.PLATFORM_CONTEXT!.db.prepare(
+    'UPDATE students SET photo = ? WHERE user_id = ?'
+  ).bind(body.photo, userId).run();
+
+  return ok({ success: true, message: 'Profile photo updated' });
 }
 
 export async function handleGetTickets(_request: Request, env: Env, userId: string): Promise<Response> {

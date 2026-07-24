@@ -230,11 +230,16 @@ export const api = {
     payInvoice: (invoiceId: string) => request<{ success: boolean }>(`/student/invoices/${invoiceId}/pay`, { method: 'POST' }),
     dropCourse: (course_id: string) => request<{ success: boolean; message: string }>(`/student/courses/${course_id}/drop`, { method: 'POST' }),
     getTranscript: () => request<{ classes: any[]; gpa: string | null }>('/student/transcript'),
-    getSettings: () => request<{ directory_release: number; communications_opt_in: number }>('/student/settings'),
+    getSettings: () => request<{ directory_release: number; communications_opt_in: number; photo?: string | null }>('/student/settings'),
     updateSettings: (settings: { directory_release: boolean; communications_opt_in: boolean }) => 
       request<{ success: boolean; message: string }>('/student/settings', {
         method: 'PUT',
         body: JSON.stringify(settings)
+      }),
+    updatePhoto: (photo: string) =>
+      request<{ success: boolean; message: string }>('/student/photo', {
+        method: 'PUT',
+        body: JSON.stringify({ photo })
       }),
     getSupportTickets: () => request<any[]>('/student/support'),
     createSupportTicket: (subject: string, description: string) => 
