@@ -24,7 +24,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
-      - run: npm ci --prefer-offline
+      - run: npm install --prefer-offline
       - run: npx turbo run build --filter=bmi-portal --concurrency=100%
         env:
           NODE_ENV: production
@@ -46,7 +46,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
-      - run: npm ci --prefer-offline
+      - run: npm install --prefer-offline
       - run: npx turbo run build --filter=bmi-ums-frontend --concurrency=100%
         env:
           NODE_ENV: production
@@ -68,7 +68,7 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
           cache-dependency-path: 'package-lock.json'
-      - run: npm ci --prefer-offline
+      - run: npm install --prefer-offline
       - run: npx turbo run build --filter=bmi-university --concurrency=100%
       - uses: cloudflare/wrangler-action@v4
         with:
