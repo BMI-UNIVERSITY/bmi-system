@@ -7,14 +7,13 @@ import {
   Edit,
   Mail,
   Phone,
-  
   GraduationCap,
   LayoutGrid,
   List,
-  RefreshCw,
   Globe,
   Layers,
   FileSpreadsheet,
+  ChevronDown,
 } from "lucide-react";
 import { Student, Course } from "../types";
 import StudentRegistrationModal from "./StudentRegistrationModal";
@@ -29,7 +28,6 @@ import { postStudentBatch } from "../services/batchService";
 import { getAllStudyCenters, StudyCenter } from "../services/studyCenterService";
 import { StudyCenterSelector } from "./StudyCenterSelector";
 import StudentEnrollmentForm from "./StudentEnrollmentForm";
-import { useTranslation } from "react-i18next";
 
 import { useDataStore } from "../stores/dataStore";
 import { usePagination } from "../hooks/usePagination";
@@ -46,8 +44,8 @@ interface StudentsProps {
 }
 
 const Students: React.FC<StudentsProps> = (props) => {
-  const { t } = useTranslation();
   const storeStudents = useDataStore((s) => s.students);
+
   const storeSetStudents = useDataStore((s) => s.setStudents);
 
   const students = props.students ?? storeStudents;
@@ -87,6 +85,7 @@ const Students: React.FC<StudentsProps> = (props) => {
     undefined,
   );
   const [isSyncing, setIsSyncing] = useState(false);
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
   const { page, perPage, meta, setPage, setMeta } = usePagination(50);
   const queryClient = useQueryClient();
 
@@ -341,174 +340,156 @@ const Students: React.FC<StudentsProps> = (props) => {
   return (
     <div className="h-full flex flex-col animate-fade-in relative">
       {/* Sticky Page Header */}
-      <div className="flex-shrink-0 sticky top-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 px-4 py-2 flex flex-col md:flex-row justify-between items-center gap-2 shadow-sm min-h-[60px]">
-        <div className="flex items-center gap-3 pl-14 w-full md:w-auto">
-          <div className="w-1 h-5 bg-[#FFD700] rounded-none"></div>
+      <div className="flex-shrink-0 sticky top-0 z-40 bg-white/95 dark:bg-gray-900/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-700 px-6 py-3 flex flex-col md:flex-row justify-between items-center gap-4 shadow-sm min-h-[60px]">
+        <div className="flex items-center gap-3 w-full md:w-auto">
           <div className="flex flex-col">
-            <h2 className="text-base md:text-lg font-bold text-[#2E004F] dark:text-white tracking-tight uppercase leading-none">
+            <h2 className="text-xl font-bold text-gray-900 dark:text-white tracking-tight">
               Student Registry
             </h2>
-            <p className="text-[8px] md:text-[9px] font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-widest">
-              Enrollment Data • Total:{" "}
-              {meta.total > 0 ? meta.total.toLocaleString() : students.length}
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400">
+              Total Enrollment: {meta.total > 0 ? meta.total.toLocaleString() : students.length}
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 pl-14 md:pl-0 w-full md:w-auto justify-end">
-          <button
-            onClick={handleGoogleSheetsSync}
-            disabled={isSyncing}
-            className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-green-600 text-white rounded-none font-bold text-[9px] uppercase tracking-widest hover:bg-green-700 transition-all shadow-sm disabled:opacity-50"
-          >
-            {isSyncing ? (
-              <RefreshCw size={12} className="animate-spin" />
-            ) : (
-              <FileSpreadsheet size={12} />
+        <div className="flex items-center gap-3 w-full md:w-auto justify-end">
+          {/* Actions Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setIsActionsMenuOpen(!isActionsMenuOpen)}
+              className="flex items-center gap-2 px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-semibold text-sm hover:bg-gray-50 dark:hover:bg-gray-700 transition-all shadow-sm"
+            >
+              Data Options <ChevronDown size={14} />
+            </button>
+            {isActionsMenuOpen && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setIsActionsMenuOpen(false)}></div>
+                <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-lg shadow-xl z-50 overflow-hidden py-1">
+                  <button
+                    onClick={() => { handleGoogleSheetsSync(); setIsActionsMenuOpen(false); }}
+                    disabled={isSyncing}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                  >
+                    <FileSpreadsheet size={14} className="text-green-600" />
+                    Sync Sheets
+                  </button>
+                  <button
+                    onClick={() => { handleSyncApplications(); setIsActionsMenuOpen(false); }}
+                    disabled={isSyncing}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                  >
+                    <Globe size={14} className="text-[#4B0082]" />
+                    Sync Web Apps
+                  </button>
+                  <button
+                    onClick={() => { setBulkStudentsOpen(true); setIsActionsMenuOpen(false); }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                  >
+                    <Layers size={14} className="text-indigo-600" />
+                    Bulk JSON
+                  </button>
+                  <button
+                    onClick={() => { setIsImportOpen(true); setIsActionsMenuOpen(false); }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2"
+                  >
+                    <FileSpreadsheet size={14} className="text-emerald-600" />
+                    Import Excel
+                  </button>
+                </div>
+              </>
             )}
-            {isSyncing ? "Syncing..." : "Sync Sheets"}
-          </button>
-          <button
-            onClick={() => handleSyncApplications()}
-            disabled={isSyncing}
-            className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-[#4B0082] dark:text-purple-300 rounded-none font-bold text-[9px] uppercase tracking-widest hover:border-[#4B0082] transition-all shadow-sm disabled:opacity-50"
-            title="Fetch from portal applications"
-          >
-            {isSyncing ? (
-              <RefreshCw size={12} className="animate-spin" />
-            ) : (
-              <Globe size={12} />
-            )}
-            {isSyncing ? "Syncing..." : "Sync Web Apps"}
-          </button>
+          </div>
+
           <button
             onClick={() => setIsEnrollOpen(true)}
-            className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-teal-600 text-white rounded-none font-bold text-[9px] uppercase tracking-widest hover:bg-teal-700 transition-all shadow-sm"
+            className="flex items-center gap-2 px-4 py-2 bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300 rounded-lg font-semibold text-sm hover:bg-indigo-100 dark:hover:bg-indigo-900/50 transition-all"
           >
-            <GraduationCap size={12} /> Enroll Student
-          </button>
-          <button
-            onClick={() => setBulkStudentsOpen(true)}
-            className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-indigo-700 text-white rounded-none font-bold text-[9px] uppercase tracking-widest hover:bg-indigo-800 transition-all shadow-sm"
-          >
-            Bulk JSON
-          </button>
-          <button
-            onClick={() => setIsImportOpen(true)}
-            className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-emerald-600 text-white rounded-none font-bold text-[9px] uppercase tracking-widest hover:bg-emerald-700 transition-all shadow-sm"
-          >
-            <FileSpreadsheet size={12} /> Import Excel
+            <GraduationCap size={16} /> Enroll Existing
           </button>
 
-          <div className="flex bg-white dark:bg-gray-800 p-1 rounded-none shadow-sm border border-gray-100 dark:border-gray-700">
-            <button
-              onClick={() => setViewMode("grid")}
-              className={`p-1.5 transition-all ${viewMode === "grid" ? "bg-[#4B0082] text-white" : "text-gray-400 hover:text-[#4B0082]"}`}
-            >
-              <LayoutGrid size={14} />
-            </button>
-            <button
-              onClick={() => setViewMode("table")}
-              className={`p-1.5 transition-all ${viewMode === "table" ? "bg-[#4B0082] text-white" : "text-gray-400 hover:text-[#4B0082]"}`}
-            >
-              <List size={14} />
-            </button>
-          </div>
           <button
             onClick={() => {
               setEditingStudent(undefined);
               setIsModalOpen(true);
             }}
-            className="flex items-center gap-2 px-4 py-2 bg-[#4B0082] text-white rounded-none shadow-xl hover:bg-black transition-all font-black text-[9px] uppercase tracking-widest border border-[#FFD700]/30"
+            className="flex items-center gap-2 px-4 py-2 bg-[#4B0082] text-white rounded-lg shadow-md hover:bg-[#380062] transition-all font-semibold text-sm border border-[#4B0082]"
           >
-            <Plus size={12} className="text-[#FFD700]" /> New Admission
+            <Plus size={16} /> New Admission
           </button>
         </div>
-      </div>
-
-      {/* Sticky Top Tab Bar */}
-      <div className="sticky top-[60px] z-30 bg-[#F8F9FA]/95 dark:bg-[#0a0015]/95 backdrop-blur-md border-b border-gray-200 dark:border-gray-800 px-6 py-3 flex items-center gap-3 overflow-x-auto no-scrollbar shadow-sm">
-        <div className="flex items-center gap-2 mr-4 text-gray-400">
-          <Layers size={14} />
-          <span className="text-[9px] font-black uppercase tracking-widest">
-            Levels
-          </span>
-        </div>
-        {[
-          "All Levels",
-          "Certificate",
-          "Diploma",
-          "Degree",
-          "Masters",
-          "PhD",
-        ].map((level) => (
-          <button
-            key={level}
-            onClick={() => setAcademicLevelFilter(level)}
-            className={`px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
-              academicLevelFilter === level
-                ? "bg-[#4B0082] text-white shadow-lg shadow-purple-500/20 scale-105 border border-purple-500/50"
-                : "bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-[#4B0082]"
-            }`}
-          >
-            {level}
-          </button>
-        ))}
       </div>
 
       {/* Scrollable Content */}
       <div className="flex-1 overflow-y-auto p-6 space-y-6">
         {/* Filters */}
-        <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-4 flex flex-col md:flex-row gap-4 items-center shadow-sm">
-          <div className="relative flex-1 w-full">
-            <Search
-              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
-              size={16}
-            />
+        <div className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-3 flex flex-col md:flex-row gap-3 items-center shadow-sm">
+          <div className="relative flex-1 w-full md:min-w-[200px]">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" size={16} />
             <input
               type="text"
-              placeholder="Search by Name, ID or Faculty..."
-              className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-none outline-none font-bold text-xs dark:text-white focus:ring-1 focus:ring-[#4B0082]"
+              placeholder="Search students..."
+              className="w-full pl-9 pr-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg outline-none text-sm dark:text-white focus:border-[#4B0082] focus:ring-1 focus:ring-[#4B0082] transition-all"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
           </div>
-          <StudyCenterSelector
-            value={campusFilter}
-            onChange={setCampusFilter}
-            includeAll={true}
-          />
+          
+          <div className="flex-1 w-full md:w-auto">
+            <StudyCenterSelector
+              value={campusFilter}
+              onChange={setCampusFilter}
+              includeAll={true}
+            />
+          </div>
+
           <select
             value={programFilter}
             onChange={(e) => setProgramFilter(e.target.value)}
-            className="px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-[10px] font-black uppercase outline-none cursor-pointer dark:text-white max-w-[220px]"
-            title="Filter by program (from catalog)"
+            className="px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium outline-none cursor-pointer dark:text-white flex-1 w-full md:max-w-[180px] focus:border-[#4B0082]"
           >
-            <option value="All Programs">All {t('academic.programs')}</option>
+            <option value="All Programs">All Programs</option>
             {programRows.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.label}
-              </option>
+              <option key={p.id} value={p.id}>{p.label}</option>
             ))}
           </select>
+
+          <select
+            value={academicLevelFilter}
+            onChange={(e) => setAcademicLevelFilter(e.target.value)}
+            className="px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium outline-none cursor-pointer dark:text-white flex-1 w-full md:max-w-[140px] focus:border-[#4B0082]"
+          >
+            {["All Levels", "Certificate", "Diploma", "Degree", "Masters", "PhD"].map((level) => (
+              <option key={level} value={level}>{level}</option>
+            ))}
+          </select>
+
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 text-[10px] font-black uppercase outline-none cursor-pointer dark:text-white"
+            className="px-3 py-2 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg text-sm font-medium outline-none cursor-pointer dark:text-white flex-1 w-full md:max-w-[140px] focus:border-[#4B0082]"
           >
-            {[
-              "All Status",
-              "Active",
-              "Applicant",
-              "On Leave",
-              "Graduated",
-              "Suspended",
-            ].map((s) => (
-              <option key={s} value={s}>
-                {s}
-              </option>
+            {["All Status", "Active", "Applicant", "On Leave", "Graduated", "Suspended"].map((s) => (
+              <option key={s} value={s}>{s}</option>
             ))}
           </select>
+
+          {/* View Toggle */}
+          <div className="flex bg-gray-100 dark:bg-gray-900 p-1 rounded-lg border border-gray-200 dark:border-gray-700 ml-auto">
+            <button
+              onClick={() => setViewMode("grid")}
+              className={`p-1.5 rounded-md transition-all ${viewMode === "grid" ? "bg-white dark:bg-gray-800 text-[#4B0082] dark:text-purple-400 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
+              title="Grid View"
+            >
+              <LayoutGrid size={16} />
+            </button>
+            <button
+              onClick={() => setViewMode("table")}
+              className={`p-1.5 rounded-md transition-all ${viewMode === "table" ? "bg-white dark:bg-gray-800 text-[#4B0082] dark:text-purple-400 shadow-sm" : "text-gray-500 hover:text-gray-700 dark:hover:text-gray-300"}`}
+              title="Table View"
+            >
+              <List size={16} />
+            </button>
+          </div>
         </div>
 
         {/* Existing Grid/List Logic ... */}
@@ -517,79 +498,56 @@ const Students: React.FC<StudentsProps> = (props) => {
             {filteredStudents.map((student) => (
               <div
                 key={student.id}
-                className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 p-6 flex flex-col group hover:shadow-2xl transition-all relative overflow-hidden"
+                className="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-5 flex flex-col group hover:shadow-lg transition-all relative overflow-hidden"
               >
-                <div
-                  className={`absolute top-0 left-0 w-full h-1 ${student.status === "Applicant" ? "bg-orange-500" : "bg-[#4B0082]"}`}
-                ></div>
+                <div className={`absolute top-0 left-0 w-full h-1 ${student.status === "Applicant" ? "bg-orange-500" : "bg-[#4B0082]"}`}></div>
 
-                <div className="flex justify-between items-start mb-6">
-                  <div
-                    className={`w-16 h-16 rounded-none ${student.avatar_color} flex items-center justify-center text-white font-bold text-2xl shadow-lg overflow-hidden border-2 border-white dark:border-gray-700`}
-                  >
+                <div className="flex justify-between items-start mb-5">
+                  <div className={`w-14 h-14 rounded-full ${student.avatar_color} flex items-center justify-center text-white font-bold text-xl shadow-sm overflow-hidden border-2 border-white dark:border-gray-700`}>
                     {student.photo ? (
-                      <img
-                        src={student.photo}
-                        className="w-full h-full object-cover"
-                        style={{
-                          transform: `scale(${student.photo_zoom}) translate(${student.photo_position?.x}px, ${student.photo_position?.y}px)`,
-                        }}
-                      />
+                      <img src={student.photo} className="w-full h-full object-cover" />
                     ) : (
                       student.first_name.charAt(0)
                     )}
                   </div>
                   <div className="flex flex-col items-end">
-                    <span
-                      className={`px-2 py-0.5 text-[9px] font-black uppercase tracking-widest border ${
-                        student.status === "Active"
-                          ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                          : student.status === "Applicant"
-                            ? "bg-orange-50 text-orange-700 border-orange-200"
-                            : student.status === "Suspended"
-                              ? "bg-red-50 text-red-700 border-red-200"
-                              : "bg-gray-50 text-gray-500 border-gray-200"
+                    <span className={`px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide rounded-md ${
+                        student.status === "Active" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                        : student.status === "Applicant" ? "bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                        : student.status === "Suspended" ? "bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400"
+                        : "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300"
                       }`}
                     >
                       {student.status}
                     </span>
-                    <div className="flex gap-1 mt-2">
-                      <button
-                        onClick={() => openEdit(student)}
-                        className="text-gray-300 hover:text-[#4B0082] transition-colors p-1"
-                      >
+                    <div className="flex gap-2 mt-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => openEdit(student)} className="text-gray-400 hover:text-[#4B0082] transition-colors bg-gray-50 dark:bg-gray-700 p-1.5 rounded-md">
                         <Edit size={14} />
                       </button>
-                      <button
-                        onClick={() => deleteStudent(student.id)}
-                        className="text-gray-300 hover:text-red-500 transition-colors p-1"
-                      >
+                      <button onClick={() => deleteStudent(student.id)} className="text-gray-400 hover:text-red-500 transition-colors bg-gray-50 dark:bg-gray-700 p-1.5 rounded-md">
                         <Trash2 size={14} />
                       </button>
                     </div>
                   </div>
                 </div>
 
-                <div className="mb-6">
-                  <h3 className="text-lg font-black text-gray-900 dark:text-white uppercase tracking-tight leading-none group-hover:text-[#4B0082] transition-colors">
-                    {student.full_name ||
-                      `${student.first_name} ${student.last_name}`}
+                <div className="mb-5">
+                  <h3 className="text-base font-bold text-gray-900 dark:text-white leading-tight group-hover:text-[#4B0082] transition-colors">
+                    {student.full_name || `${student.first_name} ${student.last_name}`}
                   </h3>
-                  <p className="text-xs font-bold text-gray-400 mt-1">
-                    {student.reg_no}
-                  </p>
-                  <p className="text-[10px] font-black text-[#4B0082] dark:text-purple-300 uppercase tracking-widest mt-2">
-                    {student.program}
+                  <p className="text-xs font-medium text-gray-500 mt-1">{student.reg_no}</p>
+                  <p className="text-xs font-semibold text-[#4B0082] dark:text-purple-400 mt-2">
+                    {student.program_code || student.program}
                   </p>
                 </div>
 
-                <div className="mt-auto space-y-3 pt-4 border-t border-gray-50 dark:border-gray-700">
-                  <div className="flex items-center gap-2 text-xs font-medium text-gray-500">
-                    <Mail size={12} className="text-gray-400" />{" "}
+                <div className="mt-auto space-y-2 pt-4 border-t border-gray-100 dark:border-gray-700">
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                    <Mail size={14} className="text-gray-400" />
                     <span className="truncate">{student.email}</span>
                   </div>
-                  <div className="flex items-center gap-2 text-xs font-medium text-gray-500">
-                    <Phone size={12} className="text-gray-400" />{" "}
+                  <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400">
+                    <Phone size={14} className="text-gray-400" />
                     <span>{student.phone}</span>
                   </div>
                 </div>
@@ -597,101 +555,94 @@ const Students: React.FC<StudentsProps> = (props) => {
             ))}
           </div>
         ) : (
-          <div className="bg-white dark:bg-gray-800 rounded-none shadow-xl border border-gray-100 dark:border-gray-700 overflow-hidden">
-            <div className="overflow-x-auto no-scrollbar">
-              <table className="w-full text-left">
-                <thead className="sticky top-0 z-20">
-                  <tr className="bg-gray-900 text-gray-400 uppercase text-[9px] font-black tracking-[0.2em] shadow-md">
-                    <th className="px-6 py-4 sticky top-0 bg-gray-900 z-10">
-                      Student Identity
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead className="bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700">
+                  <tr>
+                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Student
                     </th>
-                    <th className="px-6 py-4 sticky top-0 bg-gray-900 z-10">
-                      Academic {t('academic.program')}
+                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Academic Program
                     </th>
-                    <th className="px-6 py-4 sticky top-0 bg-gray-900 z-10">
-                      Contact Node
+                    <th className="px-6 py-4 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
+                      Contact
                     </th>
-                    <th className="px-6 py-4 text-center sticky top-0 bg-gray-900 z-10">
+                    <th className="px-6 py-4 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Enrollment
                     </th>
-                    <th className="px-6 py-4 text-center sticky top-0 bg-gray-900 z-10">
+                    <th className="px-6 py-4 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-4 text-right sticky top-0 bg-gray-900 z-10">
+                    <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
                   {filteredStudents.map((student) => (
                     <tr
                       key={student.id}
-                      className="hover:bg-purple-50/20 dark:hover:bg-gray-700/20 transition-all group"
+                      className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group"
                     >
-                      <td className="px-6 py-5">
+                      <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div
-                            className={`w-8 h-8 rounded-none ${student.avatar_color} flex items-center justify-center text-white text-xs font-bold overflow-hidden`}
-                          >
+                          <div className={`w-10 h-10 rounded-full ${student.avatar_color} flex items-center justify-center text-white text-sm font-bold overflow-hidden shadow-sm`}>
                             {student.photo ? (
-                              <img
-                                src={student.photo}
-                                className="w-full h-full object-cover"
-                              />
+                              <img src={student.photo} className="w-full h-full object-cover" />
                             ) : (
                               student.first_name.charAt(0)
                             )}
                           </div>
                           <div>
-                            <p className="text-sm font-black text-gray-900 dark:text-white uppercase tracking-tight">
-                              {student.full_name ||
-                                `${student.first_name} ${student.last_name}`}
+                            <p className="text-sm font-bold text-gray-900 dark:text-white">
+                              {student.full_name || `${student.first_name} ${student.last_name}`}
                             </p>
-                            <p className="text-[9px] font-bold text-gray-400 uppercase tracking-widest">
+                            <p className="text-xs font-medium text-gray-500 mt-0.5">
                               {student.reg_no}
                             </p>
                           </div>
                         </div>
                       </td>
-                      <td className="px-6 py-5">
-                        <p className="text-xs font-bold text-gray-700 dark:text-gray-300 uppercase">
+                      <td className="px-6 py-4">
+                        <p className="text-sm font-semibold text-gray-900 dark:text-white">
                           {student.program_code}
                         </p>
-                        <p className="text-[9px] font-black text-[#4B0082] dark:text-purple-300 uppercase tracking-widest mt-0.5">
-                          {student.program_code}
+                        <p className="text-xs text-gray-500 mt-0.5 truncate max-w-[200px]">
+                          {student.program}
                         </p>
                       </td>
-                      <td className="px-6 py-5 text-xs text-gray-500 font-medium">
-                        <p>{student.email}</p>
-                        <p className="mt-0.5">{student.phone}</p>
+                      <td className="px-6 py-4">
+                        <p className="text-sm text-gray-600 dark:text-gray-300">{student.email}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">{student.phone}</p>
                       </td>
-                      <td className="px-6 py-5 text-center text-[10px] font-bold text-gray-500 uppercase">
+                      <td className="px-6 py-4 text-center text-sm text-gray-600 dark:text-gray-300">
                         {student.admission_date}
                       </td>
-                      <td className="px-6 py-5 text-center">
-                        <span
-                          className={`px-2 py-0.5 rounded-none text-[9px] font-black uppercase tracking-widest border ${
-                            student.status === "Active"
-                              ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                              : student.status === "Applicant"
-                                ? "bg-orange-50 text-orange-700 border-orange-200"
-                                : "bg-gray-50 text-gray-500 border-gray-200"
+                      <td className="px-6 py-4 text-center">
+                        <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium ${
+                            student.status === "Active" ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+                            : student.status === "Applicant" ? "bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400"
+                            : "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300"
                           }`}
                         >
                           {student.status}
                         </span>
                       </td>
-                      <td className="px-6 py-5 text-right">
+                      <td className="px-6 py-4 text-right">
                         <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => openEdit(student)}
-                            className="p-2 text-gray-400 hover:text-[#4B0082]"
+                            className="p-1.5 text-gray-400 hover:text-[#4B0082] bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 shadow-sm"
+                            title="Edit"
                           >
                             <Edit size={16} />
                           </button>
                           <button
                             onClick={() => deleteStudent(student.id)}
-                            className="p-2 text-gray-400 hover:text-red-500"
+                            className="p-1.5 text-gray-400 hover:text-red-600 bg-white dark:bg-gray-800 rounded-md border border-gray-200 dark:border-gray-700 shadow-sm"
+                            title="Delete"
                           >
                             <Trash2 size={16} />
                           </button>

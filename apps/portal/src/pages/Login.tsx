@@ -55,26 +55,15 @@ export default function Login() {
   return (
     <div className={styles.loginPage}>
       
-      {/* Premium Left Panel */}
-      <div className={styles.leftPanel}>
-        <Link to="/" className={styles.brand}>
-          <img src="/bmi-logo.png" alt="BMI University" />
-          <span>Student Portal</span>
-        </Link>
-        <div className={styles.quote}>
-          <h2>Equipping You<br/>For Your Calling.</h2>
-          <p>Access your courses, grades, and university resources securely through the BMI Student Portal.</p>
-        </div>
-      </div>
+      {/* Removed Left Panel as it conflicts with global Navbar */}
+
 
       {/* Right Login Panel */}
       <div className={styles.rightPanel}>
         <div className={styles.formWrapper}>
           
           <div className={styles.header}>
-            <Link to="/">
-              <img src="/bmi-logo.png" alt="BMI University" />
-            </Link>
+
             <h1>Welcome Back</h1>
             <p>{requiresMfa ? 'Enter your two-factor authentication code' : 'Sign in to your account'}</p>
           </div>
