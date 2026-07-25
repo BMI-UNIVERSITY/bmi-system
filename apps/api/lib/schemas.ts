@@ -208,7 +208,7 @@ export const CreateStudentSchema = z.object({
   first_name: nameField('First name'),
   last_name: nameField('Last name'),
   phone: z.string().max(LIMITS.PHONE).optional(),
-  reg_no: z.string({ required_error: 'Registration number is required' }).min(1).max(50),
+  reg_no: z.string().min(1).max(50).optional(),
   gender: z.enum(['Male', 'Female', 'Other']).optional(),
   date_of_birth: z.string().max(30).optional(),
   nationality: z.string().max(LIMITS.SHORT).optional(),
@@ -290,6 +290,33 @@ export function parseDocumentUploadQuery(url: URL): z.infer<typeof DocumentUploa
   }
   return result.data;
 }
+
+// ─── Import Schemas ────────────────────────────────────────────────────────────
+
+export const ImportStudentSchema = z.object({
+  first_name: z.string().min(1).max(LIMITS.SHORT),
+  last_name: z.string().min(1).max(LIMITS.SHORT).optional(),
+  email: z.string().email().max(LIMITS.EMAIL).optional(),
+  phone: z.string().max(LIMITS.PHONE).optional(),
+  gender: z.string().max(50).optional(),
+  date_of_birth: z.string().max(30).optional(),
+  nationality: z.string().max(LIMITS.SHORT).optional(),
+  address: z.string().max(LIMITS.LONG).optional(),
+  program_name: z.string().max(LIMITS.MEDIUM).optional(),
+  program_code: z.string().max(LIMITS.SHORT).optional(),
+  study_center_name: z.string().max(LIMITS.SHORT).optional(),
+  admission_date: z.string().max(30).optional(),
+  reg_no: z.string().max(50).optional(),
+  uid: z.string().max(50).optional(),
+  photo: z.string().max(300000).optional(),
+  status: z.string().max(50).optional(),
+});
+
+export const ImportPayloadSchema = z.object({
+  students: z.array(z.record(z.string())).min(1).max(500),
+  enrollments: z.array(z.record(z.string())).max(5000).optional(),
+  headers: z.array(z.string()).optional(),
+});
 
 // ─── Inbound Webhook Payload Schema ───────────────────────────────────────────
 

@@ -2,6 +2,9 @@ import type { IDatabase, IPreparedStatement, IDocumentGenerator } from '@bmi/por
 /**
  * Performance Monitoring and Database Optimization Utilities
  * Provides query performance tracking, batch operations, and monitoring
+ *
+ * NOTE: executeAdmissionPipelineOptimized now delegates to the unified
+ * provisioner so ALL registration paths converge on a single orchestrator.
  */
 
 
@@ -307,7 +310,8 @@ export async function createApplicationWithDependencies(
 }
 
 /**
- * Optimized admission pipeline with parallel operations where possible
+ * Optimized admission pipeline — delegates to the unified provisioner
+ * so ALL registration paths converge on a single orchestrator.
  */
 export async function executeAdmissionPipelineOptimized(
   db: IDatabase,
@@ -321,131 +325,23 @@ export async function executeAdmissionPipelineOptimized(
 ): Promise<{ uid: string | null; regNo: string | null }> {
   const { applicationId, userId, actorId, program } = context;
 
-  // Step 1: Parallel data gathering (no dependencies)
-  type UserRow = { first_name: string; last_name: string; person_id: string | null };
-  type PersonRow = { uid: string };
-  const [user, existingPerson] = await Promise.all([
-    db.prepare('SELECT first_name, last_name, person_id FROM users WHERE id = ?').bind(userId).first<UserRow>(),
-    db.prepare('SELECT p.uid FROM users u LEFT JOIN persons p ON u.person_id = p.id WHERE u.id = ?').bind(userId).first<PersonRow>()
-  ]);
+  const user = await db.prepare(
+    'SELECT first_name, last_name FROM users WHERE id = ?'
+  ).bind(userId).first<{ first_name: string; last_name: string }>();
 
-  let uid = existingPerson?.uid;
+  const { runUnifiedProvisioning } = await import('./unified-provisioner');
 
-  // Step 2: UID generation (only if needed)
-  if (!uid) {
-    const { generateUID } = await import('./uid');
-    uid = await generateUID(db);
-    
-    const personId = crypto.randomUUID().replace(/-/g, '');
-    const now = new Date().toISOString();
+  const result = await runUnifiedProvisioning(db, {
+    source: 'lifecycle',
+    userId,
+    firstName: user?.first_name || '',
+    lastName: user?.last_name || '',
+    programName: program,
+    applicationId,
+    actorId,
+  }, document);
 
-    const personOps = [
-      db.prepare(
-        `INSERT INTO persons (id, uid, first_name, last_name, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?)`
-      ).bind(personId, uid, user?.first_name ?? '', user?.last_name ?? '', now, now),
-      
-      db.prepare(
-        `UPDATE users SET person_id = ?, updated_at = ? WHERE id = ?`
-      ).bind(personId, now, userId)
-    ];
-
-    await executeBatch(db, personOps);
-  }
-
-  // Step 3: Create student record and lifecycle events in parallel
-  const studentOps = [];
-  
-  // Check if student record exists
-  const existingStudent = await db.prepare('SELECT user_id FROM students WHERE user_id = ?').bind(userId).first();
-  
-  if (!existingStudent) {
-    const now = new Date().toISOString();
-    const placeholderRegNo = `PENDING-${userId.slice(0, 8).toUpperCase()}`;
-    const studentId = crypto.randomUUID(); // Generate stable student_id
-    
-    studentOps.push(
-      db.prepare(
-        `INSERT INTO students (user_id, student_id, reg_no, admission_date, program, status, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, 'Active', ?, ?)`
-      ).bind(userId, studentId, placeholderRegNo, now.split('T')[0], program, now, now)
-    );
-  }
-
-  // Add lifecycle events
-  const lifecycleOps = [
-    db.prepare(
-      `INSERT OR IGNORE INTO lifecycle_events
-       (id, uid, application_id, stage, status, idempotency_key, actor_id, notes)
-       VALUES (lower(hex(randomblob(16))), ?, ?, 'application_accepted', 'completed', ?, ?, 'Application accepted')`
-    ).bind(uid, applicationId, `${applicationId}:application_accepted`, actorId),
-    
-    db.prepare(
-      `INSERT OR IGNORE INTO lifecycle_events
-       (id, uid, application_id, stage, status, idempotency_key, actor_id, notes)
-       VALUES (lower(hex(randomblob(16))), ?, ?, 'student_record_created', 'completed', ?, ?, 'Student record created')`
-    ).bind(uid, applicationId, `${applicationId}:student_record_created`, actorId)
-  ];
-
-  const allOps = [...studentOps, ...lifecycleOps];
-  await executeBatch(db, allOps);
-
-  // Step 4: Generate registration number (sequential due to counter dependency)
-  let regNo: string | null = null;
-  try {
-    const { generateRegNo } = await import('./reg_number');
-    
-    // Try to match program for RegNo generation
-    const progInfo = await db.prepare(
-      `SELECT id, code, level FROM programs WHERE lower(trim(name)) = lower(trim(?)) OR lower(trim(code)) = lower(trim(?)) LIMIT 1`
-    ).bind(program, program).first<{ id: string; code: string; level: string }>();
-
-    if (!progInfo) {
-      // programs table is empty or this program label has no matching row.
-      // ACTION REQUIRED: seed the programs table (via UMS Degree Programs screen
-      // or a new migration) so accepted students receive a real registration number
-      // instead of the permanent placeholder 'PENDING-XXXXXXXX'.
-      console.warn(
-        `[RegNo] No programs row matched "${program}". ` +
-        'Student enrolled with placeholder reg_no — seed the programs table to fix.'
-      );
-    } else {
-      const year = new Date().getUTCFullYear();
-      regNo = await generateRegNo(db, progInfo.id, progInfo.code, year, progInfo.level);
-      
-      const updateOps = [
-        db.prepare('UPDATE students SET reg_no = ?, updated_at = ? WHERE user_id = ?')
-          .bind(regNo, new Date().toISOString(), userId),
-        
-        db.prepare(
-          `INSERT OR IGNORE INTO lifecycle_events
-           (id, uid, application_id, stage, status, idempotency_key, actor_id, notes)
-           VALUES (lower(hex(randomblob(16))), ?, ?, 'registration_number_generated', 'completed', ?, ?, ?)`
-        ).bind(uid, applicationId, `${applicationId}:registration_number_generated`, actorId, `Registration number: ${regNo}`)
-      ];
-      await executeBatch(db, updateOps);
-    }
-  } catch (e) {
-    console.error('Error generating reg_no:', e);
-  }
-
-  // Step 5: Generate admission documents (non-blocking)
-  if (document && uid) {
-    const fullName = user ? `${user.first_name} ${user.last_name}` : uid;
-    const effectiveRegNo = regNo || 'PENDING';
-    const meta = { name: fullName, program, regNo: effectiveRegNo, uid };
-
-    Promise.all([
-      document.generateDocument({ type: 'admission_letter', userId, metadata: meta }).catch(e =>
-        console.error('[doc] Admission letter generation failed:', e)
-      ),
-      document.generateDocument({ type: 'id_card', userId, metadata: meta }).catch(e =>
-        console.error('[doc] ID card generation failed:', e)
-      ),
-    ]).catch(() => {});
-  }
-
-  return { uid, regNo };
+  return { uid: result.uid, regNo: result.regNo };
 }
 
 export function getPerformanceReport(): {

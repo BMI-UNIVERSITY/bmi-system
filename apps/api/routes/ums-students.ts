@@ -2,10 +2,15 @@
  * BMI UMS – Student Routes
  * CRUD for student profiles backed by Cloudflare D1.
  * Accessible by: admin, staff (list/read), student (own record only)
+ *
+ * ALL student creation paths converge at runUnifiedProvisioning() — the single
+ * orchestrator that guarantees UID, reg_no, documents, and provisioning jobs
+ * are handled identically regardless of registration method.
  */
 import { ok, error, json } from '../lib/types';
 import type { Env } from '../lib/types';
 import { parseBody, CreateStudentSchema, UpdateStudentSchema } from '../lib/schemas';
+import { runUnifiedProvisioning } from '../lib/unified-provisioner';
 
 // ─── helpers ────────────────────────────────────────────────────────────────
 
@@ -106,45 +111,64 @@ export async function handleCreateStudent(request: Request, env: Env): Promise<R
 
   const {
     email, first_name, last_name, phone, password_hash,
-    reg_no, gender, date_of_birth, nationality, admission_date, program,
-    status, avatar_color, study_center_id,
-    gpa, year_of_study, degree_level, photo,
+    reg_no, gender, date_of_birth, nationality, admission_date, program: program_name,
+    study_center_id, photo,
   } = parsed;
 
+  const db = env.PLATFORM_CONTEXT!.db;
+
   // Check if user exists already
-  const existingUser = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id FROM users WHERE email = ?').bind(email).first<{ id: string }>();
+  const existingUser = await db.prepare('SELECT id FROM users WHERE email = ?').bind(email).first<{ id: string }>();
 
   let userId: string;
   if (existingUser) {
     userId = existingUser.id;
   } else {
     userId = buildId();
-    await env.PLATFORM_CONTEXT!.db.prepare(
+    const passwordHash = password_hash || 'RESET_REQUIRED';
+    await db.prepare(
       `INSERT INTO users (id, email, password_hash, first_name, last_name, phone, role)
        VALUES (?, ?, ?, ?, ?, ?, 'student')`
-    ).bind(userId, email, password_hash, first_name, last_name, phone || null).run();
+    ).bind(userId, email, passwordHash, first_name, last_name, phone || null).run();
   }
 
-  // Upsert student profile
-  const studentId = buildId(); // Generate stable student_id
-  await env.PLATFORM_CONTEXT!.db.prepare(
-    `INSERT INTO students (user_id, student_id, reg_no, gender, date_of_birth, nationality, admission_date,
-       program, status, avatar_color, study_center_id, gpa, year_of_study, degree_level, photo)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT(user_id) DO UPDATE SET
-       reg_no = excluded.reg_no, updated_at = datetime('now')`
-  ).bind(
-    userId, studentId, reg_no, gender || null, date_of_birth || null, nationality || null,
-    admission_date, program, status, avatar_color, study_center_id || null,
-    gpa || null, year_of_study || null, degree_level || null, photo || null
-  ).run();
+  // Let the unified provisioner handle everything: UID, student record, program linking, reg_no, docs, provisioning
+  const result = await runUnifiedProvisioning(db, {
+    source: 'ums_direct',
+    userId,
+    firstName: first_name,
+    lastName: last_name,
+    email,
+    phone,
+    gender,
+    dateOfBirth: date_of_birth,
+    nationality,
+    programName: program_name,
+    studyCenterId: study_center_id,
+    admissionDate: admission_date,
+    existingRegNo: (reg_no && !reg_no.startsWith('STD') && !reg_no.startsWith('PENDING')) ? reg_no : undefined,
+    photo,
+    actorId: userId,
+  }, env.PLATFORM_CONTEXT!.document);
 
-  const created = await env.PLATFORM_CONTEXT!.db.prepare(
+  const created = await db.prepare(
     `SELECT s.user_id as id, s.*, u.email, u.first_name, u.last_name, u.phone FROM students s
      INNER JOIN users u ON s.user_id = u.id WHERE s.user_id = ?`
   ).bind(userId).first();
 
-  return json({ success: true, data: created }, 201);
+  return json({
+    success: true,
+    data: {
+      ...created,
+      _provisioning: {
+        uid: result.uid,
+        regNo: result.regNo,
+        programLinked: result.programLinked,
+        documentsGenerated: result.documentsGenerated,
+        provisioningQueued: result.provisioningQueued,
+      },
+    },
+  }, 201);
 }
 
 // ─── update student ──────────────────────────────────────────────────────────

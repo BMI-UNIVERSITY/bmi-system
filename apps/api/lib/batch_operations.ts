@@ -124,6 +124,7 @@ export async function processBulkAdmissions(
 
 /**
  * Simplified admission pipeline optimized for bulk processing
+ * Delegates to the unified provisioner for consistency.
  */
 async function executeSimplifiedAdmissionPipeline(
   db: IDatabase,
@@ -138,100 +139,19 @@ async function executeSimplifiedAdmissionPipeline(
 ): Promise<{ uid: string | null; regNo: string | null }> {
   const { applicationId, userId, actorId, program, firstName, lastName } = context;
 
-  // Check for existing UID.
-  // Must use db.queryOne(), NOT executeWithMonitoring():
-  // executeWithMonitoring calls .run() which discards row data in the D1 adapter.
-  type PersonRow = { uid?: string };
-  const existingPerson = await db.queryOne<PersonRow>(
-    'SELECT p.uid FROM users u LEFT JOIN persons p ON u.person_id = p.id WHERE u.id = ?',
-    [userId]
-  );
-  let uid = existingPerson?.uid;
+  const { runUnifiedProvisioning } = await import('./unified-provisioner');
 
-  // Generate UID if needed
-  if (!uid) {
-    const { generateUID } = await import('./uid');
-    uid = await generateUID(db);
+  const result = await runUnifiedProvisioning(db, {
+    source: 'batch',
+    userId,
+    firstName,
+    lastName,
+    programName: program,
+    applicationId,
+    actorId,
+  });
 
-    const personId = crypto.randomUUID().replace(/-/g, '');
-    const now = new Date().toISOString();
-
-    const personOps = [
-      db.prepare(
-        'INSERT INTO persons (id, uid, first_name, last_name, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)'
-      ).bind(personId, uid, firstName, lastName, now, now),
-
-      db.prepare(
-        'UPDATE users SET person_id = ?, updated_at = ? WHERE id = ?'
-      ).bind(personId, now, userId)
-    ];
-
-    await executeBatch(db, personOps);
-  }
-
-  // Create student record if not exists.
-  // Must use db.queryOne(), NOT executeWithMonitoring():
-  // executeWithMonitoring calls .run() which discards row data in the D1 adapter.
-  const existingStudent = await db.queryOne<{ user_id: string }>(
-    'SELECT user_id FROM students WHERE user_id = ?',
-    [userId]
-  );
-
-  if (!existingStudent) {
-    const now = new Date().toISOString();
-    const placeholderRegNo = `PENDING-${userId.slice(0, 8).toUpperCase()}`;
-
-    await db.prepare(
-      "INSERT INTO students (user_id, reg_no, admission_date, program, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'Active', ?, ?)"
-    ).bind(userId, placeholderRegNo, now.split('T')[0], program, now, now).run();
-  }
-
-  // Generate registration number.
-  // Must use db.queryOne(), NOT executeWithMonitoring():
-  // executeWithMonitoring calls .run() which discards row data in the D1 adapter.
-  let regNo: string | null = null;
-  try {
-    const progInfo = await db.queryOne<{ id: string; code: string; level: string }>(
-      'SELECT id, code, level FROM programs WHERE lower(trim(name)) = lower(trim(?)) OR lower(trim(code)) = lower(trim(?)) LIMIT 1',
-      [program, program]
-    );
-
-    if (!progInfo) {
-      console.warn(
-        `[RegNo] No programs row matched "${program}" in bulk admission — ` +
-        'student enrolled with placeholder reg_no. Seed the programs table to fix.'
-      );
-    } else {
-      const { generateRegNo } = await import('./reg_number');
-      const year = new Date().getUTCFullYear();
-      regNo = await generateRegNo(db, progInfo.id, progInfo.code, year, progInfo.level);
-
-      await db.prepare('UPDATE students SET reg_no = ?, updated_at = ? WHERE user_id = ?')
-        .bind(regNo, new Date().toISOString(), userId)
-        .run();
-    }
-  } catch (e) {
-    console.error('[RegNo] generateRegNo failed in bulk admission:', e);
-  }
-
-  // Add lifecycle events in batch
-  const lifecycleOps = [
-    db.prepare(
-      `INSERT OR IGNORE INTO lifecycle_events
-       (id, uid, application_id, stage, status, idempotency_key, actor_id, notes)
-       VALUES (lower(hex(randomblob(16))), ?, ?, 'application_accepted', 'completed', ?, ?, 'Bulk admission processed')`
-    ).bind(uid, applicationId, `${applicationId}:bulk_accepted`, actorId),
-
-    db.prepare(
-      `INSERT OR IGNORE INTO lifecycle_events
-       (id, uid, application_id, stage, status, idempotency_key, actor_id, notes)
-       VALUES (lower(hex(randomblob(16))), ?, ?, 'student_active', 'completed', ?, ?, 'Student activated via bulk admission')`
-    ).bind(uid, applicationId, `${applicationId}:bulk_active`, actorId)
-  ];
-
-  await executeBatch(db, lifecycleOps);
-
-  return { uid: uid ?? null, regNo };
+  return { uid: result.uid, regNo: result.regNo };
 }
 
 /**

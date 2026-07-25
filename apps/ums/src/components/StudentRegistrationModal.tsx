@@ -232,11 +232,8 @@ const StudentRegistrationModal: React.FC<StudentRegistrationModalProps> = ({
       }
 
       if (initialData) {
-        // Update existing student
         result = await updateStudent(initialData.id, payload);
       } else {
-        // Create new student
-        payload.reg_no = formData.reg_no || `STD${Date.now()}`; // Fallback reg_no
         result = await createStudent(payload);
       }
 

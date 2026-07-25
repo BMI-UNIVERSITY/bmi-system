@@ -1,8 +1,7 @@
 import { Env, ok, error, typedJson } from '../lib/types';
 import { ExecutionContext } from '@cloudflare/workers-types';
 import { sendEmail, buildEmailLayout } from '../lib/email';
-import { generateRegNo } from '../lib/reg_number';
-import { enqueueProvisioningJobs } from '../lib/provisioning';
+import { runUnifiedProvisioning } from '../lib/unified-provisioner';
 
 export type RegStep = 'personal_details' | 'address' | 'program' | 'modules' | 'fees' | 'confirm';
 
@@ -153,7 +152,7 @@ export async function handleCompleteRegistration(_req: Request, env: Env, userId
 
     const db = env.PLATFORM_CONTEXT!.db;
     
-    // Fetch user details for provisioning and reg_no generation
+    // Fetch user details
     const userRow = await db.prepare(
       `SELECT u.email, u.first_name, u.last_name, s.reg_no, p.uid
        FROM users u
@@ -163,65 +162,42 @@ export async function handleCompleteRegistration(_req: Request, env: Env, userId
     ).bind(userId).first<{ email: string; first_name: string; last_name: string; reg_no: string | null; uid: string | null }>();
     
     if (!userRow) return error('User not found', 404);
-    
-    const uid = userRow.uid;
-    if (!uid) return error('User lacks UID. Please contact support.', 400);
 
     const now = new Date().toISOString();
     const programId = currentData.program?.program_id;
-    let finalRegNo = userRow.reg_no;
+    const programName = currentData.program?.program_name || '';
 
-    await db.transaction(async (tx) => {
-      // 1. Update students program text
-      await tx.prepare(
-        `UPDATE students SET program = ?, updated_at = ? WHERE user_id = ?`
-      ).bind(currentData.program?.program_name || '', now, userId).run();
+    // Enrollments: process before provisioning so courses exist
+    const courses = currentData.modules?.selected_course_ids || [];
+    for (const courseId of courses) {
+      await db.prepare(
+        `INSERT OR IGNORE INTO enrollments (id, student_id, course_id, status) VALUES (?, ?, ?, 'enrolled')`
+      ).bind(crypto.randomUUID(), userId, courseId).run();
+    }
 
-      // 2. Link student_programs and generate Reg No if needed
-      if (programId) {
-        const year = new Date().getUTCFullYear();
-        const rowId = crypto.randomUUID().replace(/-/g, '');
-        
-        await tx.prepare(
-          `INSERT OR IGNORE INTO student_programs
-             (id, uid, program_id, admission_year, enrollment_date, status, current_flag, created_at, updated_at)
-           VALUES (?, ?, ?, ?, ?, 'active', 1, ?, ?)`
-        ).bind(rowId, uid, programId, year, now.split('T')[0], now, now).run();
-        
-        if (!finalRegNo || finalRegNo.startsWith('PENDING')) {
-          const progInfo = await tx.prepare(
-            `SELECT code, level FROM programs WHERE id = ?`
-          ).bind(programId).first<{ code: string; level: string }>();
-          
-          if (progInfo) {
-            finalRegNo = await generateRegNo(tx, programId, progInfo.code, year, progInfo.level);
-            await tx.prepare(
-              `UPDATE students SET reg_no = ?, updated_at = ? WHERE user_id = ?`
-            ).bind(finalRegNo, now, userId).run();
-            await tx.prepare(
-              `UPDATE student_programs SET registration_number = ?, updated_at = ? WHERE uid = ? AND current_flag = 1`
-            ).bind(finalRegNo, now, uid).run();
-          }
-        }
-      }
+    // Let the unified provisioner handle UID verification, reg_no generation,
+    // program linking, document generation, and provisioning job creation.
+    const result = await runUnifiedProvisioning(db, {
+      source: 'portal',
+      userId,
+      firstName: userRow.first_name,
+      lastName: userRow.last_name,
+      email: userRow.email || undefined,
+      programId,
+      programName,
+      admissionDate: now.split('T')[0],
+      existingUid: userRow.uid || undefined,
+      existingRegNo: userRow.reg_no || undefined,
+    }, env.PLATFORM_CONTEXT!.document);
 
-      // 3. Process Enrollments
-      const courses = currentData.modules?.selected_course_ids || [];
-      for (const courseId of courses) {
-        await tx.prepare(
-          `INSERT OR IGNORE INTO enrollments (id, student_id, course_id, status) VALUES (?, ?, ?, 'enrolled')`
-        ).bind(crypto.randomUUID(), userId, courseId).run();
-      }
+    const finalRegNo = result.regNo || userRow.reg_no;
 
-      // 4. Update metadata to show completion
-      await tx.prepare(
-        `UPDATE metadata SET value = ? WHERE id = ? AND key = 'registration_data'`
-      ).bind(JSON.stringify({ ...currentData, _completed_at: now }), userId).run();
-    });
+    // Mark registration wizard as complete in metadata
+    await db.prepare(
+      `UPDATE metadata SET value = ? WHERE id = ? AND key = 'registration_data'`
+    ).bind(JSON.stringify({ ...currentData, _completed_at: now }), userId).run();
 
-    // 5. Trigger Provisioning Jobs (Finance, Email, ID Card, LMS)
-    await enqueueProvisioningJobs(db, uid);
-
+    // Send welcome email
     if (userRow.email) {
       ctx?.waitUntil(sendEmail(env, {
         to: userRow.email,
@@ -233,7 +209,7 @@ export async function handleCompleteRegistration(_req: Request, env: Env, userId
           </p>
           <div style="background:#f8fafc;border-left:4px solid #d4af37;padding:16px;margin:20px 0;border-radius:4px;">
             <p><strong>Registration Number:</strong> ${finalRegNo || 'Pending'}</p>
-            <p><strong>Programme:</strong> ${currentData.program?.program_name || 'N/A'}</p>
+            <p><strong>Programme:</strong> ${programName || 'N/A'}</p>
           </div>
           <p style="color: #475569; line-height: 1.6;">
             Our systems are currently provisioning your student email, ID card, and enrolling you into the LMS. You will receive separate emails as these become available.

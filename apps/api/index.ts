@@ -20,6 +20,7 @@ import { handleListPosts, handleCreatePost, handleUpdatePost, handleDeletePost, 
 import { handleInboundWebhook, handleListEvents, handleListDeadLetters, handleRetryDeadLetter } from './routes/webhooks';
 // UMS routes
 import { handleListStudents, handleGetStudent, handleCreateStudent, handleUpdateStudent, handleDeleteStudent } from './routes/ums-students';
+import { handleImportV2 } from './routes/ums-import';
 import { handleListGrades, handleCreateGrade, handleUpdateGrade } from './routes/ums-grades';
 import { handleListUmsCourses, handleCreateCourse, handleUpdateCourse, handleDeleteCourse, handleListPrograms, handleListFaculties, handleListDepartments, handleListTerms, handleListEnrollments, handleCreateEnrollment } from './routes/ums-courses';
 import { handleListStaff, handleGetStaff, handleCreateStaff, handleUpdateStaff } from './routes/ums-staff';
@@ -246,6 +247,8 @@ const ROUTES: Route[] = [
   { method: 'GET', path: /^\/api\/v1\/finance\/stats$/, roles: ['admin', 'staff'], handler: async (req, env) =>handleFinanceStats(req, env) },
   { method: 'POST', path: /^\/api\/v1\/documents\/verify$/, roles: undefined, handler: async (req, env) =>handleVerifyCertificate(req, env) },
   { method: 'GET', path: /^\/api\/v1\/certificates\/verification\/stats$/, roles: ['admin', 'staff'], handler: async (req, env) =>handleCertificateVerificationStats(req, env) },
+  // Import route — intelligent Excel/JSON data import with fuzzy column matching
+  { method: 'POST', path: /^\/api\/v1\/import\/v2$/, roles: ['admin', 'staff'], handler: async (req, env, _p, auth) =>handleImportV2(req, env, auth!.user.sub) },
   // Multi-Agent Implementation Routes
   { method: 'POST', path: /^\/api\/auth\/claim$/, roles: undefined, handler: async (req, env, _p, _auth, ctx) =>handleClaimAccount(req, env, ctx) },
   { method: 'GET', path: /^\/api\/student\/onboarding$/, roles: ['student'], handler: async (req, env, _p, auth) =>handleGetOnboardingStatus(req, env, auth!.user.sub) },
