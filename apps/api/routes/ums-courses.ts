@@ -241,6 +241,12 @@ export async function handleCreateEnrollment(request: Request, env: Env): Promis
       );
 
       batchOps.push({
+        sql: `UPDATE students SET previous_reg_no = reg_no, updated_at = datetime('now')
+              WHERE user_id = ? AND reg_no IS NOT NULL AND reg_no != '' AND previous_reg_no IS NULL`,
+        params: [student_id]
+      });
+
+      batchOps.push({
         sql: `UPDATE students SET reg_no = ?, updated_at = datetime('now')
               WHERE user_id = ? AND (reg_no IS NULL OR reg_no NOT LIKE 'BMI/%')`,
         params: [regNo, student_id]

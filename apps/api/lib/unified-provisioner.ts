@@ -286,6 +286,12 @@ export async function runUnifiedProvisioning(
         ).bind(uid).first<{ program_id: string; code: string; level: string }>();
 
         if (progInfo) {
+          // Preserve the old reg_no before overwriting (best practice: never destroy identifiers)
+          await db.prepare(
+            `UPDATE students SET previous_reg_no = reg_no, updated_at = ?
+             WHERE user_id = ? AND reg_no IS NOT NULL AND reg_no != '' AND previous_reg_no IS NULL`
+          ).bind(now, input.userId).run();
+
           regNo = await generateRegNo(db, progInfo.program_id, progInfo.code, year, progInfo.level);
 
           await db.transaction(async (tx) => {

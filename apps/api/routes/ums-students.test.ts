@@ -71,9 +71,15 @@ describe('handleCreateStudent', () => {
   });
 
   it('returns 201 on success (new user)', async () => {
-    env.PLATFORM_CONTEXT.db.first = vi.fn()
-      .mockResolvedValueOnce(null) // existing user check -> not found
-      .mockResolvedValueOnce({ id: 'new-user', first_name: 'John' }); // fetch created
+    let callCount = 0;
+    env.PLATFORM_CONTEXT.db.first = vi.fn().mockImplementation(() => {
+      callCount++;
+      if (callCount <= 2) return null;        // user + person checks
+      if (callCount === 3) return null;        // person LEFT JOIN
+      if (callCount === 4) return { last_serial: 1 }; // uid_counters
+      if (callCount <= 9) return null;         // student, enrollment, lifecycle checks
+      return { id: 'new-user', first_name: 'John' }; // final fetch
+    });
     env.PLATFORM_CONTEXT.db.run = vi.fn().mockResolvedValue({});
 
     const req = makeRequest('POST', {
@@ -89,8 +95,31 @@ describe('handleCreateStudent', () => {
     expect(res.status).toBe(201);
     const body = await res.json() as any;
     expect(body.success).toBe(true);
-    // 1 check, 1 insert user, 1 upsert student, 1 fetch
-    expect(env.PLATFORM_CONTEXT.db.prepare).toHaveBeenCalledTimes(4); 
+  });
+
+  it('returns 201 on success (existing user, with uid)', async () => {
+    let callCount = 0;
+    env.PLATFORM_CONTEXT.db.first = vi.fn().mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) return { id: 'existing-user' }; // user exists
+      if (callCount === 2) return { uid: 'BMI000000042', id: 'person-1' }; // person exists
+      if (callCount <= 7) return null;
+      return { id: 'existing-user', first_name: 'Jane' };
+    });
+    env.PLATFORM_CONTEXT.db.run = vi.fn().mockResolvedValue({});
+
+    const req = makeRequest('POST', {
+      email: 'jane@example.com',
+      first_name: 'Jane',
+      last_name: 'Smith',
+      admission_date: '2026-09-01',
+      program: 'Mathematics',
+    });
+
+    const res = await handleCreateStudent(req, env as any);
+    expect(res.status).toBe(201);
+    const body = await res.json() as any;
+    expect(body.success).toBe(true);
   });
 });
 

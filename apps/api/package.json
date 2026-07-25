@@ -9,6 +9,8 @@
     "db:migrate": "wrangler d1 migrations apply bmi-portal-db --remote",
     "db:migrate:local": "wrangler d1 migrations apply bmi-portal-db --local",
     "verify-migrations": "tsx scripts/verify-migrations.ts",
+    "backfill-reg-numbers": "tsx scripts/backfill-reg-numbers.ts",
+    "backfill-reg-numbers:dry-run": "tsx scripts/backfill-reg-numbers.ts --dry-run",
     "type-check": "tsc --noEmit",
     "secrets:set": "node scripts/set-secrets.mjs",
     "test": "vitest run --passWithNoTests",
