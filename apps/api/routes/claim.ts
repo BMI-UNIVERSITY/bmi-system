@@ -40,18 +40,7 @@ export async function handleClaimAccount(req: Request, env: Env, ctx: ExecutionC
       `UPDATE users SET password_hash = ?, account_claimed = 1, admission_code = NULL, admission_code_expires_at = NULL WHERE id = ?`
     ).bind(hashedPassword, user.id).run();
 
-    const holdTypes = [
-      { hold_type: 'document', reason: 'Upload your student ID photo to verify your identity.' },
-      { hold_type: 'orientation', reason: 'Complete the online orientation to learn about campus policies and resources.' },
-      { hold_type: 'course_selection', reason: 'Complete course registration (mandatory auto-enrollment + elective selection).' },
-      { hold_type: 'payment', reason: 'Pay your program tuition and fees to complete registration.' },
-    ];
-
-    for (const h of holdTypes) {
-      await env.PLATFORM_CONTEXT!.db.prepare(
-        `INSERT INTO student_holds (id, student_id, hold_type, reason) VALUES (?, ?, ?, ?)`
-      ).bind(crypto.randomUUID(), user.id, h.hold_type, h.reason).run();
-    }
+    // Onboarding holds are now strictly assigned during unified provisioning (lib/unified-provisioner.ts).
 
     if (userInfo && env.RESEND_API_KEY) {
       ctx.waitUntil(sendEmail(env, {

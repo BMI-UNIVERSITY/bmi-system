@@ -166,15 +166,6 @@ export async function handleCompleteRegistration(_req: Request, env: Env, userId
     const now = new Date().toISOString();
     const programId = currentData.program?.program_id;
     const programName = currentData.program?.program_name || '';
-
-    // Enrollments: process before provisioning so courses exist
-    const courses = currentData.modules?.selected_course_ids || [];
-    for (const courseId of courses) {
-      await db.prepare(
-        `INSERT OR IGNORE INTO enrollments (id, student_id, course_id, status) VALUES (?, ?, ?, 'enrolled')`
-      ).bind(crypto.randomUUID(), userId, courseId).run();
-    }
-
     // Let the unified provisioner handle UID verification, reg_no generation,
     // program linking, document generation, and provisioning job creation.
     const result = await runUnifiedProvisioning(db, {
@@ -189,6 +180,14 @@ export async function handleCompleteRegistration(_req: Request, env: Env, userId
       existingUid: userRow.uid || undefined,
       existingRegNo: userRow.reg_no || undefined,
     }, env.PLATFORM_CONTEXT!.document);
+
+    // Enrollments: process after provisioning so student record and UID validity are confirmed
+    const courses = currentData.modules?.selected_course_ids || [];
+    for (const courseId of courses) {
+      await db.prepare(
+        `INSERT OR IGNORE INTO enrollments (id, student_id, course_id, status) VALUES (?, ?, ?, 'enrolled')`
+      ).bind(crypto.randomUUID(), userId, courseId).run();
+    }
 
     const finalRegNo = result.regNo || userRow.reg_no;
 

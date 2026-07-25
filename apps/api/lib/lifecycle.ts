@@ -44,6 +44,7 @@ export const STAGES = {
   PROGRAM_ENROLLED:               'program_enrolled',
   REGISTRATION_NUMBER_GENERATED:    'registration_number_generated',
   DOCUMENTS_GENERATED:              'documents_generated',
+  HOLDS_ASSIGNED:                   'holds_assigned',
   PROVISIONING_QUEUED:              'provisioning_queued',
   STUDENT_ACTIVE:                   'student_active',
   GRADUATED:                        'graduated',

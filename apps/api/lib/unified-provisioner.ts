@@ -192,6 +192,55 @@ export async function runUnifiedProvisioning(
     }
   }
 
+  // ─── Step 2.5: Hold Assignment ────────────────────────────────────────
+  const holdKey = `${baseKey}:holds_assigned`;
+  lifecycleKeys.push(holdKey);
+
+  if (uid && !(await isStageComplete(db, holdKey))) {
+    try {
+      const holdTypes = [
+        { hold_type: 'document', reason: 'Upload your student ID photo to verify your identity.' },
+        { hold_type: 'orientation', reason: 'Complete the online orientation to learn about campus policies and resources.' },
+        { hold_type: 'course_selection', reason: 'Complete course registration (mandatory auto-enrollment + elective selection).' },
+        { hold_type: 'payment', reason: 'Pay your program tuition and fees to complete registration.' },
+      ];
+
+      await db.transaction(async (tx) => {
+        for (const h of holdTypes) {
+          const existing = await tx.prepare(
+            `SELECT id FROM student_holds WHERE student_id = ? AND hold_type = ?`
+          ).bind(input.userId, h.hold_type).first();
+
+          if (!existing) {
+            await tx.prepare(
+              `INSERT INTO student_holds (id, student_id, hold_type, reason) VALUES (?, ?, ?, ?)`
+            ).bind(crypto.randomUUID(), input.userId, h.hold_type, h.reason).run();
+          }
+        }
+      });
+
+      await appendLifecycleEvent(db, {
+        idempotencyKey: holdKey,
+        stage: STAGES.HOLDS_ASSIGNED,
+        status: 'completed',
+        uid,
+        applicationId: input.applicationId || null,
+        actorId: input.actorId || null,
+        notes: `Onboarding holds assigned via ${input.source}`,
+      });
+    } catch (e) {
+      await appendLifecycleEvent(db, {
+        idempotencyKey: holdKey,
+        stage: STAGES.HOLDS_ASSIGNED,
+        status: 'failed',
+        uid,
+        applicationId: input.applicationId || null,
+        actorId: input.actorId || null,
+        errorDetail: String(e),
+      });
+    }
+  }
+
   // ─── Step 3: Program Enrollment ──────────────────────────────────────
   const progKey = `${baseKey}:program_enrolled`;
   lifecycleKeys.push(progKey);

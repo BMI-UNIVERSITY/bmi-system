@@ -45,60 +45,12 @@ export class D1DatabaseAdapter implements IDatabase, IHealthCheck {
   }
 
   async transaction<T>(callback: (db: IDatabase) => Promise<T>): Promise<T> {
-    // Implement transaction batching for D1
-    const statements: D1PreparedStatement[] = [];
-    
-    // Create a wrapper that collects prepared statements
-    const collectingDb: IDatabase = {
-      query: async <U = any>(sql: string, params?: any[]): Promise<U[]> => {
-        let qStmt = this.d1.prepare(sql);
-        if (params && params.length > 0) {
-          qStmt = qStmt.bind(...params);
-        }
-        const result = await qStmt.all<U>();
-        return result.results as U[];
-      },
-      queryOne: async <U = any>(sql: string, params?: any[]): Promise<U | null> => {
-        let qStmt = this.d1.prepare(sql);
-        if (params && params.length > 0) {
-          qStmt = qStmt.bind(...params);
-        }
-        return await qStmt.first<U>();
-      },
-      prepare: (sql: string): IPreparedStatement => {
-        let stmt = this.d1.prepare(sql);
-        const wrapper: IPreparedStatement = {
-          bind: (...params: any[]) => {
-            stmt = stmt.bind(...params);
-            return wrapper;
-          },
-          run: async () => {
-            statements.push(stmt);
-            return { success: true };
-          },
-          all: async <U = any>() => {
-            const result = await stmt.all<U>();
-            return { results: result.results as U[], meta: result.meta };
-          },
-          first: async <U = any>() => {
-            return await stmt.first<U>();
-          }
-        };
-        return wrapper;
-      },
-      transaction: async <U>(_cb: (db: IDatabase) => Promise<U>) => {
-        throw new Error("Nested transactions are not supported.");
-      },
-      getPlatform: () => this.getPlatform(),
-    };
-
-    const result = await callback(collectingDb);
-    
-    if (statements.length > 0) {
-      await this.d1.batch(statements);
-    }
-    
-    return result;
+    // Cloudflare D1 does not support interactive transactions (e.g., BEGIN; ... SELECT; ... COMMIT;).
+    // Previously, statements were queued into a batch, but reads (query) executed immediately
+    // against the uncommitted DB state, leading to stale or empty results.
+    // By passing `this` directly, statements are executed sequentially. While this sacrifices atomicity,
+    // it guarantees data correctness for reads within the transaction callback.
+    return callback(this);
   }
 
   getPlatform(): string {

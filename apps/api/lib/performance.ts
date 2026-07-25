@@ -216,7 +216,6 @@ export async function executeBatch(
     chunks.push(operations.slice(i, i + maxBatchSize));
   }
 
-  // Process operations sequentially within transactions for portability
   try {
     for (let chunkIndex = 0; chunkIndex < chunks.length; chunkIndex++) {
       const chunk = chunks[chunkIndex];
@@ -227,24 +226,14 @@ export async function executeBatch(
           }
         });
         successfulOperations += chunk.length;
-      } catch {
-        // If transaction fails, try operations individually to identify failures
-        for (let opIndex = 0; opIndex < chunk.length; opIndex++) {
-          const globalIndex = chunkIndex * maxBatchSize + opIndex;
-          try {
-            await chunk[opIndex].run();
-            successfulOperations++;
-          } catch (opError) {
-            failures.push({
-              index: globalIndex,
-              error: opError instanceof Error ? opError.message : String(opError)
-            });
-          }
-        }
+      } catch (e) {
+        throw new Error(`Batch execution failed at chunk ${chunkIndex}: ${e instanceof Error ? e.message : String(e)}`, { cause: e });
       }
     }
   } catch (e) {
     console.error('Unexpected batch execution error:', e);
+    // Propagate the error rather than returning a "success: false" payload with partial commits
+    throw e;
   }
 
   const totalDuration = performance.now() - startTime;
