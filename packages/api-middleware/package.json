@@ -12,7 +12,7 @@
     "test:coverage": "vitest run --coverage"
   },
   "dependencies": {
-    "@asteasolutions/zod-to-openapi": "^8.5.0",
+    "@asteasolutions/zod-to-openapi": "^9.1.0",
     "@bmi/ports": "workspace:*",
     "@bmi/shared": "workspace:*",
     "openapi3-ts": "4.6.0",
