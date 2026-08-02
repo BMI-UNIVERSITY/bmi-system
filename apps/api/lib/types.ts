@@ -32,6 +32,17 @@ export interface Env {
   WEBHOOK_URL?: string;
   /** HMAC-SHA256 signing key for outbound webhooks. */
   WEBHOOK_SECRET?: string;
+  /** Neon PostgreSQL connection strings (Neon-centric migration). */
+  DATABASE_URL?: string;
+  DATABASE_URL_CORE?: string;
+  DATABASE_URL_HR?: string;
+  DATABASE_URL_LIBRARY?: string;
+  DATABASE_URL_ALUMNI?: string;
+  /** Cloudflare Hyperdrive bindings for pooled connections to Neon. */
+  CORE_HYPERDRIVE?: Hyperdrive;
+  HR_HYPERDRIVE?: Hyperdrive;
+  LIBRARY_HYPERDRIVE?: Hyperdrive;
+  ALUMNI_HYPERDRIVE?: Hyperdrive;
   /** Stripe secret key for payment processing. */
   STRIPE_SECRET_KEY?: string;
   /** Stripe webhook signing secret for verifying webhook events. */

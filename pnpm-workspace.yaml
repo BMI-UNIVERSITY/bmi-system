@@ -2,5 +2,6 @@ packages:
   - "apps/*"
   - "packages/*"
   - "bmi-university"
+  - "!apps/ums_backup"
 
 

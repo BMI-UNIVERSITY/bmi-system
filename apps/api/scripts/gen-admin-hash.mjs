@@ -5,10 +5,10 @@
 const pepper = process.argv[2] || '';
 const password = process.argv[3] || 'Admin@123';
 
-const { subtle, getRandomValues } = globalThis.crypto;
+const { subtle } = globalThis.crypto;
 
 async function hashPassword(password, pepper) {
-  const salt = getRandomValues(new Uint8Array(16));
+  const salt = globalThis.crypto.getRandomValues(new Uint8Array(16));
   const pepperKey = await subtle.importKey(
     'raw',
     new TextEncoder().encode(pepper),

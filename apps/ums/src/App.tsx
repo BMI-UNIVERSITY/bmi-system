@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
-import { Menu, Bell } from "lucide-react";
 import Sidebar from "./components/Sidebar";
+import TopHeader from "./components/TopHeader";
 import AIModal from "./components/AIModal";
 import NotificationCenter from "./components/NotificationCenter";
 import Login from "./components/Login";
@@ -51,18 +51,8 @@ function AuthenticatedLayout() {
     openSidebar,
     toggleSidebarCollapse,
     closeAIModal,
-    openNotificationCenter,
     closeNotificationCenter,
   } = useUIStore();
-
-  // Activate real-time synchronization
-
-
-  // Data freshness is now managed by TanStack Query (staleTime + refetchOnWindowFocus).
-  // See src/hooks/useEntityQueries.ts. Components that need paginated data should use
-  // useStudentsQuery(), useStaffQuery(), etc. directly instead of the global store.
-  // The initial fetchAllCoreData() call on login (in the App component) still populates
-  // the Zustand store for components not yet migrated to React Query.
 
   // Handle Theme
   useEffect(() => {
@@ -74,25 +64,7 @@ function AuthenticatedLayout() {
   }, [theme]);
 
   return (
-    <div className="flex bg-[#F8F9FA] dark:bg-[#0a0015] h-screen font-sans transition-colors duration-300 relative overflow-hidden">
-      {/* Hamburger Menu Button - Mobile Only */}
-      <button
-        onClick={openSidebar}
-        className={`lg:hidden fixed top-3 left-4 z-30 p-2 bg-[#4B0082] text-white rounded-full shadow-lg hover:scale-110 transition-all border-2 border-[#FFD700] ${isSidebarOpen ? "opacity-0 pointer-events-none" : "opacity-100"}`}
-        aria-label="Open Menu"
-      >
-        <Menu size={20} />
-      </button>
-
-      {/* Notification Bell */}
-      <button
-        onClick={openNotificationCenter}
-        className={`fixed top-3 right-4 z-30 p-2 bg-white dark:bg-gray-800 text-[#4B0082] dark:text-[#FFD700] rounded-full shadow-lg hover:scale-110 transition-all border-2 border-[#4B0082] dark:border-[#FFD700]`}
-        aria-label="Notifications"
-      >
-        <Bell size={20} />
-      </button>
-
+    <div className="flex bg-slate-100 dark:bg-[#070010] h-screen font-sans transition-colors duration-300 relative overflow-hidden">
       <Sidebar
         currentView={pathname.slice(1) || "dashboard"}
         onChangeView={() => {
@@ -109,10 +81,14 @@ function AuthenticatedLayout() {
         onToggleCollapse={toggleSidebarCollapse}
       />
 
-      {/* Main Content Area - adjust margin based on sidebar state */}
-      <div className={`flex-1 h-full overflow-hidden transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
-        <div className="w-full p-2 md:p-4 lg:p-6 h-full">
-          <main key={pathname} className="h-full rounded-3xl bg-white/50 dark:bg-black/10 border border-white/20 dark:border-gray-800 shadow-sm relative backdrop-blur-sm overflow-y-auto no-scrollbar flex flex-col">
+      {/* Main Content Area */}
+      <div className={`flex-1 flex flex-col h-full overflow-hidden transition-all duration-300 ${isSidebarCollapsed ? 'lg:ml-16' : 'lg:ml-64'}`}>
+        <TopHeader 
+          onOpenSidebar={openSidebar} 
+          isSidebarOpen={isSidebarOpen} 
+        />
+        <div className="flex-1 w-full p-3 md:p-5 lg:p-6 overflow-hidden">
+          <main key={pathname} className="h-full rounded-2xl bg-white dark:bg-gray-900/60 border border-slate-200/80 dark:border-gray-800/80 shadow-sm relative overflow-y-auto no-scrollbar flex flex-col p-4 md:p-6">
             <ErrorBoundary>
               <AppRoutes />
             </ErrorBoundary>

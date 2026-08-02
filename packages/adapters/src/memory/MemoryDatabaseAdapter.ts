@@ -45,6 +45,15 @@ export class MemoryDatabaseAdapter implements IDatabase, IHealthCheck {
     return callback(this);
   }
 
+  async batch<T = any>(statements: IPreparedStatement[]): Promise<T[]> {
+    const results: any[] = [];
+    for (const stmt of statements) {
+      const r = await stmt.all();
+      results.push(r.results);
+    }
+    return results as T[];
+  }
+
   getPlatform(): string {
     return 'memory-mock';
   }

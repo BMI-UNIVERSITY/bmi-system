@@ -6,16 +6,16 @@
  */
 
 /** The public URL of the admissions / student portal. */
-export const PORTAL_URL = 'https://bmi-portal.hkmministries.org' as const;
+export const PORTAL_URL = 'https://portal.bmiuniversities.org' as const;
 
 /** The public URL of the University Management System (internal staff & students). */
-export const UMS_URL = 'https://main.bmi-university.pages.dev' as const;
+export const UMS_URL = 'https://ums.bmiuniversities.org' as const;
 
 /** The public URL of the marketing / university website. */
-export const MARKETING_URL = 'https://hkmministries.org' as const;
+export const MARKETING_URL = 'https://bmiuniversities.org' as const;
 
 /** The www-prefixed URL of the marketing site. */
-export const MARKETING_URL_WWW = 'https://www.hkmministries.org' as const;
+export const MARKETING_URL_WWW = 'https://www.bmiuniversities.org' as const;
 
 /** The Cloudflare Pages preview URL of the portal (used as a fallback origin). */
 export const PORTAL_PAGES_URL = 'https://bmi-portal.pages.dev' as const;
@@ -49,14 +49,19 @@ export const ALLOWED_ORIGINS: string[] = [
   // Cloudflare Pages deployment branches
   'https://portal.bmi-university.pages.dev',
   'https://ums.bmi-university.pages.dev',
+  // Legacy origins (kept during the hkmministries.org → bmiuniversities.org transition)
+  'https://hkmministries.org',
+  'https://www.hkmministries.org',
+  'https://bmi-portal.hkmministries.org',
+  'https://main.bmi-university.pages.dev',
   ...DEV_ORIGINS,
 ];
 
 /** The primary admissions contact email address. */
-export const ADMISSIONS_EMAIL = 'admissions@bmiuniversity.org' as const;
+export const ADMISSIONS_EMAIL = 'admissions@bmiuniversities.org' as const;
 
 /** The registrar's office contact email address. */
-export const REGISTRAR_EMAIL = 'registrar@bmiuniversity.org' as const;
+export const REGISTRAR_EMAIL = 'registrar@bmiuniversities.org' as const;
 
 /** The admin/support contact email address. */
-export const ADMIN_EMAIL = 'admin@bmiuniversity.org' as const;
+export const ADMIN_EMAIL = 'admin@bmiuniversities.org' as const;

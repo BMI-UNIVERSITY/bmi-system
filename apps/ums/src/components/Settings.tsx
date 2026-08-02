@@ -11,8 +11,11 @@ import {
   Upload,
   ImageIcon,
   Check,
-  
   Database,
+  UserPlus,
+  Loader2,
+  AlertCircle,
+  ShieldCheck,
 } from "lucide-react";
 import { authFetch } from "../services/authService";
 import { useUIStore } from "../stores/uiStore";
@@ -84,6 +87,65 @@ const Settings: React.FC = () => {
           sessionTimeout: "30m",
         };
   });
+
+
+  // ── Controlled Account Provisioning State ──────────────────────────────
+  const CONTROLLED_DESIGNATIONS = [
+    { label: 'Academic Registrar',  value: 'Academic Registrar',  scope: 'Programs, Grades, Transcripts' },
+    { label: 'Finance Bursar',      value: 'Finance Bursar',      scope: 'Student Ledger & Payroll' },
+    { label: 'Faculty Chair',       value: 'Faculty Chair',       scope: 'Classes, Grading & Attendance' },
+    { label: 'HR Director',         value: 'HR Director',         scope: 'Staff Directory & Payroll' },
+    { label: 'Admissions Officer',  value: 'Admissions Officer',  scope: 'Applications & Enrollment' },
+    { label: 'IT Administrator',    value: 'IT Administrator',    scope: 'System Health & Integrations' },
+    { label: 'Library Manager',     value: 'Library Manager',     scope: 'Library & Media Resources' },
+    { label: 'System Administrator', value: 'System Administrator', scope: 'Full System Access & Configuration' },
+  ];
+
+  const [provisionForm, setProvisionForm] = useState({
+    first_name: '',
+    last_name: '',
+    email: '',
+    designation: CONTROLLED_DESIGNATIONS[0].value,
+    staff_no: '',
+  });
+  const [provisionLoading, setProvisionLoading] = useState(false);
+  const [provisionResult, setProvisionResult] = useState<{
+    type: 'success' | 'error';
+    message: string;
+    temp_password?: string;
+  } | null>(null);
+
+  const handleProvisionAccount = async () => {
+    const { first_name, last_name, email, designation } = provisionForm;
+    if (!first_name || !last_name || !email || !designation) {
+      setProvisionResult({ type: 'error', message: 'Please fill in all required fields.' });
+      return;
+    }
+    setProvisionLoading(true);
+    setProvisionResult(null);
+    try {
+      const res = await authFetch('/api/v1/staff/provision-controlled', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(provisionForm),
+      });
+      const data = await res.json() as any;
+      if (data.success) {
+        setProvisionResult({
+          type: 'success',
+          message: data.message,
+          temp_password: data.data?.temp_password,
+        });
+        setProvisionForm({ first_name: '', last_name: '', email: '', designation: CONTROLLED_DESIGNATIONS[0].value, staff_no: '' });
+      } else {
+        setProvisionResult({ type: 'error', message: data.error || 'Provisioning failed.' });
+      }
+    } catch {
+      setProvisionResult({ type: 'error', message: 'Network error — could not reach the server.' });
+    } finally {
+      setProvisionLoading(false);
+    }
+  };
 
   const handleSave = () => {
     setIsLoading(true);
@@ -247,6 +309,7 @@ const Settings: React.FC = () => {
           <TabButton id="general" label="General" icon={Globe} />
           <TabButton id="notifications" label="Notifications" icon={Bell} />
           <TabButton id="security" label="Security" icon={Shield} />
+          <TabButton id="controlled-accounts" label="Controlled Accounts" icon={UserPlus} />
         </div>
 
         {/* Content */}
@@ -587,6 +650,129 @@ const Settings: React.FC = () => {
               </div>
             </div>
           )}
+          {/* Controlled Accounts Tab */}
+          {activeTab === "controlled-accounts" && (
+            <div className="space-y-8 max-w-2xl">
+              <div className="flex items-start gap-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-none p-5">
+                <ShieldCheck size={18} className="text-amber-600 dark:text-amber-400 mt-0.5 flex-shrink-0" />
+                <div className="text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                  <p className="font-black uppercase mb-1">How Controlled Account Provisioning Works</p>
+                  <ul className="list-disc ml-4 space-y-1">
+                    <li>A cryptographically random temporary password is generated server-side — you never define it.</li>
+                    <li>The account is created as <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">staff</code> role with <code className="bg-amber-100 dark:bg-amber-900 px-1 rounded">must_change_password = true</code>.</li>
+                    <li>If email (Resend) is configured, the user receives a welcome email with their credentials and must reset on first login.</li>
+                    <li>If email is not configured, the temporary password is returned below — relay it via a secure channel.</li>
+                  </ul>
+                </div>
+              </div>
+
+              {/* Result Banner */}
+              {provisionResult && (
+                <div className={`flex items-start gap-3 p-4 border rounded-none text-xs ${
+                  provisionResult.type === 'success'
+                    ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 text-green-800 dark:text-green-300'
+                    : 'bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-800 dark:text-red-300'
+                }`}>
+                  {provisionResult.type === 'success'
+                    ? <Check size={16} className="mt-0.5 flex-shrink-0" />
+                    : <AlertCircle size={16} className="mt-0.5 flex-shrink-0" />}
+                  <div>
+                    <p className="font-bold">{provisionResult.message}</p>
+                    {provisionResult.temp_password && (
+                      <p className="mt-2">
+                        Temporary Password (no email configured):{' '}
+                        <code className="bg-green-100 dark:bg-green-900 px-2 py-0.5 rounded font-mono font-bold select-all">
+                          {provisionResult.temp_password}
+                        </code>
+                        <span className="ml-2 text-[10px] opacity-70">— Send this via a secure channel and remind the user to change it immediately.</span>
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Provision Form */}
+              <div className="bg-purple-50/30 dark:bg-gray-700/30 p-8 border border-purple-100 dark:border-gray-600 rounded-none space-y-5">
+                <h3 className="text-xs font-black text-[#4B0082] dark:text-purple-300 uppercase tracking-widest flex items-center gap-2">
+                  <UserPlus size={16} /> Create New Controlled Staff Account
+                </h3>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-1">First Name *</label>
+                    <input
+                      type="text"
+                      value={provisionForm.first_name}
+                      onChange={(e) => setProvisionForm(f => ({ ...f, first_name: e.target.value }))}
+                      placeholder="e.g. Grace"
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-none focus:outline-none focus:ring-2 focus:ring-[#4B0082] dark:text-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-1">Last Name *</label>
+                    <input
+                      type="text"
+                      value={provisionForm.last_name}
+                      onChange={(e) => setProvisionForm(f => ({ ...f, last_name: e.target.value }))}
+                      placeholder="e.g. Mensah"
+                      className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-none focus:outline-none focus:ring-2 focus:ring-[#4B0082] dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-1">Work Email *</label>
+                  <input
+                    type="email"
+                    value={provisionForm.email}
+                    onChange={(e) => setProvisionForm(f => ({ ...f, email: e.target.value }))}
+                    placeholder="registrar@bmi.edu"
+                    className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-none focus:outline-none focus:ring-2 focus:ring-[#4B0082] dark:text-white"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-1">Designation / Role *</label>
+                  <select
+                    value={provisionForm.designation}
+                    onChange={(e) => setProvisionForm(f => ({ ...f, designation: e.target.value }))}
+                    className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-none focus:outline-none focus:ring-2 focus:ring-[#4B0082] dark:text-white"
+                  >
+                    {CONTROLLED_DESIGNATIONS.map(d => (
+                      <option key={d.value} value={d.value}>
+                        {d.label} — {d.scope}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="text-[11px] text-gray-500 mt-2">
+                    Accounts are provisioned as <strong>staff</strong> role, except System Administrators which receive the <strong>admin</strong> role. Use User Management → Role Update to grant admin privileges separately.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 mb-1">Staff Number (optional — auto-generated if blank)</label>
+                  <input
+                    type="text"
+                    value={provisionForm.staff_no}
+                    onChange={(e) => setProvisionForm(f => ({ ...f, staff_no: e.target.value }))}
+                    placeholder="STF-2026-001"
+                    className="w-full px-3 py-2 text-sm bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-none focus:outline-none focus:ring-2 focus:ring-[#4B0082] dark:text-white"
+                  />
+                </div>
+
+                <button
+                  onClick={handleProvisionAccount}
+                  disabled={provisionLoading}
+                  className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-[#4B0082] to-[#320064] text-white font-black text-xs uppercase tracking-widest rounded-none shadow-lg hover:shadow-xl hover:scale-[1.01] active:scale-100 transition-all disabled:opacity-70 disabled:transform-none border border-[#FFD700]/20"
+                >
+                  {provisionLoading
+                    ? <><Loader2 size={14} className="animate-spin" /> Provisioning…</>
+                    : <><UserPlus size={14} className="text-[#FFD700]" /> Provision Account</>}
+                </button>
+              </div>
+            </div>
+          )}
+
         </div>
 
         {/* Footer Actions */}

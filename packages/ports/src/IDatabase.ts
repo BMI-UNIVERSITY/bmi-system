@@ -24,6 +24,12 @@ export interface IDatabase {
   transaction<T>(callback: (db: IDatabase) => Promise<T>): Promise<T>;
 
   /**
+   * Executes an array of prepared statements as a single atomic batch
+   * (single round-trip on D1; a non-interactive transaction on Neon HTTP).
+   */
+  batch<T = any>(statements: IPreparedStatement[]): Promise<T[]>;
+
+  /**
    * Returns a string identifying the underlying platform (e.g., 'cloudflare-d1', 'postgres').
    */
   getPlatform(): string;

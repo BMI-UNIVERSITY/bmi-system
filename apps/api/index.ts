@@ -23,7 +23,7 @@ import { handleListStudents, handleGetStudent, handleCreateStudent, handleUpdate
 import { handleImportV2 } from './routes/ums-import';
 import { handleListGrades, handleCreateGrade, handleUpdateGrade } from './routes/ums-grades';
 import { handleListUmsCourses, handleCreateCourse, handleUpdateCourse, handleDeleteCourse, handleListPrograms, handleListFaculties, handleListDepartments, handleListTerms, handleListEnrollments, handleCreateEnrollment } from './routes/ums-courses';
-import { handleListStaff, handleGetStaff, handleCreateStaff, handleUpdateStaff } from './routes/ums-staff';
+import { handleListStaff, handleGetStaff, handleCreateStaff, handleUpdateStaff, handleProvisionControlledAccount } from './routes/ums-staff';
 import { handleGetStudentPrograms, handleProgramTransfer } from './routes/programs';
 import { handleListTransactions } from './routes/ums-finance';
 import { handleGetRevenueTrend } from './routes/ums-dashboard';
@@ -69,7 +69,11 @@ import {
   handleComputeStanding,
   handleListStandingRules,
 } from './routes/academic_standing';
-
+import { handleListLeaveRequests, handleGetLeaveRequest, handleCreateLeaveRequest, handleUpdateLeaveRequest, handleListPayroll, handleCreatePayrollRecord } from './routes/ums-hr';
+import { handleListBorrowings, handleCreateBorrowing, handleReturnBook, handleListFines, handleMarkFinePaid } from './routes/ums-library';
+import { handleListAlumniProfiles, handleUpsertAlumniProfile, handleListAlumniEvents, handleCreateAlumniEvent, handleListDonations, handleRecordDonation } from './routes/ums-alumni';
+import { handleListTransportRoutes, handleCreateTransportRoute, handleUpdateTransportRoute, handleListTransportPasses, handleIssueTransportPass, handleRevokeTransportPass } from './routes/ums-campus';
+import { handleListNotifications, handleMarkNotificationsRead, handleCreateNotification, handleBroadcastNotification } from './routes/ums-notifications';
 const log = createLogger('bmi-api');
 
 interface AuthResult {
@@ -206,7 +210,8 @@ const ROUTES: Route[] = [
   { method: 'GET', path: /^\/api\/v1\/enrollments$/, roles: ['admin', 'staff', 'student'], handler: async (req, env) =>handleListEnrollments(req, env) },
   { method: 'POST', path: /^\/api\/v1\/enrollments$/, roles: ['admin', 'staff'], handler: async (req, env) =>handleCreateEnrollment(req, env) },
   { method: 'GET', path: /^\/api\/v1\/staff$/, roles: ['admin', 'staff'], handler: async (req, env) =>handleListStaff(req, env) },
-  { method: 'POST', path: /^\/api\/v1\/staff$/, roles: ['admin'], handler: async (req, env) =>handleCreateStaff(req, env) },
+  { method: 'POST', path: /^\/api\/v1\/staff$/, roles: ['admin'], handler: async (req, env) => handleCreateStaff(req, env) },
+  { method: 'POST', path: /^\/api\/v1\/staff\/provision-controlled$/, roles: ['admin'], handler: async (req, env, _p, auth) => handleProvisionControlledAccount(req, env, auth!.user.sub) },
   { method: 'GET', path: /^\/api\/v1\/staff\/([^/]+)$/, roles: ['admin', 'staff'], handler: async (req, env, p) =>handleGetStaff(req, env, p[1]) },
   { method: ['PUT', 'PATCH'], path: /^\/api\/v1\/staff\/([^/]+)$/, roles: ['admin'], handler: async (req, env, p) =>handleUpdateStaff(req, env, p[1]) },
   { method: 'GET', path: /^\/api\/v1\/finance\/transactions$/, roles: ['admin', 'staff'], handler: async (req, env) =>handleListTransactions(req, env) },
@@ -282,6 +287,38 @@ const ROUTES: Route[] = [
   { method: 'GET', path: /^\/api\/v1\/admin\/standing\/rules$/, roles: ['admin', 'staff'], handler: async (req, env) =>handleListStandingRules(req, env) },
   { method: 'GET', path: /^\/api\/v1\/admin\/standing$/, roles: ['admin', 'staff'], handler: async (req, env) =>handleAdminListStanding(req, env) },
   { method: 'POST', path: /^\/api\/v1\/admin\/standing\/compute$/, roles: ['admin'], handler: async (req, env) =>handleComputeStanding(req, env) },
+  // HR
+  { method: 'GET', path: /^\/api\/v1\/hr\/leave-requests$/, roles: ['admin', 'staff'], handler: async (req, env) =>handleListLeaveRequests(req, env) },
+  { method: 'GET', path: /^\/api\/v1\/hr\/leave-requests\/([^/]+)$/, roles: ['admin', 'staff'], handler: async (req, env, p) =>handleGetLeaveRequest(req, env, p[1]) },
+  { method: 'POST', path: /^\/api\/v1\/hr\/leave-requests$/, roles: ['admin', 'staff'], handler: async (req, env, _p, auth) =>handleCreateLeaveRequest(req, env, auth!.user.sub) },
+  { method: 'PATCH', path: /^\/api\/v1\/hr\/leave-requests\/([^/]+)$/, roles: ['admin'], handler: async (req, env, p, auth) =>handleUpdateLeaveRequest(req, env, p[1], auth!.user.sub) },
+  { method: 'GET', path: /^\/api\/v1\/hr\/payroll$/, roles: ['admin'], handler: async (req, env) =>handleListPayroll(req, env) },
+  { method: 'POST', path: /^\/api\/v1\/hr\/payroll$/, roles: ['admin'], handler: async (req, env) =>handleCreatePayrollRecord(req, env) },
+  // Library (Extended)
+  { method: 'GET', path: /^\/api\/v1\/library\/borrowing$/, roles: ['admin', 'staff', 'student'], handler: async (req, env) =>handleListBorrowings(req, env) },
+  { method: 'POST', path: /^\/api\/v1\/library\/borrowing$/, roles: ['admin', 'staff'], handler: async (req, env, _p, auth) =>handleCreateBorrowing(req, env, auth!.user.sub) },
+  { method: 'PATCH', path: /^\/api\/v1\/library\/borrowing\/([^/]+)\/return$/, roles: ['admin', 'staff'], handler: async (req, env, p) =>handleReturnBook(req, env, p[1]) },
+  { method: 'GET', path: /^\/api\/v1\/library\/fines$/, roles: ['admin', 'staff', 'student'], handler: async (req, env) =>handleListFines(req, env) },
+  { method: 'PATCH', path: /^\/api\/v1\/library\/fines\/([^/]+)\/pay$/, roles: ['admin', 'staff'], handler: async (req, env, p) =>handleMarkFinePaid(req, env, p[1]) },
+  // Alumni
+  { method: 'GET', path: /^\/api\/v1\/alumni\/profiles$/, roles: ['admin', 'staff', 'alumni'], handler: async (req, env) =>handleListAlumniProfiles(req, env) },
+  { method: 'POST', path: /^\/api\/v1\/alumni\/profiles$/, roles: ['admin', 'staff', 'alumni'], handler: async (req, env, _p, auth) =>handleUpsertAlumniProfile(req, env, auth!.user.sub) },
+  { method: 'GET', path: /^\/api\/v1\/alumni\/events$/, roles: ['admin', 'staff', 'alumni', 'student'], handler: async (req, env) =>handleListAlumniEvents(req, env) },
+  { method: 'POST', path: /^\/api\/v1\/alumni\/events$/, roles: ['admin', 'staff'], handler: async (req, env, _p, auth) =>handleCreateAlumniEvent(req, env, auth!.user.sub) },
+  { method: 'GET', path: /^\/api\/v1\/alumni\/donations$/, roles: ['admin', 'staff'], handler: async (req, env) =>handleListDonations(req, env) },
+  { method: 'POST', path: /^\/api\/v1\/alumni\/donations$/, roles: ['admin', 'staff'], handler: async (req, env) =>handleRecordDonation(req, env) },
+  // Campus Services
+  { method: 'GET', path: /^\/api\/v1\/campus\/transport$/, roles: ['admin', 'staff', 'student'], handler: async (req, env) =>handleListTransportRoutes(req, env) },
+  { method: 'POST', path: /^\/api\/v1\/campus\/transport$/, roles: ['admin'], handler: async (req, env) =>handleCreateTransportRoute(req, env) },
+  { method: 'PATCH', path: /^\/api\/v1\/campus\/transport\/([^/]+)$/, roles: ['admin'], handler: async (req, env, p) =>handleUpdateTransportRoute(req, env, p[1]) },
+  { method: 'GET', path: /^\/api\/v1\/campus\/transport\/passes$/, roles: ['admin', 'staff', 'student'], handler: async (req, env) =>handleListTransportPasses(req, env) },
+  { method: 'POST', path: /^\/api\/v1\/campus\/transport\/passes$/, roles: ['admin', 'staff'], handler: async (req, env) =>handleIssueTransportPass(req, env) },
+  { method: 'DELETE', path: /^\/api\/v1\/campus\/transport\/passes\/([^/]+)$/, roles: ['admin', 'staff'], handler: async (req, env, p) =>handleRevokeTransportPass(req, env, p[1]) },
+  // Notifications
+  { method: 'GET', path: /^\/api\/v1\/notifications$/, roles: [], handler: async (req, env, _p, auth) =>handleListNotifications(req, env, auth!.user.sub) },
+  { method: 'POST', path: /^\/api\/v1\/notifications\/read$/, roles: [], handler: async (req, env, _p, auth) =>handleMarkNotificationsRead(req, env, auth!.user.sub) },
+  { method: 'POST', path: /^\/api\/v1\/notifications$/, roles: ['admin'], handler: async (req, env) =>handleCreateNotification(req, env) },
+  { method: 'POST', path: /^\/api\/v1\/notifications\/broadcast$/, roles: ['admin'], handler: async (req, env) =>handleBroadcastNotification(req, env) },
 ];
 
 import { bootstrap } from '@bmi/bootstrap';

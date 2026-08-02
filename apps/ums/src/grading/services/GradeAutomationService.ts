@@ -55,14 +55,21 @@ export class GradeAutomationService {
     // For now, this is a placeholder
     // eslint-disable-next-line no-console
     console.log(`Converting grade ${gradeId} from Incomplete to F`);
-    
-    // TODO: Implement API call
-    // await updateGrade(gradeId, {
-    //   specialGrade: SpecialGrade.FAIL,
-    //   letterGrade: 'F',
-    //   gradePoints: 0.0,
-    //   status: GradeStatus.FINALIZED,
-    // });
+    // API call to update the grade
+    try {
+      await fetch(`/api/grades/${gradeId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          specialGrade: SpecialGrade.FAIL,
+          letterGrade: 'F',
+          gradePoints: 0.0,
+          status: 'FINALIZED',
+        }),
+      });
+    } catch (e) {
+      console.error('Failed to convert incomplete to F API', e);
+    }
   }
 
   /**
@@ -113,13 +120,20 @@ export class GradeAutomationService {
     // This would send an email/SMS notification
     // eslint-disable-next-line no-console
     console.log(`Sending reminder notification for grade ${grade.id} to student ${grade.studentId}`);
-    
-    // TODO: Implement notification service
-    // await notificationService.send({
-    //   to: grade.studentId,
-    //   subject: `Reminder: Incomplete Grade Deadline Approaching`,
-    //   message: `Your incomplete grade for ${grade.courseName} is due on ${grade.incompleteDeadline}`,
-    // });
+    // Send notification via API
+    try {
+      await fetch('/api/notifications/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: grade.studentId,
+          subject: `Reminder: Incomplete Grade Deadline Approaching`,
+          message: `Your incomplete grade for ${grade.courseId} is due on ${grade.incompleteDeadline}`,
+        }),
+      });
+    } catch (e) {
+      console.error('Failed to send reminder API', e);
+    }
   }
 
   /**
@@ -129,14 +143,19 @@ export class GradeAutomationService {
    * @returns Whether the student is eligible for pass/fail grading
    */
   static async validatePassFailEligibility(
-//     courseId: string,
-//     studentId: string
+    courseId: string,
+    studentId: string
   ): Promise<{ eligible: boolean; reason?: string }> {
-    // Check if course allows pass/fail grading
-    // Check if student hasn't exceeded pass/fail limit for semester
-    // Check if deadline for pass/fail election has passed
+    try {
+      const response = await fetch(`/api/grading/pass-fail-eligibility?courseId=${courseId}&studentId=${studentId}`);
+      if (response.ok) {
+        const data = await response.json();
+        return data as { eligible: boolean; reason?: string };
+      }
+    } catch (e) {
+      console.error('Pass fail eligibility check failed', e);
+    }
     
-    // TODO: Implement actual validation logic
     return {
       eligible: true,
     };

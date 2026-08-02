@@ -9,15 +9,15 @@ import {
 
 describe('@bmi/shared — domains', () => {
   it('PORTAL_URL is the expected production URL', () => {
-    expect(PORTAL_URL).toBe('https://bmi-portal.hkmministries.org');
+    expect(PORTAL_URL).toBe('https://portal.bmiuniversities.org');
   });
 
   it('MARKETING_URL is the expected production URL', () => {
-    expect(MARKETING_URL).toBe('https://hkmministries.org');
+    expect(MARKETING_URL).toBe('https://bmiuniversities.org');
   });
 
   it('MARKETING_URL_WWW includes www prefix', () => {
-    expect(MARKETING_URL_WWW).toBe('https://www.hkmministries.org');
+    expect(MARKETING_URL_WWW).toBe('https://www.bmiuniversities.org');
   });
 
   it('ADMISSIONS_EMAIL is a valid email address', () => {
@@ -25,10 +25,12 @@ describe('@bmi/shared — domains', () => {
   });
 
   it('ALLOWED_ORIGINS includes all expected origins', () => {
-    expect(ALLOWED_ORIGINS).toContain('https://hkmministries.org');
-    expect(ALLOWED_ORIGINS).toContain('https://www.hkmministries.org');
-    expect(ALLOWED_ORIGINS).toContain('https://bmi-portal.hkmministries.org');
+    expect(ALLOWED_ORIGINS).toContain('https://bmiuniversities.org');
+    expect(ALLOWED_ORIGINS).toContain('https://www.bmiuniversities.org');
+    expect(ALLOWED_ORIGINS).toContain('https://portal.bmiuniversities.org');
+    expect(ALLOWED_ORIGINS).toContain('https://ums.bmiuniversities.org');
     expect(ALLOWED_ORIGINS).toContain('https://bmi-portal.pages.dev');
+    expect(ALLOWED_ORIGINS).toContain('https://bmi-ums.pages.dev');
     expect(ALLOWED_ORIGINS).toContain('http://localhost:5173');
     expect(ALLOWED_ORIGINS).toContain('http://localhost:3000');
   });

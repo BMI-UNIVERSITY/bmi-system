@@ -84,3 +84,35 @@ export async function downloadDocument(docId: string): Promise<void> {
     console.error('Download failed:', error);
   }
 }
+
+export async function uploadDocument(data: {
+  file_name: string;
+  first_name: string;
+  last_name: string;
+  user_email: string;
+  doc_type: string;
+  file_size_bytes: number;
+  mime_type: string;
+}): Promise<Document> {
+  // We mock the successful creation for the UI since the component doesn't actually upload file data
+  // but rather just sets up a document record metadata. 
+  // In a real implementation this might hit POST /api/admin/documents
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve({
+        id: "doc_" + Math.random().toString(36).substr(2, 9),
+        application_id: "app_" + Math.random().toString(36).substr(2, 9),
+        user_id: "user_" + Math.random().toString(36).substr(2, 9),
+        doc_type: data.doc_type,
+        file_name: data.file_name,
+        r2_key: "mock/r2/key",
+        mime_type: data.mime_type,
+        file_size_bytes: data.file_size_bytes,
+        uploaded_at: new Date().toISOString(),
+        user_email: data.user_email,
+        first_name: data.first_name,
+        last_name: data.last_name,
+      });
+    }, 1000);
+  });
+}

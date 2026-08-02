@@ -1,26 +1,11 @@
--- Migration: 0030_program_rename
--- Renames "program" to "program" across all tables, columns, and indexes
--- for consistency with the "programs" table naming convention.
--- Uses ALTER TABLE RENAME (SQLite 3.25+ / D1 supported).
+-- Migration: 0030_program_rename (fixed)
+-- Ensures all indexes on student_programs are correctly named.
+-- The table is already named "student_programs" (created in 0004).
+-- Self-rename ALTER TABLE statements removed (invalid in SQLite).
 
--- 1. Rename student_programs table -> student_programs
-ALTER TABLE student_programs RENAME TO student_programs;
-
--- 2. Rename columns within student_programs
-ALTER TABLE student_programs RENAME COLUMN program_id TO program_id;
-
--- 3. Rename students.program -> students.program
-ALTER TABLE students RENAME COLUMN program TO program;
-
--- 4. Rename courses.program_id -> courses.program_id
-ALTER TABLE courses RENAME COLUMN program_id TO program_id;
-
--- 5. Rename regno_counters.program_id -> regno_counters.program_id
-ALTER TABLE regno_counters RENAME COLUMN program_id TO program_id;
-
--- 6. Rebuild indexes with new names (drop old, create new)
+-- Rebuild indexes with consistent naming
 DROP INDEX IF EXISTS idx_student_progs_uid;
-DROP INDEX IF EXISTS idx_student_progs_program;
+DROP INDEX IF EXISTS idx_student_progs_programme;
 DROP INDEX IF EXISTS idx_student_progs_current;
 DROP INDEX IF EXISTS idx_student_progs_one_current;
 DROP INDEX IF EXISTS idx_student_programs_admission;
@@ -33,4 +18,3 @@ CREATE INDEX IF NOT EXISTS idx_student_progs_current   ON student_programs(uid, 
 CREATE UNIQUE INDEX IF NOT EXISTS idx_student_progs_one_current ON student_programs(uid) WHERE current_flag = 1;
 CREATE INDEX IF NOT EXISTS idx_student_programs_admission ON student_programs(admission_year, status);
 CREATE INDEX IF NOT EXISTS idx_students_program_status ON students(program_id, status);
-CREATE INDEX IF NOT EXISTS idx_student_programs_student ON student_programs(student_id);

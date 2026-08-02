@@ -61,7 +61,7 @@
     "ENVIRONMENT": "production",
     // Comma-separated list of all frontend origins that may call this API.
     // Add your Cloudflare Pages URLs here after deployment.
-    "ALLOWED_ORIGINS_OVERRIDE": "https://bmi-portal.hkmministries.org,https://bmi-ums.hkmministries.org,https://bmi-portal.pages.dev,https://bmi-ums.pages.dev,https://main.bmi-university.pages.dev,https://portal.bmi-university.pages.dev,https://ums.bmi-university.pages.dev"
+    "ALLOWED_ORIGINS_OVERRIDE": "https://bmiuniversities.org,https://www.bmiuniversities.org,https://portal.bmiuniversities.org,https://ums.bmiuniversities.org,https://bmi-portal.pages.dev,https://bmi-ums.pages.dev,https://main.bmi-university.pages.dev,https://portal.bmi-university.pages.dev,https://ums.bmi-university.pages.dev,https://bmi-portal.hkmministries.org,https://bmi-ums.hkmministries.org"
   },
 
   // ─── Cloudflare DNS Routes ──────────────────────────────────────────────────
@@ -69,9 +69,9 @@
   //   /api/health           — liveliness probe
   //   scheduled (cron)      — nightly backup job
   // All other paths are handled by domain-worker routes below.
-  // Pattern: api.hkmministries.org/api/health* only.
+  // Pattern: api.bmiuniversities.org/api/health* only.
   // "routes": [
-  //   { "pattern": "api.hkmministries.org/api/health*", "zone_name": "hkmministries.org" }
+  //   { "pattern": "api.bmiuniversities.org/api/health*", "zone_name": "bmiuniversities.org" }
   // ],
 
 

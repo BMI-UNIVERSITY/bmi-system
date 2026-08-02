@@ -215,7 +215,7 @@ async function createApplicationWithDependenciesOptimized(
     db.prepare(
       `INSERT INTO applications (id, user_id, program, degree_level, status, personal_statement, prior_education, high_school, graduation_year, gpa, submitted_at, created_at, updated_at)
        VALUES (?, ?, ?, ?, 'submitted', ?, ?, ?, ?, ?, datetime('now'), datetime('now'), datetime('now'))`
-    ).bind(appId, userId, program, degreeLevel, personalStatement, priorEducation, highSchool ?? null, graduationYear ?? null, gpa ?? null),
+    ).bind(appId, userId, program, degreeLevel, personalStatement ?? null, priorEducation ?? null, highSchool ?? null, graduationYear ?? null, gpa ?? null),
     
     // Initial status log with timestamp
     db.prepare(

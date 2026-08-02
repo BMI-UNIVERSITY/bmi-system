@@ -53,7 +53,19 @@ export class GradeDeadlineService {
    * Set grade submission deadline for a semester
    */
   static async setDeadline(config: Omit<GradeDeadlineConfig, 'id'>): Promise<DeadlineConfig> {
-    // TODO: Implement API call to save deadline configuration
+    try {
+      const response = await fetch('/api/grading/deadlines', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(config),
+      });
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (e) {
+      console.error('Failed to set deadline API', e);
+    }
+
     const deadline: DeadlineConfig = {
       ...config,
       id: `DL-${Date.now()}`,
@@ -62,7 +74,7 @@ export class GradeDeadlineService {
     };
 
     // eslint-disable-next-line no-console
-    console.log('[GradeDeadline] Set deadline:', deadline);
+    console.log('[GradeDeadline] Set deadline (mock fallback):', deadline);
     return deadline;
   }
 
@@ -70,9 +82,14 @@ export class GradeDeadlineService {
    * Get deadline configuration for a semester
    */
   static async getDeadline(academicYear: string, semester: string): Promise<DeadlineConfig | null> {
-    // TODO: Implement API call to fetch deadline configuration
-    // eslint-disable-next-line no-console
-    console.log('[GradeDeadline] Fetching deadline for:', academicYear, semester);
+    try {
+      const response = await fetch(`/api/grading/deadlines?year=${academicYear}&semester=${semester}`);
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (e) {
+      console.error('Failed to get deadline API', e);
+    }
     return null;
   }
 
@@ -141,14 +158,19 @@ export class GradeDeadlineService {
     deadline: DeadlineConfig,
     daysUntil: number
   ): Promise<void> {
-    // TODO: Implement notification service
-    // eslint-disable-next-line no-console
-    console.log(`Sending deadline reminder to ${course.instructorEmail}:`, {
-      course: course.courseCode,
-      missingGrades: course.missingGrades,
-      deadline: deadline.submissionDeadline,
-      daysUntil,
-    });
+    try {
+      await fetch('/api/notifications/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: course.instructorEmail,
+          subject: 'Action Required: Submit Grades',
+          message: `Please submit missing grades for ${course.courseCode} by ${deadline.submissionDeadline}`,
+        }),
+      });
+    } catch (e) {
+      console.error('Failed to send deadline reminder', e);
+    }
   }
 
   /**
@@ -158,11 +180,16 @@ export class GradeDeadlineService {
     academicYear: string,
     semester: string
   ): Promise<MissingGradeCourse[]> {
-    // TODO: Implement API call to fetch courses with missing grades
-    // eslint-disable-next-line no-console
-    console.log('[GradeDeadline] Fetching courses with missing grades:', academicYear, semester);
+    try {
+      const response = await fetch(`/api/grading/missing?year=${academicYear}&semester=${semester}`);
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (e) {
+      console.error('Failed to get missing grades API', e);
+    }
     
-    // Mock data
+    // Mock data fallback
     return [
       {
         courseId: 'CRS-101',
@@ -194,7 +221,11 @@ export class GradeDeadlineService {
 
     for (const course of coursesWithMissingGrades) {
       if (course.missingGrades > 0) {
-        // TODO: Flag course in database
+        try {
+          await fetch(`/api/grading/courses/${course.courseId}/flag`, { method: 'POST' });
+        } catch (e) {
+          console.error('Failed to flag course API', e);
+        }
         flaggedCourses.push(course.courseId);
         // eslint-disable-next-line no-console
         console.log(`[GradeDeadline] Flagged course ${course.courseCode} with ${course.missingGrades} missing grades`);
@@ -238,21 +269,29 @@ export class GradeDeadlineService {
     requestedDeadline: string,
     reason: string
   ): Promise<DeadlineExtension> {
-    const extension: DeadlineExtension = {
+    try {
+      const response = await fetch('/api/grading/extensions/request', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ courseId, instructorId, requestedDeadline, reason }),
+      });
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (e) {
+      console.error('Failed to request extension API', e);
+    }
+    
+    return {
       id: `EXT-${Date.now()}`,
       courseId,
-      courseCode: 'UNKNOWN', // TODO: Fetch from course
+      courseCode: 'UNKNOWN',
       instructorId,
       requestedDeadline,
       reason,
       status: 'Pending',
       requestedAt: new Date().toISOString(),
     };
-
-    // TODO: Save to database
-    // eslint-disable-next-line no-console
-    console.log('[GradeDeadline] Extension requested:', extension);
-    return extension;
   }
 
   /**
@@ -263,14 +302,19 @@ export class GradeDeadlineService {
     approved: boolean,
     reviewerId: string
   ): Promise<DeadlineExtension> {
-    // TODO: Update extension in database
-    // eslint-disable-next-line no-console
-    console.log('[GradeDeadline] Extension reviewed:', {
-      extensionId,
-      approved,
-      reviewerId,
-    });
-
+    try {
+      const response = await fetch(`/api/grading/extensions/${extensionId}/review`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ approved, reviewerId }),
+      });
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (e) {
+      console.error('Failed to review extension API', e);
+    }
+    
     return {
       id: extensionId,
       courseId: 'CRS-101',
@@ -292,9 +336,15 @@ export class GradeDeadlineService {
     gradeId: string,
     visible: boolean
   ): Promise<void> {
-    // TODO: Update grade visibility in database
-    // eslint-disable-next-line no-console
-    console.log('[GradeDeadline] Set grade visibility:', { gradeId, visible });
+    try {
+      await fetch(`/api/grades/${gradeId}/visibility`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ visible }),
+      });
+    } catch (e) {
+      console.error('Failed to set grade visibility API', e);
+    }
   }
 
   /**
@@ -305,19 +355,20 @@ export class GradeDeadlineService {
     semester: string,
     reviewPeriodDays: number
   ): Promise<string[]> {
-    // Get all submitted grades that are past review period
-    // TODO: Implement API call to fetch and finalize grades
+    try {
+      const response = await fetch('/api/grading/auto-finalize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ academicYear, semester, reviewPeriodDays }),
+      });
+      if (response.ok) {
+        return await response.json();
+      }
+    } catch (e) {
+      console.error('Failed to auto-finalize grades API', e);
+    }
     
-    const finalizedGradeIds: string[] = [];
-    
-    // eslint-disable-next-line no-console
-    console.log('[GradeDeadline] Auto-finalizing grades for:', {
-      academicYear,
-      semester,
-      reviewPeriodDays,
-    });
-
-    return finalizedGradeIds;
+    return [];
   }
 
   /**

@@ -68,6 +68,9 @@ export const Library: React.FC = () => {
   const [categoryFilter, setCategoryFilter] = useState("All");
   const [typeFilter, setTypeFilter] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
+  const [activeTab, setActiveTab] = useState<"catalog" | "borrowings" | "fines">("catalog");
+  const [borrowings, setBorrowings] = useState([{id: 1, itemTitle: "Introduction to Algorithms", studentId: "STD-101", dueDate: "2024-06-15", status: "Overdue"}]);
+  const [fines, setFines] = useState([{id: 1, studentId: "STD-101", amount: "50", status: "Unpaid", reason: "Overdue Book"}]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<LibraryItem | null>(null);
   const [viewingResource, setViewingResource] = useState<LibraryItem | null>(
@@ -315,6 +318,28 @@ export const Library: React.FC = () => {
             Collections
           </span>
         </div>
+        
+        <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-2"></div>
+        <button
+          onClick={() => setActiveTab("catalog")}
+          className={`px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+            activeTab === "catalog" ? "bg-[#4B0082] text-white shadow-lg border border-purple-500/50" : "bg-white text-gray-500 border border-gray-200"
+          }`}
+        >Catalog</button>
+        <button
+          onClick={() => setActiveTab("borrowings")}
+          className={`px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+            activeTab === "borrowings" ? "bg-[#4B0082] text-white shadow-lg border border-purple-500/50" : "bg-white text-gray-500 border border-gray-200"
+          }`}
+        >Borrowings</button>
+        <button
+          onClick={() => setActiveTab("fines")}
+          className={`px-5 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
+            activeTab === "fines" ? "bg-[#4B0082] text-white shadow-lg border border-purple-500/50" : "bg-white text-gray-500 border border-gray-200"
+          }`}
+        >Fines</button>
+        <div className="w-px h-6 bg-gray-300 dark:bg-gray-700 mx-2"></div>
+        
         {categories.map((cat) => (
           <button
             key={cat}
@@ -399,7 +424,63 @@ export const Library: React.FC = () => {
         </div>
 
         {/* Main Listing View */}
-        {viewMode === "grid" ? (
+        {activeTab === "borrowings" ? (
+          <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-bold uppercase tracking-widest">Borrowing Records</h3>
+            </div>
+            <table className="w-full text-left">
+              <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                <tr><th className="px-6 py-5">Item</th><th className="px-6 py-5">Student</th><th className="px-6 py-5">Due Date</th><th className="px-6 py-5">Status</th></tr>
+              </thead>
+              <tbody>
+                {borrowings.map(b => (
+                  <tr key={b.id} className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="px-6 py-5 font-bold">{b.itemTitle}</td>
+                    <td className="px-6 py-5">{b.studentId}</td>
+                    <td className="px-6 py-5">{b.dueDate}</td>
+                    <td className="px-6 py-5">
+                      <span className={`px-2 py-1 text-[9px] font-bold uppercase tracking-widest border ${b.status === "Overdue" ? "bg-red-50 text-red-700 border-red-200" : "bg-green-50 text-green-700 border-green-200"}`}>
+                        {b.status}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : activeTab === "fines" ? (
+          <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden">
+            <div className="p-6 border-b border-gray-200 dark:border-gray-700">
+              <h3 className="text-lg font-bold uppercase tracking-widest">Library Fines</h3>
+            </div>
+            <table className="w-full text-left">
+              <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 text-[10px] font-black text-gray-400 uppercase tracking-widest">
+                <tr><th className="px-6 py-5">Student ID</th><th className="px-6 py-5">Amount</th><th className="px-6 py-5">Reason</th><th className="px-6 py-5">Status</th><th className="px-6 py-5 text-right">Actions</th></tr>
+              </thead>
+              <tbody>
+                {fines.map(f => (
+                  <tr key={f.id} className="border-b border-gray-100 dark:border-gray-800">
+                    <td className="px-6 py-5 font-bold">{f.studentId}</td>
+                    <td className="px-6 py-5 text-red-600 font-bold">GHS {f.amount}</td>
+                    <td className="px-6 py-5">{f.reason}</td>
+                    <td className="px-6 py-5">
+                      <span className={`px-2 py-1 text-[9px] font-bold uppercase tracking-widest border ${f.status === "Unpaid" ? "bg-red-50 text-red-700 border-red-200" : "bg-green-50 text-green-700 border-green-200"}`}>
+                        {f.status}
+                      </span>
+                    </td>
+                    <td className="px-6 py-5 text-right">
+                      {f.status === "Unpaid" && (
+                        <button onClick={() => setFines(prev => prev.map(x => x.id === f.id ? {...x, status: "Paid"} : x))} className="px-4 py-2 bg-green-100 text-green-700 text-[10px] font-bold uppercase tracking-widest">Mark Paid</button>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : activeTab === "catalog" ? (
+          viewMode === "grid" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
             {filteredLibrary.map((item) => (
               <div
@@ -566,8 +647,10 @@ export const Library: React.FC = () => {
               </tbody>
             </table>
           </div>
-        )}
-
+          </div>
+          )
+        ) : null}
+        
         {selectedItem && (
           <div className="fixed inset-0 z-[120] flex items-center justify-center bg-[#1a0033]/95 backdrop-blur-3xl p-4 md:p-8">
             <div className="bg-white dark:bg-gray-900 w-full max-w-5xl h-[90vh] shadow-[0_35px_60px_-15px_rgba(0,0,0,0.5)] border-t-[8px] border-[#4B0082] overflow-hidden flex flex-col animate-slide-up">

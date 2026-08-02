@@ -41,7 +41,16 @@ export class D1DatabaseAdapter implements IDatabase, IHealthCheck {
         return await stmt.first<T>();
       }
     };
+    // Keep a handle on the underlying D1 statement so `batch()` can forward it
+    // to D1's native atomic batch execution.
+    (wrapper as any)._d1 = stmt;
     return wrapper;
+  }
+
+  async batch<T = any>(statements: IPreparedStatement[]): Promise<T[]> {
+    const raw = statements.map((s) => (s as any)._d1 as D1PreparedStatement);
+    const results = await this.d1.batch(raw);
+    return results.map((r) => r.results) as T[];
   }
 
   async transaction<T>(callback: (db: IDatabase) => Promise<T>): Promise<T> {

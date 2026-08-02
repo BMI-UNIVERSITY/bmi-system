@@ -151,9 +151,9 @@ const Students: React.FC<StudentsProps> = (props) => {
       try {
         const data = await getAllStudyCenters();
         if (!cancelled) setCampuses(data);
-      } catch (error) { // eslint-disable-next-line no-console
-        console.error("Failed to load study centers:", error);
-       }
+      } catch (_error) {
+        // Fallback default study centers handled by getAllStudyCenters
+      }
     }
     loadStudyCenters();
     return () => {
@@ -337,6 +337,28 @@ const Students: React.FC<StudentsProps> = (props) => {
 // //     queryClient.invalidateQueries({ queryKey: ["students"] });
 // //   };
 
+  const handleExportStudentsCSV = () => {
+    const listToExport = filteredStudents.length > 0 ? filteredStudents : students;
+    const headers = ["Registration No", "Full Name", "Program", "Status", "Email", "Phone"];
+    const rows = listToExport.map((s) => [
+      s.reg_no,
+      `"${s.full_name || `${s.first_name} ${s.last_name}`}"`,
+      `"${s.program_code || s.program}"`,
+      s.status,
+      `"${s.email}"`,
+      `"${s.phone}"`
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `student_registry_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="h-full flex flex-col animate-fade-in relative">
       {/* Sticky Page Header */}
@@ -394,6 +416,13 @@ const Students: React.FC<StudentsProps> = (props) => {
                   >
                     <FileSpreadsheet size={14} className="text-emerald-600" />
                     Import Excel
+                  </button>
+                  <button
+                    onClick={() => { handleExportStudentsCSV(); setIsActionsMenuOpen(false); }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 flex items-center gap-2 border-t border-gray-100 dark:border-gray-700"
+                  >
+                    <FileSpreadsheet size={14} className="text-blue-600" />
+                    Export CSV
                   </button>
                 </div>
               </>

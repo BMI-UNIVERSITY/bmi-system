@@ -1,0 +1,35 @@
+name: Nightly Database Backup to R2
+
+on:
+  schedule:
+    - cron: '0 2 * * *' # Run at 2 AM UTC every day
+  workflow_dispatch: # Allow manual triggering
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Backup D1 Database
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          npm install -g wrangler
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          BACKUP_FILE="bmi_core_db_backup_${TIMESTAMP}.sqlite"
+          
+          echo "Exporting database..."
+          wrangler d1 export bmi-portal-db --remote --output="./${BACKUP_FILE}"
+          
+          echo "Compressing backup..."
+          gzip "./${BACKUP_FILE}"
+          
+          echo "Uploading to R2..."
+          # Uses the AWS CLI which is pre-installed on ubuntu-latest, configured for R2
+          aws s3 cp "./${BACKUP_FILE}.gz" "s3://bmi-portal-backups/" \
+            --endpoint-url "https://${CLOUDFLARE_ACCOUNT_ID}.r2.cloudflarestorage.com" \
+            --region auto
+        
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}

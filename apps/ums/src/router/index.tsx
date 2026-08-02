@@ -116,7 +116,7 @@ export function AppRoutes() {
         <Route
           path="/admissions"
           element={
-            <RoleGuard allowedRoles={["registrar", "staff"]}>
+            <RoleGuard allowedRoles={["registrar", "admissions", "staff"]}>
               <Admissions />
             </RoleGuard>
           }
@@ -125,7 +125,7 @@ export function AppRoutes() {
         <Route
           path="/staff"
           element={
-            <RoleGuard allowedRoles={["registrar"]}>
+            <RoleGuard allowedRoles={["registrar", "hr", "finance", "staff"]}>
               <Staff />
             </RoleGuard>
           }
@@ -133,7 +133,7 @@ export function AppRoutes() {
         <Route
           path="/attendance"
           element={
-            <RoleGuard allowedRoles={["registrar", "faculty"]}>
+            <RoleGuard allowedRoles={["registrar", "faculty", "hr", "staff"]}>
               <Attendance />
             </RoleGuard>
           }
@@ -141,7 +141,7 @@ export function AppRoutes() {
         <Route
           path="/finance"
           element={
-            <RoleGuard allowedRoles={["registrar"]}>
+            <RoleGuard allowedRoles={["registrar", "finance", "bursar", "hr"]}>
               <Finance />
             </RoleGuard>
           }
@@ -187,7 +187,7 @@ export function AppRoutes() {
         <Route
           path="/hostels"
           element={
-            <RoleGuard allowedRoles={["staff"]}>
+            <RoleGuard allowedRoles={["staff", "facilities"]}>
               <Hostels />
             </RoleGuard>
           }
@@ -196,7 +196,7 @@ export function AppRoutes() {
         <Route
           path="/inventory"
           element={
-            <RoleGuard allowedRoles={["staff"]}>
+            <RoleGuard allowedRoles={["staff", "facilities"]}>
               <Inventory />
             </RoleGuard>
           }
@@ -204,7 +204,7 @@ export function AppRoutes() {
         <Route
           path="/alumni"
           element={
-            <RoleGuard allowedRoles={["registrar"]}>
+            <RoleGuard allowedRoles={["registrar", "admissions"]}>
               <Alumni />
             </RoleGuard>
           }
@@ -212,7 +212,7 @@ export function AppRoutes() {
         <Route
           path="/communications"
           element={
-            <RoleGuard allowedRoles={["registrar", "staff"]}>
+            <RoleGuard allowedRoles={["registrar", "admissions", "finance", "hr", "staff"]}>
               <Communications />
             </RoleGuard>
           }
@@ -220,7 +220,7 @@ export function AppRoutes() {
         <Route
           path="/visitors"
           element={
-            <RoleGuard allowedRoles={["staff"]}>
+            <RoleGuard allowedRoles={["staff", "facilities"]}>
               <Visitors />
             </RoleGuard>
           }
@@ -228,7 +228,7 @@ export function AppRoutes() {
         <Route
           path="/reports"
           element={
-            <RoleGuard allowedRoles={["registrar"]}>
+            <RoleGuard allowedRoles={["registrar", "finance", "hr", "admissions"]}>
               <Reports />
             </RoleGuard>
           }
@@ -236,7 +236,7 @@ export function AppRoutes() {
         <Route
           path="/settings"
           element={
-            <RoleGuard allowedRoles={["registrar", "faculty", "staff"]}>
+            <RoleGuard allowedRoles={["registrar", "faculty", "staff", "finance", "hr", "admissions"]}>
               <Settings />
             </RoleGuard>
           }
@@ -244,7 +244,7 @@ export function AppRoutes() {
         <Route
           path="/documents"
           element={
-            <RoleGuard allowedRoles={["registrar", "staff"]}>
+            <RoleGuard allowedRoles={["registrar", "admissions", "staff"]}>
               <AdminDocuments />
             </RoleGuard>
           }

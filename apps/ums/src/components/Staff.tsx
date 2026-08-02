@@ -29,6 +29,7 @@ import { StudyCenterSelector } from "./StudyCenterSelector";
 import { useDataStore } from "../stores/dataStore";
 import { usePagination } from "../hooks/usePagination";
 import { useStaffQuery } from "../hooks/useEntityQueries";
+import { useLeaveRequestsQuery, useUpdateLeaveRequest } from "../hooks/api";
 
 const departments = [
   "All Departments",
@@ -59,7 +60,7 @@ const Staff: React.FC = () => {
   const [campusFilter, setCampusFilter] = useState("All Study Centers");
   const [, setCampuses] = useState<StudyCenter[]>([]);
   const [activeTab, setActiveTab] = useState<
-    "All" | "Academic" | "Administrative" | "Management"
+    "All" | "Academic" | "Administrative" | "Management" | "Leave Requests"
   >("All");
   const [viewMode, setViewMode] = useState<"grid" | "table">("table");
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -117,15 +118,41 @@ const Staff: React.FC = () => {
       try {
         const data = await getAllStudyCenters();
         if (!cancelled) setCampuses(data);
-      } catch (error) { // eslint-disable-next-line no-console
-        console.error("Failed to load campuses:", error);
-       }
+      } catch (_error) {
+        // Fallback default study centers handled by service
+      }
     }
     loadStudyCenters();
     return () => {
       cancelled = true;
     };
   }, []);
+
+
+  // ── Leave Requests — real API with local fallback ───────────────────────────
+  const { data: apiLeaveRequests, isLoading: leaveLoading } = useLeaveRequestsQuery();
+  const updateLeaveRequest = useUpdateLeaveRequest();
+
+  // Fallback mock data shown when backend endpoint not yet available
+  const [mockLeaveRequests, setMockLeaveRequests] = useState([
+    {id: 1, staffId: "EMP-001", startDate: "2024-06-01", endDate: "2024-06-15", reason: "Medical", status: "pending" as const},
+    {id: 2, staffId: "EMP-003", startDate: "2024-06-10", endDate: "2024-06-12", reason: "Family event", status: "pending" as const},
+    {id: 3, staffId: "EMP-007", startDate: "2024-05-20", endDate: "2024-05-22", reason: "Conference", status: "approved" as const},
+  ]);
+
+  const leaveRequests = apiLeaveRequests ?? mockLeaveRequests;
+
+  const handleLeaveAction = (id: number, status: 'approved' | 'rejected') => {
+    if (apiLeaveRequests) {
+      // Real API available — call the backend
+      updateLeaveRequest.mutate({ id, status });
+    } else {
+      // No API yet — update local mock state
+      setMockLeaveRequests(prev =>
+        prev.map(req => req.id === id ? { ...req, status } : req)
+      );
+    }
+  };
 
   const filteredStaff = useMemo(() => {
     if ((pagedStaff && pagedStaff.length > 0) || isFetching)
@@ -208,6 +235,31 @@ const Staff: React.FC = () => {
     }
   };
 
+  const handleExportCSV = () => {
+    const listToExport = filteredStaff.length > 0 ? filteredStaff : staff;
+    const headers = ["Staff Number", "Name", "Role", "Department", "Category", "Status", "Email", "Phone", "Office"];
+    const rows = listToExport.map((s) => [
+      `"${s.staff_number || s.id}"`,
+      `"${s.first_name ? `${s.first_name} ${s.last_name}` : s.name}"`,
+      `"${s.role || ""}"`,
+      `"${s.department || ""}"`,
+      `"${s.category || ""}"`,
+      `"${s.status || ""}"`,
+      `"${s.email || ""}"`,
+      `"${s.phone || ""}"`,
+      `"${s.office || ""}"`
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `staff_faculty_directory_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="h-full flex flex-col animate-fade-in relative">
       {/* Sticky Header - Compact & Padded */}
@@ -223,13 +275,16 @@ const Staff: React.FC = () => {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3 pl-14 md:pl-0 w-full md:w-auto justify-end">
-          <button className="p-1.5 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-none text-gray-500 hover:text-[#4B0082] transition-all shadow-sm">
-            <Download size={14} />
+        <div className="flex items-center gap-2 pl-14 md:pl-0 w-full md:w-auto justify-end">
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all font-bold text-[10px] uppercase tracking-wider rounded-lg shadow-xs cursor-pointer"
+          >
+            <Download size={12} /> Export CSV
           </button>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-[#4B0082] text-white rounded-none shadow-lg hover:bg-black transition-all font-bold text-[9px] uppercase tracking-widest"
+            className="flex items-center gap-2 px-4 py-2 bg-[#4B0082] text-white hover:bg-purple-950 transition-all font-bold text-[10px] uppercase tracking-wider border border-[#FFD700]/30 shadow-md rounded-lg cursor-pointer"
           >
             <Plus size={12} className="text-[#FFD700]" /> Register Staff
           </button>
@@ -244,10 +299,10 @@ const Staff: React.FC = () => {
             Categories
           </span>
         </div>
-        {["All", "Academic", "Administrative", "Management"].map((tab) => (
+        {["All", "Academic", "Administrative", "Management", "Leave Requests"].map((tab) => (
           <button
             key={tab}
-            onClick={() => setActiveTab(tab as "All" | "Academic" | "Administrative" | "Management")}
+            onClick={() => setActiveTab(tab as "All" | "Academic" | "Administrative" | "Management" | "Leave Requests")}
             className={`px-6 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap ${
               activeTab === tab
                 ? "bg-[#4B0082] text-white shadow-lg shadow-purple-500/20 scale-105 border border-purple-500/50"
@@ -313,6 +368,65 @@ const Staff: React.FC = () => {
           ))}
         </div>
 
+      {activeTab === "Leave Requests" ? (
+        <div className="bg-white dark:bg-gray-800 rounded-none border border-gray-100 dark:border-gray-700 overflow-hidden shadow-sm mt-6">
+          <div className="p-6 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+            <h3 className="text-lg font-black uppercase tracking-tight text-[#2E004F] dark:text-white">Leave Requests</h3>
+          </div>
+          <table className="w-full text-left text-sm">
+            <thead className="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
+              <tr>
+                <th className="p-4 uppercase tracking-widest text-xs font-bold text-gray-500">Staff ID</th>
+                <th className="p-4 uppercase tracking-widest text-xs font-bold text-gray-500">Start</th>
+                <th className="p-4 uppercase tracking-widest text-xs font-bold text-gray-500">End</th>
+                <th className="p-4 uppercase tracking-widest text-xs font-bold text-gray-500">Reason</th>
+                <th className="p-4 uppercase tracking-widest text-xs font-bold text-gray-500">Status</th>
+                <th className="p-4 uppercase tracking-widest text-xs font-bold text-gray-500 text-right">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+              {leaveRequests.map((r) => (
+                <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors">
+                  <td className="p-4 font-bold text-[#4B0082] dark:text-[#FFD700]">#{r.staffId}</td>
+                  <td className="p-4">{r.startDate}</td>
+                  <td className="p-4">{r.endDate}</td>
+                  <td className="p-4">{r.reason}</td>
+                  <td className="p-4">
+                    <span className={`px-2 py-1 text-[10px] font-bold uppercase tracking-widest border ${
+                      r.status === 'approved' ? 'bg-green-50 text-green-700 border-green-200' :
+                      r.status === 'rejected' ? 'bg-red-50 text-red-700 border-red-200' :
+                      'bg-yellow-50 text-yellow-700 border-yellow-200'
+                    }`}>
+                      {r.status}
+                    </span>
+                  </td>
+                  <td className="p-4 text-right">
+                    {r.status === 'pending' && (
+                      <div className="flex justify-end gap-2">
+                        <button
+                          onClick={() => handleLeaveAction(r.id, 'approved')}
+                          disabled={updateLeaveRequest.isPending}
+                          className="px-3 py-1 bg-green-100 text-green-700 border border-green-200 text-[10px] font-bold uppercase tracking-widest hover:bg-green-200 transition-colors disabled:opacity-50"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleLeaveAction(r.id, 'rejected')}
+                          disabled={updateLeaveRequest.isPending}
+                          className="px-3 py-1 bg-red-100 text-red-700 border border-red-200 text-[10px] font-bold uppercase tracking-widest hover:bg-red-200 transition-colors disabled:opacity-50"
+                        >
+                          Reject
+                        </button>
+                      </div>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <>
         <div className="bg-white dark:bg-gray-800 rounded-none shadow-sm border border-gray-100 dark:border-gray-700 flex flex-col p-2">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 p-2">
             <div className="flex items-center gap-2 bg-gray-100 dark:bg-gray-700 p-1 rounded-none ml-auto">
@@ -596,10 +710,13 @@ const Staff: React.FC = () => {
           </div>
         )}
 
-        {isModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-            {/* Modal Content (Unchanged) */}
-            <div className="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-none shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-slide-up border border-[#FFD700]/20">
+          </>
+      )}
+
+      {/* Add / Edit Staff Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-[#1a0033]/90 backdrop-blur-3xl z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-800 w-full max-w-2xl rounded-none shadow-2xl flex flex-col max-h-[90vh] overflow-hidden animate-slide-up border border-[#FFD700]/20">
               <div className="p-6 border-b border-gray-100 dark:border-gray-700 flex justify-between items-center bg-gray-900 text-white">
                 <div>
                   <h2 className="text-xl font-bold uppercase tracking-tight">

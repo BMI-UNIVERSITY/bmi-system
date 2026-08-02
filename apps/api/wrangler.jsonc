@@ -37,6 +37,28 @@
     ]
   },
 
+  // ─── Neon PostgreSQL (Neon-Centric migration) ─────────────────────
+  // Four separate Neon projects, each bound to a Cloudflare Hyperdrive
+  // connection pool for low-latency Postgres access.
+  //
+  // Provision (Phase 3):
+  //   1. Create the four Neon projects: bmi-core-db, bmi-hr-db, bmi-library-db, bmi-alumni-campus-db
+  //   2. Apply migrations: pnpm run db:push:core | db:push:hr | db:push:library | db:push:alumni
+  //   3. Create Hyperdrive instances and paste their IDs below.
+  //   4. Set the connection strings as secrets:
+  //        npx wrangler secret put DATABASE_URL_CORE
+  //        npx wrangler secret put DATABASE_URL_HR
+  //        npx wrangler secret put DATABASE_URL_LIBRARY
+  //        npx wrangler secret put DATABASE_URL_ALUMNI
+  //   Until DATABASE_URL_* secrets are set, the Worker continues to use D1
+  //   via the `DB` binding below (strangler-fig compatibility).
+  "hyperdrive": [
+    // { "binding": "CORE_HYPERDRIVE", "id": "<neon-core-hyperdrive-id>" },
+    // { "binding": "HR_HYPERDRIVE", "id": "<neon-hr-hyperdrive-id>" },
+    // { "binding": "LIBRARY_HYPERDRIVE", "id": "<neon-library-hyperdrive-id>" },
+    // { "binding": "ALUMNI_HYPERDRIVE", "id": "<neon-alumni-hyperdrive-id>" }
+  ],
+
   // ─── R2 Object Storage (Documents & Backups) ──────────────────────
   "r2_buckets": [
     {
@@ -61,7 +83,7 @@
     "ENVIRONMENT": "production",
     // Comma-separated list of all frontend origins that may call this API.
     // Add your Cloudflare Pages URLs here after deployment.
-    "ALLOWED_ORIGINS_OVERRIDE": "https://bmi-portal.hkmministries.org,https://bmi-ums.hkmministries.org,https://bmi-portal.pages.dev,https://bmi-ums.pages.dev,https://main.bmi-university.pages.dev,https://portal.bmi-university.pages.dev,https://ums.bmi-university.pages.dev"
+    "ALLOWED_ORIGINS_OVERRIDE": "https://bmiuniversities.org,https://www.bmiuniversities.org,https://portal.bmiuniversities.org,https://ums.bmiuniversities.org,https://bmi-portal.pages.dev,https://bmi-ums.pages.dev,https://main.bmi-university.pages.dev,https://portal.bmi-university.pages.dev,https://ums.bmi-university.pages.dev,https://bmi-portal.hkmministries.org,https://bmi-ums.hkmministries.org"
   },
 
   // ─── Cloudflare DNS Routes ──────────────────────────────────────────────────
@@ -69,9 +91,9 @@
   //   /api/health           — liveliness probe
   //   scheduled (cron)      — nightly backup job
   // All other paths are handled by domain-worker routes below.
-  // Pattern: api.hkmministries.org/api/health* only.
+  // Pattern: api.bmiuniversities.org/api/health* only.
   // "routes": [
-  //   { "pattern": "api.hkmministries.org/api/health*", "zone_name": "hkmministries.org" }
+  //   { "pattern": "api.bmiuniversities.org/api/health*", "zone_name": "bmiuniversities.org" }
   // ],
 
 

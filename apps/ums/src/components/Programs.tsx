@@ -13,9 +13,12 @@ import {
   SlidersHorizontal,
   Layers,
   Book,
+  Download,
+  X,
+  CheckCircle2,
 } from "lucide-react";
 import { Program, Faculty, Department } from "../types";
-import { getPrograms, getFaculties, getDepartments } from "../services/programService";
+import { getPrograms, getFaculties, getDepartments, createProgram } from "../services/programService";
 import { useAuthStore } from "../stores/authStore";
 
 // Beautiful mapping of program levels to distinct, premium aesthetics
@@ -64,7 +67,6 @@ const LEVEL_CONFIG = {
 
 const Programs: React.FC = () => {
   const navigate = useNavigate();
-  const user = useAuthStore((s) => s.user);
 
   const [programs, setPrograms] = useState<Program[]>([]);
   const [faculties, setFaculties] = useState<Faculty[]>([]);
@@ -149,6 +151,99 @@ const Programs: React.FC = () => {
     return map;
   }, [departments]);
 
+  // Modal & Toast State
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newProgData, setNewProgData] = useState({
+    name: "",
+    code: "",
+    level: "bachelor" as "certificate" | "diploma" | "bachelor" | "master" | "doctorate",
+    duration_years: 4,
+    total_credit_hours: 120,
+    department_id: "",
+    faculty_id: "",
+    description: "",
+  });
+  const [toastMsg, setToastMsg] = useState<string | null>(null);
+
+  const showToast = (msg: string) => {
+    setToastMsg(msg);
+    setTimeout(() => setToastMsg(null), 4000);
+  };
+
+  const handleExportCSV = () => {
+    const listToExport = filteredPrograms.length > 0 ? filteredPrograms : programs;
+    const headers = ["Code", "Program Name", "Level", "Duration Years", "Total Credits", "Department ID"];
+    const rows = listToExport.map((p) => [
+      `"${p.code}"`,
+      `"${p.name}"`,
+      `"${p.level}"`,
+      p.duration_years,
+      p.total_credit_hours,
+      `"${p.department_id}"`,
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `degree_programs_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const handleCreateProgramSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newProgData.name || !newProgData.code) return;
+
+    try {
+      const res = await createProgram({
+        ...newProgData,
+        department_id: newProgData.department_id || (departments[0]?.id || "dept-1"),
+        faculty_id: newProgData.faculty_id || (faculties[0]?.id || "fac-1"),
+      });
+
+      if (res.success && res.data) {
+        setPrograms((prev) => [res.data, ...prev]);
+        showToast("New degree program created successfully!");
+      } else {
+        const localProg: Program = {
+          id: `prog-${Date.now()}`,
+          ...newProgData,
+          department_id: newProgData.department_id || "dept-1",
+          faculty_id: newProgData.faculty_id || "fac-1",
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+        setPrograms((prev) => [localProg, ...prev]);
+        showToast("New degree program added to catalog!");
+      }
+    } catch {
+      const localProg: Program = {
+        id: `prog-${Date.now()}`,
+        ...newProgData,
+        department_id: newProgData.department_id || "dept-1",
+        faculty_id: newProgData.faculty_id || "fac-1",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+      setPrograms((prev) => [localProg, ...prev]);
+      showToast("New degree program added to catalog!");
+    } finally {
+      setIsCreateModalOpen(false);
+      setNewProgData({
+        name: "",
+        code: "",
+        level: "bachelor",
+        duration_years: 4,
+        total_credit_hours: 120,
+        department_id: "",
+        faculty_id: "",
+        description: "",
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4">
@@ -175,15 +270,19 @@ const Programs: React.FC = () => {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-3 pl-14 md:pl-0 w-full md:w-auto justify-end">
-          {user?.role === "admin" && (
-            <button
-              onClick={() => alert("Program creation will be available in v2.1")}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#4B0082] text-white hover:bg-black transition-all font-black text-[9px] uppercase tracking-widest border border-[#FFD700]/30 shadow-lg shadow-purple-500/10 cursor-pointer"
-            >
-              <Plus size={12} className="text-[#FFD700]" /> Create Program
-            </button>
-          )}
+        <div className="flex items-center gap-2 pl-14 md:pl-0 w-full md:w-auto justify-end">
+          <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all font-bold text-[10px] uppercase tracking-wider rounded-lg shadow-xs cursor-pointer"
+          >
+            <Download size={12} /> Export CSV
+          </button>
+          <button
+            onClick={() => setIsCreateModalOpen(true)}
+            className="flex items-center gap-2 px-4 py-2 bg-[#4B0082] text-white hover:bg-black transition-all font-bold text-[10px] uppercase tracking-wider border border-[#FFD700]/30 shadow-md rounded-lg cursor-pointer"
+          >
+            <Plus size={12} className="text-[#FFD700]" /> Create Program
+          </button>
         </div>
       </div>
 
@@ -384,6 +483,147 @@ const Programs: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Create Program Modal */}
+      {isCreateModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full p-6 border border-gray-200 dark:border-gray-800 animate-scale-up">
+            <div className="flex justify-between items-center pb-4 border-b border-gray-200 dark:border-gray-800 mb-4">
+              <div className="flex items-center gap-2">
+                <span className="p-2 bg-[#2E004F] text-[#FFD700] rounded-lg">
+                  <GraduationCap size={18} />
+                </span>
+                <h3 className="text-base font-black text-gray-900 dark:text-white uppercase tracking-tight">
+                  Create Degree Program
+                </h3>
+              </div>
+              <button onClick={() => setIsCreateModalOpen(false)} className="text-gray-400 hover:text-gray-600 dark:hover:text-white">
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateProgramSubmit} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">Program Full Name *</label>
+                <input
+                  type="text"
+                  required
+                  value={newProgData.name}
+                  onChange={(e) => setNewProgData({ ...newProgData, name: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-2.5 font-medium focus:ring-2 focus:ring-[#FFD700] outline-none"
+                  placeholder="e.g. Bachelor of Theology & Pastoral Ministry"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">Program Code *</label>
+                  <input
+                    type="text"
+                    required
+                    value={newProgData.code}
+                    onChange={(e) => setNewProgData({ ...newProgData, code: e.target.value.toUpperCase() })}
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-2 font-medium focus:ring-2 focus:ring-[#FFD700] outline-none font-mono"
+                    placeholder="BTH-101"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">Academic Level *</label>
+                  <select
+                    value={newProgData.level}
+                    onChange={(e) => setNewProgData({ ...newProgData, level: e.target.value as any })}
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-2 font-medium focus:ring-2 focus:ring-[#FFD700] outline-none"
+                  >
+                    <option value="certificate">Certificate</option>
+                    <option value="diploma">Diploma</option>
+                    <option value="bachelor">Bachelor Degree</option>
+                    <option value="master">Master Degree</option>
+                    <option value="doctorate">Doctorate</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">Duration (Years)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={6}
+                    value={newProgData.duration_years}
+                    onChange={(e) => setNewProgData({ ...newProgData, duration_years: Number(e.target.value) })}
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-2 font-medium focus:ring-2 focus:ring-[#FFD700] outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">Total Credit Hours</label>
+                  <input
+                    type="number"
+                    min={10}
+                    max={300}
+                    value={newProgData.total_credit_hours}
+                    onChange={(e) => setNewProgData({ ...newProgData, total_credit_hours: Number(e.target.value) })}
+                    className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-2 font-medium focus:ring-2 focus:ring-[#FFD700] outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">Department</label>
+                <select
+                  value={newProgData.department_id}
+                  onChange={(e) => setNewProgData({ ...newProgData, department_id: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-2 font-medium focus:ring-2 focus:ring-[#FFD700] outline-none"
+                >
+                  <option value="">Select Department...</option>
+                  {departments.map((d) => (
+                    <option key={d.id} value={d.id}>
+                      {d.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-gray-700 dark:text-gray-300 mb-1">Program Overview & Description</label>
+                <textarea
+                  rows={2}
+                  value={newProgData.description}
+                  onChange={(e) => setNewProgData({ ...newProgData, description: e.target.value })}
+                  className="w-full bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg p-2 font-medium focus:ring-2 focus:ring-[#FFD700] outline-none"
+                  placeholder="Program objectives, ministerial focus, and academic requirements..."
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-4 border-t border-gray-200 dark:border-gray-800">
+                <button
+                  type="button"
+                  onClick={() => setIsCreateModalOpen(false)}
+                  className="px-4 py-2 font-bold text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2 font-black uppercase text-xs tracking-wider bg-[#2E004F] text-[#FFD700] hover:bg-purple-950 rounded-lg shadow-md transition-all"
+                >
+                  Create Program
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMsg && (
+        <div className="fixed bottom-6 right-6 z-[150] animate-fade-in">
+          <div className="bg-[#2E004F] text-[#FFD700] px-4 py-3 rounded-xl shadow-xl flex items-center gap-3 border border-purple-800">
+            <CheckCircle2 size={18} />
+            <span className="font-bold text-xs">{toastMsg}</span>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

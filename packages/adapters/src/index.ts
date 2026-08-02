@@ -1,4 +1,5 @@
 export * from './cloudflare/D1DatabaseAdapter';
+export * from './cloudflare/PostgresDatabaseAdapter';
 export * from './cloudflare/CloudflareKVAdapter';
 export * from './cloudflare/CloudflareQueueAdapter';
 export * from './cloudflare/CloudflareRateLimiterAdapter';

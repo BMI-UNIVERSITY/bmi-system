@@ -23,9 +23,7 @@ import {
   Mail,
   Check,
   Edit2,
-  
-  
-  
+  Download,
   CreditCard,
 } from "lucide-react";
 import { Transaction, Student } from "../types";
@@ -331,6 +329,47 @@ const Finance: React.FC = () => {
     return { student, totalPaid, balance };
   };
 
+  const handleExportCSV = () => {
+    if (financeView === "students") {
+      const headers = ["Student ID", "Student Name", "Program", "Total Paid ($)", "Pending ($)", "Transactions Count"];
+      const rows = studentLedgerData.map((s) => [
+        `"${s.id}"`,
+        `"${s.first_name} ${s.last_name}"`,
+        `"${s.program_code || ""}"`,
+        s.paid,
+        s.pending,
+        s.txCount,
+      ]);
+
+      const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `finance_student_ledger_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      const headers = ["Employee ID", "Employee Name", "Role / Department", "Total Salary Paid ($)", "Disbursements Count"];
+      const rows = employeeLedgerData.map((st) => [
+        `"${st.id}"`,
+        `"${st.name}"`,
+        `"${st.role || st.department || ""}"`,
+        st.totalPaid,
+        st.txCount,
+      ]);
+
+      const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", `finance_personnel_payroll_${new Date().toISOString().slice(0, 10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col animate-fade-in relative">
       {/* Sticky Header - Compact & Padded */}
@@ -346,11 +385,18 @@ const Finance: React.FC = () => {
             </p>
           </div>
         </div>
-        <div className="flex gap-3 pl-14 md:pl-0 w-full md:w-auto justify-end">
+        <div className="flex items-center gap-2 pl-14 md:pl-0 w-full md:w-auto justify-end">
+          <button
+            type="button"
+            onClick={handleExportCSV}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all font-bold text-[10px] uppercase tracking-wider rounded-lg shadow-xs cursor-pointer"
+          >
+            <Download size={12} /> Export CSV
+          </button>
           <button
             type="button"
             onClick={() => setBulkTxOpen(true)}
-            className="flex items-center gap-2 px-4 py-2 bg-indigo-700 text-white rounded-none shadow-xl hover:bg-indigo-900 transition-all font-black text-[9px] uppercase tracking-widest"
+            className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-gray-800 text-[#4B0082] dark:text-purple-300 border border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950/30 transition-all font-bold text-[10px] uppercase tracking-wider rounded-lg shadow-xs cursor-pointer"
           >
             Bulk JSON
           </button>
@@ -369,7 +415,7 @@ const Finance: React.FC = () => {
               });
               setIsNewTxModalOpen(true);
             }}
-            className="flex items-center gap-2 px-6 py-2 bg-[#4B0082] text-white rounded-none shadow-xl hover:bg-black transition-all font-black text-[9px] uppercase tracking-widest border border-[#FFD700]/30"
+            className="flex items-center gap-2 px-4 py-2 bg-[#4B0082] text-white hover:bg-purple-950 transition-all font-bold text-[10px] uppercase tracking-wider border border-[#FFD700]/30 shadow-md rounded-lg cursor-pointer"
           >
             <Plus size={12} className="text-[#FFD700]" />{" "}
             {financeView === "students" ? "Record Payment" : "Process Payroll"}

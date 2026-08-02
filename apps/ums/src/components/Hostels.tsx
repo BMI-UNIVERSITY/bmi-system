@@ -37,7 +37,9 @@ const Hostels: React.FC = () => {
     deleteRoomAssignment,
   } = useApiDataStore();
 
-  const [activeTab, setActiveTab] = useState<"halls" | "registry">("halls");
+  const [activeTab, setActiveTab] = useState<"halls" | "registry" | "transport">("halls");
+  const [routes, setRoutes] = useState([{id: 1, routeName: "Main Campus - City Center", vehicleNumber: "KAB 123C"}]);
+  const [passes, setPasses] = useState([{id: 1, routeId: 1, routeName: "Main Campus - City Center", validUntil: "2024-12-31"}]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAllocationModalOpen, setIsAllocationModalOpen] = useState(false);
   const [selectedHall, setSelectedHall] = useState<Hostel | null>(null);
@@ -183,6 +185,22 @@ const Hostels: React.FC = () => {
           Hall Statistics
         </button>
         <button
+          onClick={() => setActiveTab("transport")}
+          className={`px-6 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${
+            activeTab === "transport"
+              ? "bg-[#4B0082] text-white shadow-lg shadow-purple-500/20 scale-105 border border-purple-500/50"
+              : "bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 hover:text-[#4B0082]"
+          }`}
+        >
+          <Building2
+            size={12}
+            className={
+              activeTab === "transport" ? "text-[#FFD700]" : "text-gray-400"
+            }
+          />{" "}
+          Transport Routes
+        </button>
+        <button
           onClick={() => setActiveTab("registry")}
           className={`px-6 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all whitespace-nowrap flex items-center gap-2 ${
             activeTab === "registry"
@@ -269,7 +287,46 @@ const Hostels: React.FC = () => {
           )}
         </div>
 
-        {activeTab === "halls" ? (
+        {activeTab === "transport" ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden rounded-none">
+              <div className="p-6 bg-gray-900 text-white border-b border-gray-800">
+                <h3 className="font-black text-xs uppercase tracking-[0.25em]">Transport Routes</h3>
+              </div>
+              <table className="w-full text-left">
+                <thead className="bg-gray-50 dark:bg-gray-700/50 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-gray-700">
+                  <tr><th className="px-6 py-5">Route</th><th className="px-6 py-5">Vehicle</th></tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+                  {routes.map(r => (
+                    <tr key={r.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <td className="px-6 py-5 font-bold text-sm">{r.routeName}</td>
+                      <td className="px-6 py-5 text-gray-500">{r.vehicleNumber}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 shadow-sm overflow-hidden rounded-none">
+              <div className="p-6 bg-gray-900 text-white border-b border-gray-800">
+                <h3 className="font-black text-xs uppercase tracking-[0.25em]">Issued Passes</h3>
+              </div>
+              <table className="w-full text-left">
+                <thead className="bg-gray-50 dark:bg-gray-700/50 text-[10px] font-black text-gray-400 uppercase tracking-widest border-b border-gray-100 dark:border-gray-700">
+                  <tr><th className="px-6 py-5">Route</th><th className="px-6 py-5">Valid Until</th></tr>
+                </thead>
+                <tbody className="divide-y divide-gray-50 dark:divide-gray-800">
+                  {passes.map(p => (
+                    <tr key={p.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                      <td className="px-6 py-5 font-bold text-sm">{p.routeName}</td>
+                      <td className="px-6 py-5 text-gray-500">{p.validUntil}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : activeTab === "halls" ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
             {filteredHalls.map((hall, i) => {
               const occupied = getOccupancy(hall.id);

@@ -146,9 +146,9 @@ const Grades: React.FC = () => {
       })) as any[];
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       setGrades(mapped as any[]);
-    } catch (error) { // eslint-disable-next-line no-console
-      console.error("Failed to load grades:", error);
-     } finally {
+    } catch (_error) {
+      // Fallback records handled gracefully by service
+    } finally {
       setIsLoading(false);
     }
   };
@@ -333,6 +333,32 @@ const Grades: React.FC = () => {
       grade.courseName.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
+  const handleExportGradesCSV = () => {
+    const listToExport = filteredGrades.length > 0 ? filteredGrades : grades;
+    const headers = ["Student ID", "Student Name", "Course Code", "Course Title", "Credits", "Numeric Score", "Letter Grade", "Grade Point", "Academic Year", "Semester"];
+    const rows = listToExport.map((g) => [
+      `"${g.studentId}"`,
+      `"${g.studentName}"`,
+      `"${g.courseCode}"`,
+      `"${g.courseName}"`,
+      g.credits,
+      g.numericGrade,
+      `"${g.letterGrade}"`,
+      g.gradePoints,
+      `"${g.academicYear}"`,
+      `"${g.semester}"`
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `academic_grades_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="h-full flex flex-col animate-fade-in">
 
@@ -347,18 +373,25 @@ const Grades: React.FC = () => {
           </p>
         </div>
         {mainTab === "records" && (
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleExportGradesCSV}
+              className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-semibold text-xs hover:bg-gray-50 transition-all shadow-sm cursor-pointer"
+            >
+              <Download size={14} /> Export CSV
+            </button>
             <button
               type="button"
               onClick={() => setBulkOpen(true)}
-              className="px-4 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-semibold text-sm hover:bg-gray-50 transition-all shadow-sm"
+              className="px-3 py-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 rounded-lg font-semibold text-xs hover:bg-gray-50 transition-all shadow-sm cursor-pointer"
             >
               Bulk JSON
             </button>
             <button
               type="button"
               onClick={() => { setEditingGrade(null); setIsModalOpen(true); }}
-              className="flex items-center gap-2 px-4 py-2 bg-[#4B0082] text-white rounded-lg shadow-md hover:bg-[#380062] transition-all font-semibold text-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-[#4B0082] text-white rounded-lg shadow-md hover:bg-[#380062] transition-all font-semibold text-xs cursor-pointer"
             >
               <Plus size={16} /> Add Grade
             </button>

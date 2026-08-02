@@ -33,3 +33,6 @@ apps/api/*.sql.bak
 apps/*/tsc-*.txt
 apps/*/out.txt
 apps/*/*.txt
+
+# Local backup of the UMS frontend (package name collides with apps/ums)
+apps/ums_backup/

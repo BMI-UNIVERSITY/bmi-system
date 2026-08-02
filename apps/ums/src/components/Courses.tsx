@@ -235,6 +235,29 @@ const Courses: React.FC = () => {
     setIsModalOpen(true);
   };
 
+  const handleExportCSV = () => {
+    const listToExport = filteredCourses.length > 0 ? filteredCourses : courses;
+    const headers = ["Course Code", "Title", "Faculty", "Department", "Level", "Credit Hours", "Status"];
+    const rows = listToExport.map((c) => [
+      `"${c.code}"`,
+      `"${c.title}"`,
+      `"${c.faculty || ""}"`,
+      `"${(c as any).department || ""}"`,
+      `"${(c as any).level || ""}"`,
+      c.credit_hours,
+      `"${(c as any).status || "Published"}"`
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `courses_catalog_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="h-full flex flex-col animate-fade-in relative">
       {/* Sticky Header */}
@@ -250,33 +273,41 @@ const Courses: React.FC = () => {
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-4 pl-14 md:pl-0 w-full md:w-auto justify-end">
-          <div className="flex bg-white dark:bg-gray-800 p-1 rounded-none shadow-sm border border-gray-100 dark:border-gray-700">
+
+        <div className="flex items-center gap-2 pl-14 md:pl-0 w-full md:w-auto justify-end">
+          <div className="flex bg-white dark:bg-gray-800 p-0.5 rounded-lg shadow-xs border border-gray-200 dark:border-gray-700 mr-2">
             <button
               onClick={() => setViewMode("grid")}
-              className={`p-1.5 transition-all ${viewMode === "grid" ? "bg-[#4B0082] text-white" : "text-gray-400 hover:text-[#4B0082]"}`}
+              className={`p-1.5 rounded-md transition-all ${viewMode === "grid" ? "bg-[#4B0082] text-white" : "text-gray-400 hover:text-[#4B0082]"}`}
+              title="Grid View"
             >
               <LayoutGrid size={14} />
             </button>
             <button
               onClick={() => setViewMode("list")}
-              className={`p-1.5 transition-all ${viewMode === "list" ? "bg-[#4B0082] text-white" : "text-gray-400 hover:text-[#4B0082]"}`}
+              className={`p-1.5 rounded-md transition-all ${viewMode === "list" ? "bg-[#4B0082] text-white" : "text-gray-400 hover:text-[#4B0082]"}`}
+              title="List View"
             >
               <List size={14} />
             </button>
           </div>
           <button
-            type="button"
+            onClick={handleExportCSV}
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 transition-all font-bold text-[10px] uppercase tracking-wider rounded-lg shadow-xs cursor-pointer"
+          >
+            Export CSV
+          </button>
+          <button
             onClick={() => setBulkCoursesOpen(true)}
-            className="flex items-center gap-2 px-3 py-2 bg-indigo-700 text-white rounded-none shadow-xl hover:bg-indigo-900 transition-all font-black text-[9px] uppercase tracking-widest"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-gray-800 text-[#4B0082] dark:text-purple-300 border border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950/30 transition-all font-bold text-[10px] uppercase tracking-wider rounded-lg shadow-xs cursor-pointer"
           >
             Bulk JSON
           </button>
           <button
             onClick={() => openModal()}
-            className="flex items-center gap-2 px-4 py-2 bg-[#4B0082] text-white rounded-none shadow-xl hover:bg-black transition-all font-black text-[9px] uppercase tracking-widest border border-[#FFD700]/30"
+            className="flex items-center gap-1.5 px-4 py-1.5 bg-[#4B0082] text-white hover:bg-purple-950 transition-all font-bold text-[10px] uppercase tracking-wider border border-[#FFD700]/30 shadow-md rounded-lg cursor-pointer"
           >
-            <Plus size={12} className="text-[#FFD700]" /> New Course
+            <Plus size={14} className="text-[#FFD700]" /> Add Course
           </button>
         </div>
       </div>
@@ -588,30 +619,8 @@ const Courses: React.FC = () => {
               ok: (r.data?.failureCount ?? 0) === 0,
               message: `Created: ${r.data?.successCount ?? 0}, failed: ${r.data?.failureCount ?? 0}.`,
             };
-} catch {
-            return { ok: false, message: "Invalid JSON on one or more lines." };
-          }
-        }}
-      />
-
-      <BulkEntryModal
-        open={bulkCoursesOpen}
-        onClose={() => setBulkCoursesOpen(false)}
-        title="Bulk courses (JSON lines)"
-        entity="courses"
-        sampleLine='{"name":"Sample Course","code":"SMPL101","faculty":"Theology","department":"Ministry","level":"Undergraduate","credits":3,"status":"Published","description":"At least ten chars here.","syllabus":"At least ten chars in syllabus text."}'
-        onSubmit={async (lines) => {
-          try {
-            const items = lines.map((l) => JSON.parse(l) as any);
-            const r = await postCourseBatch(items);
-            const list = await getCourses({ perPage: 500 });
-            if (list.success && list.data) setCourses(list.data.items);
-            return {
-              ok: (r.data?.failureCount ?? 0) === 0,
-              message: `Created: ${r.data?.successCount ?? 0}, failed: ${r.data?.failureCount ?? 0}.`,
-            };
           } catch {
-            return { ok: false, message: 'Invalid JSON on one or more lines.' };
+            return { ok: false, message: "Invalid JSON on one or more lines." };
           }
         }}
       />

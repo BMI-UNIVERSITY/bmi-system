@@ -28,11 +28,8 @@ CREATE TABLE IF NOT EXISTS users_new (
 
 INSERT INTO users_new SELECT * FROM users;
 
-DROP TABLE IF EXISTS users_old;
-ALTER TABLE users RENAME TO users_old;
+DROP TABLE users;
 ALTER TABLE users_new RENAME TO users;
-
-DROP TABLE IF EXISTS users_old;
 
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_role  ON users(role);

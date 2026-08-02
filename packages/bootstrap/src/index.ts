@@ -19,6 +19,7 @@ import {
 
 import {
   D1DatabaseAdapter,
+  PostgresDatabaseAdapter,
   CloudflareKVAdapter,
   CloudflareQueueAdapter,
   CloudflareRateLimiterAdapter,
@@ -99,7 +100,7 @@ function buildCloudflare(env: any): PlatformContext {
     
   // Storage provider: use R2 if bucket is available, else memory
   const storageProvider = env.DOCUMENTS
-    ? new CloudflareR2StorageAdapter(env.DOCUMENTS, env.R2_PUBLIC_URL || 'https://pub-documents.hkmministries.org')
+    ? new CloudflareR2StorageAdapter(env.DOCUMENTS, env.R2_PUBLIC_URL || 'https://pub-documents.bmiuniversities.org')
     : new MemoryStorageAdapter();
 
   const rateLimiter = env.RATE_LIMITER
@@ -114,7 +115,16 @@ function buildCloudflare(env: any): PlatformContext {
     ? new StripeAdapter(env.STRIPE_SECRET_KEY, env.STRIPE_WEBHOOK_SECRET)
     : unimplemented<IPaymentProvider>('payment');
 
-  const dbAdapter = new D1DatabaseAdapter(env.DB);
+  // Database: prefer Neon (Postgres) when a connection string is configured,
+  // otherwise fall back to D1 during the strangler-fig migration phase.
+  const coreConnectionUrl =
+    env.DATABASE_URL_CORE ??
+    env.DATABASE_URL ??
+    env.CORE_HYPERDRIVE?.connectionString ??
+    env.HYPERDRIVE?.connectionString;
+  const dbAdapter = typeof coreConnectionUrl === 'string' && coreConnectionUrl.length > 0
+    ? new PostgresDatabaseAdapter(coreConnectionUrl)
+    : new D1DatabaseAdapter(env.DB);
   return {
     db: dbAdapter,
     kv: new CloudflareKVAdapter(env.KV),

@@ -13,6 +13,8 @@ import {
   
   
   Timer,
+  Download,
+  CheckCheck,
 } from "lucide-react";
 import { useStudentsQuery } from "../hooks/useEntityQueries";
 import { useApiDataStore } from "../stores/apiDataStore";
@@ -191,6 +193,43 @@ const Attendance: React.FC = () => {
     return { present: p, late: l, absent: a };
   }, [attendance, filteredStudents]);
 
+  const markAllPresent = () => {
+    const nextState: AttendanceState = { ...attendance };
+    filteredStudents.forEach((s) => {
+      nextState[s.id] = "present";
+    });
+    setAttendance(nextState);
+  };
+
+  const markAllAbsent = () => {
+    const nextState: AttendanceState = { ...attendance };
+    filteredStudents.forEach((s) => {
+      nextState[s.id] = "absent";
+    });
+    setAttendance(nextState);
+  };
+
+  const handleExportCSV = () => {
+    const headers = ["Registration No", "Student Name", "Department", "Status", "Course / Module", "Session Date"];
+    const rows = filteredStudents.map((s) => [
+      `"${s.reg_no || s.id}"`,
+      `"${s.first_name} ${s.last_name}"`,
+      `"${s.department || ""}"`,
+      (attendance[s.id] || "absent").toUpperCase(),
+      `"${selectedCourse}"`,
+      `"${sessionDate}"`
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((e) => e.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `attendance_report_${selectedCourse.replace(/\s+/g, "_")}_${sessionDate}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="h-full flex flex-col animate-fade-in relative">
       {/* Loading overlay — shown while students or attendance records are in-flight */}
@@ -243,9 +282,15 @@ const Attendance: React.FC = () => {
           </div>
 
           <button
+            onClick={handleExportCSV}
+            className="flex items-center gap-1.5 px-3 py-2 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 border border-gray-200 dark:border-gray-700 hover:bg-gray-50 transition-all font-bold text-[9px] uppercase tracking-wider rounded-lg shadow-xs cursor-pointer"
+          >
+            <Download size={12} /> Export CSV
+          </button>
+          <button
             onClick={handleSubmit}
             disabled={isSubmitting || filteredStudents.length === 0}
-            className="flex items-center gap-2 px-6 py-2 bg-[#4B0082] text-white rounded-none shadow-xl hover:bg-black transition-all font-black text-[9px] uppercase tracking-widest border border-[#FFD700]/30 disabled:opacity-50"
+            className="flex items-center gap-2 px-5 py-2 bg-[#4B0082] text-white rounded-lg shadow-md hover:bg-black transition-all font-bold text-[9px] uppercase tracking-wider border border-[#FFD700]/30 disabled:opacity-50 cursor-pointer"
           >
             {isSubmitting ? (
               <Loader2 size={12} className="animate-spin" />
@@ -344,6 +389,22 @@ const Attendance: React.FC = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-gray-50 dark:bg-gray-700 border border-gray-200 dark:border-gray-600 rounded-none outline-none font-bold text-xs dark:text-white focus:ring-1 focus:ring-[#4B0082]"
               />
+            </div>
+            <div className="flex items-center gap-2 w-full md:w-auto">
+              <button
+                onClick={markAllPresent}
+                type="button"
+                className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 rounded-lg hover:bg-emerald-100 font-bold text-[10px] uppercase tracking-wider cursor-pointer"
+              >
+                <CheckCheck size={13} /> Mark All Present
+              </button>
+              <button
+                onClick={markAllAbsent}
+                type="button"
+                className="flex items-center gap-1 px-3 py-1.5 bg-rose-50 dark:bg-rose-950/30 text-rose-700 dark:text-rose-300 border border-rose-200 dark:border-rose-800 rounded-lg hover:bg-rose-100 font-bold text-[10px] uppercase tracking-wider cursor-pointer"
+              >
+                <XCircle size={13} /> Mark All Absent
+              </button>
             </div>
             {lastMarkedAt && (
               <div className="flex items-center gap-2 text-[9px] font-bold text-emerald-600 uppercase tracking-widest">

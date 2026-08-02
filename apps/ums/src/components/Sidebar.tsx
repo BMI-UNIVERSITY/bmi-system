@@ -116,11 +116,9 @@ const Sidebar: React.FC<SidebarProps> = ({
 
   // Role-specific portal items shown only for matching roles
   const roleItems: NavItem[] =
-    user?.role === "student"
-      ? [{ id: "student", label: "My Portal", icon: GraduationCap }]
-      : user?.role === "faculty"
-        ? [{ id: "faculty", label: "Faculty Portal", icon: Briefcase }]
-        : [];
+    user?.role === "faculty"
+      ? [{ id: "faculty", label: "Faculty Portal", icon: Briefcase }]
+      : [];
 
   // Define navigation groups
   const navGroups: NavGroup[] = [
@@ -197,24 +195,9 @@ const Sidebar: React.FC<SidebarProps> = ({
       ...group,
       items: group.items.filter((item) => {
         if (user?.role === "admin") return true;
-        if (["ai", "settings"].includes(item.id)) {
-          return user?.role !== "student";
-        }
+        if (["ai", "settings"].includes(item.id)) return true;
+
         switch (user?.role) {
-          case "student":
-            return ["timetable", "library", "medical"].includes(item.id);
-          case "faculty":
-            return [
-              "dashboard",
-              "students",
-              "attendance",
-              "timetable",
-              "courses",
-              "programs",
-              "grades",
-              "rubrics",
-              "library",
-            ].includes(item.id);
           case "registrar":
             return [
               "dashboard",
@@ -232,18 +215,61 @@ const Sidebar: React.FC<SidebarProps> = ({
               "certificates",
               "reports",
               "alumni",
+              "sms",
             ].includes(item.id);
-          case "staff":
+          case "finance":
+          case "bursar":
+            return [
+              "dashboard",
+              "finance",
+              "students",
+              "staff",
+              "reports",
+              "sms",
+            ].includes(item.id);
+          case "faculty":
+            return [
+              "dashboard",
+              "students",
+              "attendance",
+              "timetable",
+              "courses",
+              "programs",
+              "grades",
+              "rubrics",
+              "library",
+            ].includes(item.id);
+          case "hr":
+            return [
+              "dashboard",
+              "staff",
+              "attendance",
+              "finance",
+              "reports",
+              "sms",
+            ].includes(item.id);
+          case "admissions":
             return [
               "dashboard",
               "admissions",
               "documents",
               "students",
-              "library",
+              "alumni",
+              "reports",
+              "sms",
+            ].includes(item.id);
+          case "facilities":
+          case "staff":
+            return [
+              "dashboard",
               "hostels",
+              "library",
               "medical",
               "inventory",
               "visitors",
+              "timetable",
+              "sms",
+              "documents",
             ].includes(item.id);
           case "viewer":
             return ["dashboard", "students", "courses", "library"].includes(item.id);
@@ -295,50 +321,52 @@ const Sidebar: React.FC<SidebarProps> = ({
 
       {/* Sidebar */}
       <div
-        className={`fixed left-0 top-0 h-screen bg-[#D4C5F9] dark:bg-[#1a1a1a] border-r border-[#C4B5E3] dark:border-gray-800 flex flex-col shadow-2xl z-50 transition-all duration-300 ease-out ${
+        className={`fixed left-0 top-0 h-screen bg-[#0a0015] border-r border-purple-900/30 text-slate-200 flex flex-col shadow-2xl z-50 transition-all duration-300 ease-out ${
           isCollapsed ? "w-16" : "w-64"
         } ${
           isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
         }`}
       >
         {/* Header */}
-        <div className={`p-4 flex ${isCollapsed ? "justify-center" : "justify-between"} items-center border-b border-[#C4B5E3] dark:border-gray-800`}>
+        <div className={`p-4 flex ${isCollapsed ? "justify-center" : "justify-between"} items-center border-b border-purple-900/30 bg-purple-950/20`}>
           {!isCollapsed && (
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 relative">
+              <div className="w-9 h-9 relative p-1 bg-white rounded-xl border border-[#FFD700]/50 shadow-md flex items-center justify-center">
                 <img
                   src={logo}
                   alt="BMI University"
-                  className="w-full h-full object-contain rounded-lg border border-[#4B0082]"
+                  className="w-full h-full object-contain"
                 />
               </div>
               <div>
-                <h1 className="text-sm font-bold text-[#4B0082] dark:text-[#FFD700]">BMI University</h1>
-                <span className="text-[8px] text-[#5C4E7A] dark:text-gray-400 uppercase tracking-wider">ERP System</span>
+                <h1 className="text-sm font-black text-white tracking-tight flex items-center gap-1.5">
+                  BMI University
+                </h1>
+                <span className="text-[9px] font-bold text-[#FFD700] uppercase tracking-wider block">Enterprise UMS</span>
               </div>
             </div>
           )}
           {isCollapsed && (
-            <div className="w-8 h-8 relative">
+            <div className="w-8 h-8 relative p-1 bg-white rounded-xl border border-[#FFD700]/50 shadow-md">
               <img
                 src={logo}
                 alt="BMI"
-                className="w-full h-full object-contain rounded-lg border border-[#4B0082]"
+                className="w-full h-full object-contain"
               />
             </div>
           )}
           <button
             onClick={onClose}
-            className="lg:hidden p-1 text-[#5C4E7A] dark:text-gray-400 hover:text-[#1E1B4B] dark:hover:text-white hover:bg-[#C4B5E3] dark:hover:bg-white/10 rounded transition-colors"
+            className="lg:hidden p-1.5 text-slate-400 hover:text-white hover:bg-purple-900/40 rounded-xl transition-colors"
             aria-label="Close sidebar"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
 
         {/* Navigation */}
         <nav
-          className="flex-1 overflow-y-auto py-2 px-2 space-y-1 no-scrollbar"
+          className="flex-1 overflow-y-auto py-3 px-2 space-y-2 no-scrollbar"
           aria-label="Main navigation"
         >
           {/* Role-specific portal items */}
@@ -349,20 +377,20 @@ const Sidebar: React.FC<SidebarProps> = ({
               <button
                 key={item.id}
                 onClick={() => handleNavigate(item.id)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative text-left ${
+                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-200 group relative text-left ${
                   isActive
-                    ? "bg-[#7C3AED] text-white shadow-sm"
-                    : "text-[#1E1B4B] dark:text-gray-400 hover:bg-[#C4B5E3] dark:hover:bg-[#2a2a2a] hover:text-[#1E1B4B] dark:hover:text-white"
+                    ? "bg-gradient-to-r from-[#6b21a8] to-[#4c1d95] text-white shadow-lg border-l-4 border-[#FFD700]"
+                    : "text-slate-300 hover:bg-purple-950/40 hover:text-white"
                 }`}
                 title={isCollapsed ? item.label : undefined}
                 aria-current={isActive ? "page" : undefined}
               >
                 <Icon
-                  size={20}
-                  className={`flex-shrink-0 ${isActive ? "text-white" : "text-[#5C4E7A] dark:text-gray-400 group-hover:text-[#1E1B4B] dark:group-hover:text-white"}`}
+                  size={18}
+                  className={`flex-shrink-0 ${isActive ? "text-[#FFD700]" : "text-slate-400 group-hover:text-white"}`}
                 />
                 {!isCollapsed && (
-                  <span className="text-sm font-medium truncate">{item.label}</span>
+                  <span className="text-xs font-bold truncate">{item.label}</span>
                 )}
               </button>
             );
@@ -371,7 +399,7 @@ const Sidebar: React.FC<SidebarProps> = ({
           {/* Role divider */}
           {roleItems.length > 0 && !isCollapsed && (
             <div className="py-1 px-3">
-              <div className="border-t border-[#C4B5E3] dark:border-gray-700" />
+              <div className="border-t border-purple-900/30" />
             </div>
           )}
 
@@ -380,7 +408,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             const GroupIcon = group.icon as React.ElementType;
             const isExpanded = expandedGroups.includes(group.id);
             return (
-              <div key={group.id} className="space-y-0.5">
+              <div key={group.id} className="space-y-1">
                 {/* Group header */}
                 <button
                   ref={activeGroupRef}
@@ -394,27 +422,27 @@ const Sidebar: React.FC<SidebarProps> = ({
                       },
                     )
                   }
-                  className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 text-left ${
+                  className={`w-full flex items-center gap-3 px-3 py-1.5 rounded-xl transition-all duration-200 text-left ${
                     isCollapsed
-                      ? "justify-center text-[#5C4E7A] dark:text-gray-400 hover:bg-[#C4B5E3] dark:hover:bg-[#2a2a2a]"
-                      : "text-[#5C4E7A] dark:text-gray-400 hover:bg-[#C4B5E3] dark:hover:bg-[#2a2a2a] hover:text-[#1E1B4B] dark:hover:text-white"
+                      ? "justify-center text-slate-400 hover:bg-purple-950/40"
+                      : "text-slate-400 hover:bg-purple-950/40 hover:text-white"
                   }`}
                   title={isCollapsed ? group.label : undefined}
                   aria-expanded={isExpanded}
                   aria-label={`${group.label} section`}
                 >
                   <GroupIcon
-                    size={18}
-                    className="flex-shrink-0"
+                    size={16}
+                    className="flex-shrink-0 text-purple-400"
                   />
                   {!isCollapsed && (
                     <>
-                      <span className="text-[10px] font-bold uppercase tracking-widest flex-1 truncate">
+                      <span className="text-[10px] font-black text-purple-300/70 uppercase tracking-widest flex-1 truncate">
                         {group.label}
                       </span>
                       <ChevronDown
                         size={14}
-                        className={`transition-transform duration-200 ${isExpanded ? "rotate-0" : "-rotate-90"}`}
+                        className={`transition-transform duration-200 text-slate-400 ${isExpanded ? "rotate-0" : "-rotate-90"}`}
                       />
                     </>
                   )}
@@ -427,7 +455,7 @@ const Sidebar: React.FC<SidebarProps> = ({
                       isExpanded ? "max-h-[500px] opacity-100" : "max-h-0 opacity-0"
                     }`}
                   >
-                    <div className="ml-2 pl-2 border-l-2 border-[#C4B5E3] dark:border-gray-700 space-y-0.5">
+                    <div className="ml-3 pl-2.5 border-l border-purple-900/40 space-y-0.5">
                       {group.items.map((item) => {
                         const Icon = item.icon;
                         const isActive = getActiveView(item.id);
@@ -435,18 +463,18 @@ const Sidebar: React.FC<SidebarProps> = ({
                           <button
                             key={item.id}
                             onClick={() => handleNavigate(item.id)}
-                            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group text-left ${
+                            className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-xl transition-all duration-200 group text-left ${
                               isActive
-                                ? "bg-[#7C3AED] text-white shadow-sm"
-                                : "text-[#1E1B4B] dark:text-gray-400 hover:bg-[#C4B5E3] dark:hover:bg-[#2a2a2a] hover:text-[#1E1B4B] dark:hover:text-white"
+                                ? "bg-gradient-to-r from-[#6b21a8] to-[#581c87] text-white font-bold shadow-md border-l-2 border-[#FFD700]"
+                                : "text-slate-300 hover:bg-purple-950/40 hover:text-white font-medium"
                             }`}
                             aria-current={isActive ? "page" : undefined}
                           >
                             <Icon
-                              size={16}
-                              className={`flex-shrink-0 ${isActive ? "text-white" : "text-[#5C4E7A] dark:text-gray-400 group-hover:text-[#1E1B4B] dark:group-hover:text-white"}`}
+                              size={15}
+                              className={`flex-shrink-0 ${isActive ? "text-[#FFD700]" : "text-slate-400 group-hover:text-white"}`}
                             />
-                            <span className="text-xs font-medium truncate">{item.label}</span>
+                            <span className="text-xs truncate">{item.label}</span>
                           </button>
                         );
                       })}
@@ -459,34 +487,43 @@ const Sidebar: React.FC<SidebarProps> = ({
         </nav>
 
         {/* Footer */}
-        <div className={`p-2 border-t border-[#C4B5E3] dark:border-gray-800 space-y-2 ${isCollapsed ? "" : "px-4"}`}>
+        <div className={`p-3 border-t border-purple-900/30 bg-purple-950/20 space-y-2 ${isCollapsed ? "" : "px-4"}`}>
           {/* Collapse toggle */}
           <button
             onClick={onToggleCollapse}
-            className="hidden lg:flex w-full items-center gap-3 px-3 py-2 rounded-lg text-[#5C4E7A] dark:text-gray-400 hover:bg-[#C4B5E3] dark:hover:bg-[#2a2a2a] hover:text-[#1E1B4B] dark:hover:text-white transition-colors"
+            className="hidden lg:flex w-full items-center gap-3 px-3 py-2 rounded-xl text-slate-400 hover:bg-purple-900/30 hover:text-white transition-colors"
             title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
           >
-            <LayoutDashboard size={20} className="flex-shrink-0" />
-            {!isCollapsed && <span className="text-sm font-medium">Collapse</span>}
+            <LayoutDashboard size={18} className="flex-shrink-0" />
+            {!isCollapsed && <span className="text-xs font-semibold">Collapse Navigation</span>}
           </button>
 
-          {/* Logout */}
-          <button
-            onClick={onLogout}
-            className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-[#5C4E7A] dark:text-gray-400 hover:bg-red-100 dark:hover:bg-red-500/20 hover:text-red-600 dark:hover:text-red-400 transition-colors ${isCollapsed ? "justify-center" : ""}`}
-            title={isCollapsed ? "Log out" : undefined}
-          >
-            <LogOut size={20} className="flex-shrink-0" />
-            {!isCollapsed && <span className="text-sm font-medium">Log Out</span>}
-          </button>
-
-          {/* User info */}
+          {/* User Card */}
           {!isCollapsed && user && (
-            <div className="px-3 py-2 text-xs text-[#5C4E7A] dark:text-gray-500 border-t border-[#C4B5E3] dark:border-gray-700 mt-2">
-              <div className="truncate font-medium text-[#1E1B4B] dark:text-gray-400">{user.name}</div>
-              <div className="truncate">{user.email}</div>
-              <div className="uppercase text-[10px] text-[#4B0082] dark:text-[#FFD700] mt-1 font-bold">{user.role}</div>
+            <div className="p-2.5 rounded-xl bg-purple-950/40 border border-purple-900/40 text-xs text-slate-300 flex items-center justify-between gap-2">
+              <div className="truncate">
+                <div className="truncate font-bold text-white">{user.name}</div>
+                <div className="truncate text-[10px] text-purple-300/70">{user.email}</div>
+              </div>
+              <button
+                onClick={onLogout}
+                className="p-1.5 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
+                title="Log Out"
+              >
+                <LogOut size={16} />
+              </button>
             </div>
+          )}
+
+          {/* Collapse state Logout */}
+          {isCollapsed && (
+            <button
+              onClick={onLogout}
+              className="w-full flex items-center justify-center p-2 rounded-xl text-slate-400 hover:bg-red-500/20 hover:text-red-400 transition-colors"
+              title="Log Out"
+            >
+              <LogOut size={18} />
+            </button>
           )}
         </div>
       </div>
