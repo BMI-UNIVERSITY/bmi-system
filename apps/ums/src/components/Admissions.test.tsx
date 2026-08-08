@@ -28,7 +28,7 @@ describe('Admissions Component', () => {
       </MemoryRouter>
     );
 
-    expect(screen.getByText(/Admissions Management/i)).toBeInTheDocument();
+    expect(screen.getByText(/Admissions Lifecycle/i)).toBeInTheDocument();
   });
 
   it('renders stat cards correctly when data is loaded', async () => {

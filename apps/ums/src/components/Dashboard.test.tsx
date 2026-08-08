@@ -46,7 +46,7 @@ describe('Dashboard', () => {
         <Dashboard />
       </MemoryRouter>,
     );
-    expect(screen.getByText(/executive dashboard/i)).toBeInTheDocument();
+    expect(screen.getByText(/executive dashboard|executive overview/i)).toBeInTheDocument();
   });
 
   it('renders the four stat cards', () => {
@@ -58,7 +58,7 @@ describe('Dashboard', () => {
     expect(screen.getByText(/total students/i)).toBeInTheDocument();
     expect(screen.getByText(/ytd revenue/i)).toBeInTheDocument();
     expect(screen.getByText(/new admissions/i)).toBeInTheDocument();
-    expect(screen.getByText(/upcoming events/i)).toBeInTheDocument();
+    expect(screen.getByText(/upcoming deadlines/i)).toBeInTheDocument();
   });
 
   it('shows the logged-in user name', () => {

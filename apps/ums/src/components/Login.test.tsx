@@ -12,14 +12,14 @@ describe("Login", () => {
 
   it("renders the login form with an email input", () => {
     render(<Login onLogin={mockOnLogin} />);
-    // The email input has placeholder 'name@university.edu'
-    const emailInput = screen.getByPlaceholderText(/university\.edu/i);
+    // The email input has placeholder 'admin@bmi.edu'
+    const emailInput = screen.getByPlaceholderText(/bmi\.edu/i);
     expect(emailInput).toBeInTheDocument();
   });
 
   it("renders a submit / sign-in button", () => {
     render(<Login onLogin={mockOnLogin} />);
-    const btn = screen.getByRole("button", { name: /sign in|login|access/i });
+    const btn = screen.getByRole("button", { name: /sign in to ums dashboard/i });
     expect(btn).toBeInTheDocument();
   });
 
