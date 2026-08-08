@@ -1,5 +1,25 @@
 import { ok, error, typedJson } from '../lib/types';
 import type { Env } from '../lib/types';
+import { createCoreDb } from '../lib/db';
+import {
+  studentHolds,
+  studentCourseRegistrations,
+  programCurriculum,
+  programCourses,
+  enrollments,
+} from '../schema/academic';
+import {
+  studentPrograms,
+  programs,
+  persons,
+  users,
+  academicTerms,
+  documents,
+  invoices,
+  courses,
+} from '../schema/core';
+import { programFees } from '../schema/academic';
+import { eq, and, count, lte, gte } from 'drizzle-orm';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -12,31 +32,22 @@ interface Hold {
   resolved_at: string | null;
 }
 
-interface CurriculumTerm {
-  id: string;
-  term_id: string;
-  term_name: string;
-  term_number: number;
-  academic_year: string;
-}
-
-interface ProgramCourse {
-  id: string;
-  course_id: string;
-  code: string;
-  title: string;
-  credits: number;
-  is_mandatory: number;
-  elective_group: string | null;
-}
-
 // ─── Holds ──────────────────────────────────────────────────────────────────
 
 export async function handleGetMyHolds(_req: Request, env: Env, userId: string): Promise<Response> {
-  const { results: holds } = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT id, hold_type, reason, is_active, created_at, resolved_at
-     FROM student_holds WHERE student_id = ? ORDER BY created_at ASC`
-  ).bind(userId).all<Hold>();
+  const db = createCoreDb(env);
+
+  const holds = await db.select({
+    id: studentHolds.id,
+    hold_type: studentHolds.hold_type,
+    reason: studentHolds.reason,
+    is_active: studentHolds.is_active,
+    created_at: studentHolds.created_at,
+    resolved_at: studentHolds.resolved_at,
+  })
+    .from(studentHolds)
+    .where(eq(studentHolds.student_id, userId))
+    .orderBy(studentHolds.created_at);
 
   const active = holds.filter(h => h.is_active);
   const resolved = holds.filter(h => !h.is_active);
@@ -49,50 +60,59 @@ export async function handleGetMyHolds(_req: Request, env: Env, userId: string):
 export async function handleGetProgramCurriculum(req: Request, env: Env, userId: string): Promise<Response> {
   const url = new URL(req.url);
   const termId = url.searchParams.get('term_id');
+  const db = createCoreDb(env);
 
-  const studentProg = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT sp.program_id, p.name as program_name, p.code as program_code
-     FROM student_programs sp
-     JOIN programs p ON p.id = sp.program_id
-     WHERE sp.uid = (SELECT uid FROM persons WHERE id = (SELECT person_id FROM users WHERE id = ?))
-     AND sp.current_flag = 1`
-  ).bind(userId).first<{ program_id: string; program_name: string; program_code: string }>();
+  const studentProg = (await db.select({
+    program_id: studentPrograms.program_id,
+    program_name: programs.name,
+    program_code: programs.code,
+    uid: studentPrograms.uid,
+  })
+    .from(studentPrograms)
+    .leftJoin(programs, eq(programs.id, studentPrograms.program_id))
+    .leftJoin(persons, eq(persons.uid, studentPrograms.uid))
+    .leftJoin(users, eq(users.person_id, persons.id))
+    .where(and(eq(users.id, userId), eq(studentPrograms.current_flag, 1)))
+    .execute())[0];
 
   if (!studentProg) return error('No active program found. Please contact admissions.', 404);
 
-  let curriculumRows;
-  if (termId) {
-    const curResult = await env.PLATFORM_CONTEXT!.db.prepare(
-      `SELECT pc.id, pc.term_id, at.name as term_name, pc.term_number, at.academic_year
-       FROM program_curriculum pc
-       JOIN academic_terms at ON at.id = pc.term_id
-       WHERE pc.program_id = ? AND pc.term_id = ?
-       ORDER BY pc.term_number ASC`
-    ).bind(studentProg.program_id, termId).all<CurriculumTerm>();
-    curriculumRows = curResult.results;
-  } else {
-    const curResult = await env.PLATFORM_CONTEXT!.db.prepare(
-      `SELECT pc.id, pc.term_id, at.name as term_name, pc.term_number, at.academic_year
-       FROM program_curriculum pc
-       JOIN academic_terms at ON at.id = pc.term_id
-       WHERE pc.program_id = ?
-       ORDER BY pc.term_number ASC`
-    ).bind(studentProg.program_id).all<CurriculumTerm>();
-    curriculumRows = curResult.results;
-  }
+  const curriculumQuery = db.select({
+    id: programCurriculum.id,
+    term_id: programCurriculum.term_id,
+    term_name: academicTerms.name,
+    term_number: programCurriculum.term_number,
+    academic_year: academicTerms.academic_year,
+  })
+    .from(programCurriculum)
+    .leftJoin(academicTerms, eq(academicTerms.id, programCurriculum.term_id))
+    .where(
+      termId
+        ? and(eq(programCurriculum.program_id, studentProg.program_id), eq(programCurriculum.term_id, termId))
+        : eq(programCurriculum.program_id, studentProg.program_id)
+    )
+    .orderBy(programCurriculum.term_number);
+
+  const curriculumRows = await curriculumQuery;
 
   if (curriculumRows.length === 0) return error('No curriculum defined for this program.', 404);
 
   const curriculumWithCourses = await Promise.all(curriculumRows.map(async (term) => {
-    const { results: courses } = await env.PLATFORM_CONTEXT!.db.prepare(
-      `SELECT pc.id, pc.course_id, c.code, c.name as title, c.credits, pc.is_mandatory, pc.elective_group
-       FROM program_courses pc
-       JOIN courses c ON c.id = pc.course_id
-       WHERE pc.curriculum_id = ?
-       ORDER BY pc.is_mandatory DESC, c.code ASC`
-    ).bind(term.id).all<ProgramCourse>();
+    const termCourses = await db.select({
+      id: programCourses.id,
+      course_id: programCourses.course_id,
+      code: courses.code,
+      title: courses.title,
+      credits: courses.credits,
+      is_mandatory: programCourses.is_mandatory,
+      elective_group: programCourses.elective_group,
+    })
+      .from(programCourses)
+      .leftJoin(courses, eq(courses.id, programCourses.course_id))
+      .where(eq(programCourses.curriculum_id, term.id))
+      .orderBy(programCourses.is_mandatory, courses.code);
 
-    return { ...term, courses };
+    return { ...term, courses: termCourses };
   }));
 
   return ok({
@@ -103,69 +123,101 @@ export async function handleGetProgramCurriculum(req: Request, env: Env, userId:
   });
 }
 
+// ─── Active Term Helper ──────────────────────────────────────────────────────
+
+async function getActiveTerm(db: ReturnType<typeof createCoreDb>) {
+  const now = new Date();
+  return (await db.select({ id: academicTerms.id, name: academicTerms.name, academic_year: academicTerms.academic_year })
+    .from(academicTerms)
+    .where(and(
+      lte(academicTerms.start_date, now),
+      gte(academicTerms.end_date, now),
+      eq(academicTerms.status, 'active')
+    ))
+    .limit(1)
+    .execute())[0];
+}
+
 // ─── Auto-Enrollment (Mandatory Courses) ────────────────────────────────────
 
 export async function handleAutoEnrollMandatory(_req: Request, env: Env, userId: string): Promise<Response> {
-  const hold = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT id FROM student_holds WHERE student_id = ? AND hold_type = 'course_selection' AND is_active = 1`
-  ).bind(userId).first<{ id: string }>();
+  const db = createCoreDb(env);
+
+  const hold = (await db.select({ id: studentHolds.id })
+    .from(studentHolds)
+    .where(and(
+      eq(studentHolds.student_id, userId),
+      eq(studentHolds.hold_type, 'course_selection'),
+      eq(studentHolds.is_active, 1)
+    ))
+    .execute())[0];
 
   if (!hold) return error('Course selection hold is already resolved.', 400);
 
-  const studentProg = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT sp.program_id
-     FROM student_programs sp
-     WHERE sp.uid = (SELECT uid FROM persons WHERE id = (SELECT person_id FROM users WHERE id = ?))
-     AND sp.current_flag = 1`
-  ).bind(userId).first<{ program_id: string }>();
+  const studentProg = (await db.select({ program_id: studentPrograms.program_id })
+    .from(studentPrograms)
+    .leftJoin(persons, eq(persons.uid, studentPrograms.uid))
+    .leftJoin(users, eq(users.person_id, persons.id))
+    .where(and(eq(users.id, userId), eq(studentPrograms.current_flag, 1)))
+    .execute())[0];
 
   if (!studentProg) return error('No active program found.', 404);
 
-
-  const currentTerm = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT id, name, academic_year FROM academic_terms
-     WHERE date(start_date) <= date('now') AND date(end_date) >= date('now')
-     AND status = 'active' LIMIT 1`
-  ).first<{ id: string; name: string; academic_year: string }>();
-
+  const currentTerm = await getActiveTerm(db);
   if (!currentTerm) return error('No active academic term found.', 404);
 
-  const curriculum = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT id FROM program_curriculum
-     WHERE program_id = ? AND term_id = ?`
-  ).bind(studentProg.program_id, currentTerm.id).first<{ id: string }>();
+  const curriculum = (await db.select({ id: programCurriculum.id })
+    .from(programCurriculum)
+    .where(and(
+      eq(programCurriculum.program_id, studentProg.program_id),
+      eq(programCurriculum.term_id, currentTerm.id)
+    ))
+    .execute())[0];
 
   if (!curriculum) return error('No curriculum defined for current term.', 404);
 
-  const { results: mandatoryCourses } = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT pc.course_id, c.code, c.name as title
-     FROM program_courses pc
-     JOIN courses c ON c.id = pc.course_id
-     WHERE pc.curriculum_id = ? AND pc.is_mandatory = 1`
-  ).bind(curriculum.id).all<{ course_id: string; code: string; title: string }>();
+  const mandatoryCourses = await db.select({
+    course_id: programCourses.course_id,
+    code: courses.code,
+    title: courses.title,
+  })
+    .from(programCourses)
+    .leftJoin(courses, eq(courses.id, programCourses.course_id))
+    .where(and(eq(programCourses.curriculum_id, curriculum.id), eq(programCourses.is_mandatory, 1)));
 
   if (mandatoryCourses.length === 0) return error('No mandatory courses defined for current term.', 404);
 
-  const { results: existingRegs } = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT course_id FROM student_course_registrations WHERE student_id = ? AND term_id = ?`
-  ).bind(userId, currentTerm.id).all<{ course_id: string }>();
+  const existingRegs = await db.select({ course_id: studentCourseRegistrations.course_id })
+    .from(studentCourseRegistrations)
+    .where(and(
+      eq(studentCourseRegistrations.student_id, userId),
+      eq(studentCourseRegistrations.term_id, currentTerm.id)
+    ));
+
   const already = new Set(existingRegs.map(r => r.course_id));
-  const toEnroll = mandatoryCourses.filter(c => !already.has(c.course_id));
+  const toEnroll = mandatoryCourses.filter(c => !already.has(c.course_id!));
 
   if (toEnroll.length) {
-    await env.PLATFORM_CONTEXT!.db.transaction(async (txDb) => {
+    await db.transaction(async (tx) => {
       for (const course of toEnroll) {
-        await txDb.prepare(
-          `INSERT INTO student_course_registrations (id, student_id, course_id, term_id, registration_type, status)
-           VALUES (?, ?, ?, ?, 'auto', 'registered')`
-        ).bind(crypto.randomUUID(), userId, course.course_id, currentTerm.id).run();
-        await txDb.prepare(
-          `INSERT OR IGNORE INTO enrollments (id, student_id, course_id, status)
-           VALUES (?, ?, ?, 'enrolled')`
-        ).bind(crypto.randomUUID(), userId, course.course_id).run();
+        await tx.insert(studentCourseRegistrations).values({
+          id: crypto.randomUUID(),
+          student_id: userId,
+          course_id: course.course_id!,
+          term_id: currentTerm.id,
+          registration_type: 'auto',
+          status: 'registered',
+        }).onConflictDoNothing();
+        await tx.insert(enrollments).values({
+          id: crypto.randomUUID(),
+          student_id: userId,
+          course_id: course.course_id!,
+          status: 'enrolled',
+        }).onConflictDoNothing();
       }
     });
   }
+
   const enrolled = toEnroll.length;
   const skipped = mandatoryCourses.length - toEnroll.length;
 
@@ -180,38 +232,55 @@ export async function handleAutoEnrollMandatory(_req: Request, env: Env, userId:
 
 // ─── Elective Courses ──────────────────────────────────────────────────────
 
+function getElectiveGroupDescription(group: string): string {
+  const descriptions: Record<string, string> = {
+    'Biblical Languages': 'Choose one language course to support your biblical studies.',
+    'Ministry Practice': 'Select one practical ministry course to develop hands-on skills.',
+    'General Electives': 'Choose from a range of courses to broaden your knowledge.',
+    'Theology Electives': 'Select advanced theological topics that align with your interests.',
+    'Counseling Electives': 'Choose specialized counseling courses for your concentration.',
+  };
+  return descriptions[group] || 'Select from the available elective courses below.';
+}
+
 export async function handleGetElectiveGroups(_req: Request, env: Env, userId: string): Promise<Response> {
-  const studentProg = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT sp.program_id
-     FROM student_programs sp
-     WHERE sp.uid = (SELECT uid FROM persons WHERE id = (SELECT person_id FROM users WHERE id = ?))
-     AND sp.current_flag = 1`
-  ).bind(userId).first<{ program_id: string }>();
+  const db = createCoreDb(env);
+
+  const studentProg = (await db.select({ program_id: studentPrograms.program_id })
+    .from(studentPrograms)
+    .leftJoin(persons, eq(persons.uid, studentPrograms.uid))
+    .leftJoin(users, eq(users.person_id, persons.id))
+    .where(and(eq(users.id, userId), eq(studentPrograms.current_flag, 1)))
+    .execute())[0];
 
   if (!studentProg) return error('No active program found.', 404);
 
-  const currentTerm = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT id, name FROM academic_terms
-     WHERE date(start_date) <= date('now') AND date(end_date) >= date('now')
-     AND status = 'active' LIMIT 1`
-  ).first<{ id: string; name: string }>();
-
+  const currentTerm = await getActiveTerm(db);
   if (!currentTerm) return error('No active academic term found.', 404);
 
-  const curriculum = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT id FROM program_curriculum WHERE program_id = ? AND term_id = ?`
-  ).bind(studentProg.program_id, currentTerm.id).first<{ id: string }>();
+  const curriculum = (await db.select({ id: programCurriculum.id })
+    .from(programCurriculum)
+    .where(and(
+      eq(programCurriculum.program_id, studentProg.program_id),
+      eq(programCurriculum.term_id, currentTerm.id)
+    ))
+    .execute())[0];
 
   if (!curriculum) return error('No curriculum defined for current term.', 404);
 
-  const { results: electives } = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT pc.id, pc.course_id, c.code, c.name as title, c.credits, c.description,
-            pc.elective_group
-     FROM program_courses pc
-     JOIN courses c ON c.id = pc.course_id
-     WHERE pc.curriculum_id = ? AND pc.is_mandatory = 0
-     ORDER BY pc.elective_group, c.code`
-  ).bind(curriculum.id).all<ProgramCourse & { description: string }>();
+  const electives = await db.select({
+    id: programCourses.id,
+    course_id: programCourses.course_id,
+    code: courses.code,
+    title: courses.title,
+    credits: courses.credits,
+    description: courses.description,
+    elective_group: programCourses.elective_group,
+  })
+    .from(programCourses)
+    .leftJoin(courses, eq(courses.id, programCourses.course_id))
+    .where(and(eq(programCourses.curriculum_id, curriculum.id), eq(programCourses.is_mandatory, 0)))
+    .orderBy(programCourses.elective_group, courses.code);
 
   const groups = new Map<string, typeof electives>();
   for (const e of electives) {
@@ -229,76 +298,79 @@ export async function handleGetElectiveGroups(_req: Request, env: Env, userId: s
   return ok({ term: currentTerm.name, elective_groups: groupsArray });
 }
 
-function getElectiveGroupDescription(group: string): string {
-  const descriptions: Record<string, string> = {
-    'Biblical Languages': 'Choose one language course to support your biblical studies.',
-    'Ministry Practice': 'Select one practical ministry course to develop hands-on skills.',
-    'General Electives': 'Choose from a range of courses to broaden your knowledge.',
-    'Theology Electives': 'Select advanced theological topics that align with your interests.',
-    'Counseling Electives': 'Choose specialized counseling courses for your concentration.',
-  };
-  return descriptions[group] || 'Select from the available elective courses below.';
-}
-
 export async function handleSubmitElectives(req: Request, env: Env, userId: string): Promise<Response> {
   const body = await typedJson<{ selected_course_ids: string[] }>(req);
   if (!body.selected_course_ids || !Array.isArray(body.selected_course_ids)) {
     return error('selected_course_ids is required.', 400);
   }
 
-  const hold = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT id FROM student_holds WHERE student_id = ? AND hold_type = 'course_selection' AND is_active = 1`
-  ).bind(userId).first<{ id: string }>();
+  const db = createCoreDb(env);
+
+  const hold = (await db.select({ id: studentHolds.id })
+    .from(studentHolds)
+    .where(and(
+      eq(studentHolds.student_id, userId),
+      eq(studentHolds.hold_type, 'course_selection'),
+      eq(studentHolds.is_active, 1)
+    ))
+    .execute())[0];
 
   if (!hold) return error('Course selection hold is already resolved.', 400);
 
-  const currentTerm = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT id, name FROM academic_terms
-     WHERE date(start_date) <= date('now') AND date(end_date) >= date('now')
-     AND status = 'active' LIMIT 1`
-  ).first<{ id: string; name: string }>();
-
+  const currentTerm = await getActiveTerm(db);
   if (!currentTerm) return error('No active academic term found.', 404);
 
   let enrolled = 0;
   const errors: string[] = [];
 
   for (const courseId of body.selected_course_ids) {
-    const existing = await env.PLATFORM_CONTEXT!.db.prepare(
-      `SELECT id FROM student_course_registrations WHERE student_id = ? AND course_id = ? AND term_id = ?`
-    ).bind(userId, courseId, currentTerm.id).first();
+    const existing = (await db.select({ id: studentCourseRegistrations.id })
+      .from(studentCourseRegistrations)
+      .where(and(
+        eq(studentCourseRegistrations.student_id, userId),
+        eq(studentCourseRegistrations.course_id, courseId),
+        eq(studentCourseRegistrations.term_id, currentTerm.id)
+      ))
+      .execute())[0];
 
     if (existing) {
       errors.push(`Already registered for course ${courseId}`);
       continue;
     }
 
-    const courseExists = await env.PLATFORM_CONTEXT!.db.prepare(
-      `SELECT id FROM courses WHERE id = ?`
-    ).bind(courseId).first();
+    const courseExists = (await db.select({ id: courses.id })
+      .from(courses)
+      .where(eq(courses.id, courseId))
+      .execute())[0];
 
     if (!courseExists) {
       errors.push(`Course ${courseId} not found.`);
       continue;
     }
 
-    await env.PLATFORM_CONTEXT!.db.prepare(
-      `INSERT INTO student_course_registrations (id, student_id, course_id, term_id, registration_type, status)
-       VALUES (?, ?, ?, ?, 'elective', 'registered')`
-    ).bind(crypto.randomUUID(), userId, courseId, currentTerm.id).run();
+    await db.insert(studentCourseRegistrations).values({
+      id: crypto.randomUUID(),
+      student_id: userId,
+      course_id: courseId,
+      term_id: currentTerm.id,
+      registration_type: 'elective',
+      status: 'registered',
+    });
 
-    await env.PLATFORM_CONTEXT!.db.prepare(
-      `INSERT OR IGNORE INTO enrollments (id, student_id, course_id, status)
-       VALUES (?, ?, ?, 'enrolled')`
-    ).bind(crypto.randomUUID(), userId, courseId).run();
+    await db.insert(enrollments).values({
+      id: crypto.randomUUID(),
+      student_id: userId,
+      course_id: courseId,
+      status: 'enrolled',
+    }).onConflictDoNothing();
 
     enrolled++;
   }
 
   if (enrolled > 0) {
-    await env.PLATFORM_CONTEXT!.db.prepare(
-      `UPDATE student_holds SET is_active = 0, resolved_at = datetime('now') WHERE id = ?`
-    ).bind(hold.id).run();
+    await db.update(studentHolds)
+      .set({ is_active: 0, resolved_at: new Date() })
+      .where(eq(studentHolds.id, hold.id));
   }
 
   return ok({
@@ -313,45 +385,70 @@ export async function handleSubmitElectives(req: Request, env: Env, userId: stri
 // ─── Onboarding Status ──────────────────────────────────────────────────────
 
 export async function handleGetRegistrationProgress(_req: Request, env: Env, userId: string): Promise<Response> {
-  const { results: holds } = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT id, hold_type, reason, is_active, created_at, resolved_at FROM student_holds WHERE student_id = ? ORDER BY created_at ASC`
-  ).bind(userId).all<Hold>();
+  const db = createCoreDb(env);
 
-  const idDoc = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT id FROM documents WHERE user_id = ? AND doc_type = 'id_document' LIMIT 1`
-  ).bind(userId).first();
+  const holds = await db.select({
+    id: studentHolds.id,
+    hold_type: studentHolds.hold_type,
+    reason: studentHolds.reason,
+    is_active: studentHolds.is_active,
+    created_at: studentHolds.created_at,
+    resolved_at: studentHolds.resolved_at,
+  })
+    .from(studentHolds)
+    .where(eq(studentHolds.student_id, userId))
+    .orderBy(studentHolds.created_at) as unknown as Hold[];
+
+  const idDoc = (await db.select({ id: documents.id })
+    .from(documents)
+    .where(and(eq(documents.user_id, userId), eq(documents.doc_type, 'id_document')))
+    .limit(1)
+    .execute())[0];
   const hasUploadedId = !!idDoc;
 
-  const currentTerm = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT id FROM academic_terms
-     WHERE date(start_date) <= date('now') AND date(end_date) >= date('now')
-     AND status = 'active' LIMIT 1`
-  ).first<{ id: string }>();
+  const currentTerm = await getActiveTerm(db);
 
   let hasEnrolledMandatory = false;
   let hasSelectedElectives = false;
   let hasActiveEnrollments = false;
 
   if (currentTerm) {
-    const mandatoryCount = await env.PLATFORM_CONTEXT!.db.prepare(
-      `SELECT COUNT(*) as cnt FROM student_course_registrations WHERE student_id = ? AND term_id = ? AND registration_type = 'auto'`
-    ).bind(userId, currentTerm.id).first<{ cnt: number }>();
-    hasEnrolledMandatory = (mandatoryCount?.cnt || 0) > 0;
+    const mandatoryCountRow = (await db.select({ cnt: count() })
+      .from(studentCourseRegistrations)
+      .where(and(
+        eq(studentCourseRegistrations.student_id, userId),
+        eq(studentCourseRegistrations.term_id, currentTerm.id),
+        eq(studentCourseRegistrations.registration_type, 'auto')
+      ))
+      .execute())[0];
+    hasEnrolledMandatory = (mandatoryCountRow?.cnt || 0) > 0;
 
-    const electiveCount = await env.PLATFORM_CONTEXT!.db.prepare(
-      `SELECT COUNT(*) as cnt FROM student_course_registrations WHERE student_id = ? AND term_id = ? AND registration_type = 'elective'`
-    ).bind(userId, currentTerm.id).first<{ cnt: number }>();
-    hasSelectedElectives = (electiveCount?.cnt || 0) > 0;
+    const electiveCountRow = (await db.select({ cnt: count() })
+      .from(studentCourseRegistrations)
+      .where(and(
+        eq(studentCourseRegistrations.student_id, userId),
+        eq(studentCourseRegistrations.term_id, currentTerm.id),
+        eq(studentCourseRegistrations.registration_type, 'elective')
+      ))
+      .execute())[0];
+    hasSelectedElectives = (electiveCountRow?.cnt || 0) > 0;
 
-    const totalEnrollments = await env.PLATFORM_CONTEXT!.db.prepare(
-      `SELECT COUNT(*) as cnt FROM student_course_registrations WHERE student_id = ? AND term_id = ? AND status = 'registered'`
-    ).bind(userId, currentTerm.id).first<{ cnt: number }>();
-    hasActiveEnrollments = (totalEnrollments?.cnt || 0) > 0;
+    const totalEnrollmentsRow = (await db.select({ cnt: count() })
+      .from(studentCourseRegistrations)
+      .where(and(
+        eq(studentCourseRegistrations.student_id, userId),
+        eq(studentCourseRegistrations.term_id, currentTerm.id),
+        eq(studentCourseRegistrations.status, 'registered')
+      ))
+      .execute())[0];
+    hasActiveEnrollments = (totalEnrollmentsRow?.cnt || 0) > 0;
   }
 
-  const invoice = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT id, status FROM invoices WHERE student_id = ? AND status = 'paid' LIMIT 1`
-  ).bind(userId).first();
+  const invoice = (await db.select({ id: invoices.id, status: invoices.status })
+    .from(invoices)
+    .where(and(eq(invoices.student_id, userId), eq(invoices.status, 'paid')))
+    .limit(1)
+    .execute())[0];
   const hasPaid = !!invoice;
 
   const tasks = [
@@ -410,15 +507,22 @@ export async function handleGetRegistrationProgress(_req: Request, env: Env, use
 // ─── Orientation ────────────────────────────────────────────────────────────
 
 export async function handleCompleteOrientation(_req: Request, env: Env, userId: string): Promise<Response> {
-  const hold = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT id FROM student_holds WHERE student_id = ? AND hold_type = 'orientation' AND is_active = 1`
-  ).bind(userId).first<{ id: string }>();
+  const db = createCoreDb(env);
+
+  const hold = (await db.select({ id: studentHolds.id })
+    .from(studentHolds)
+    .where(and(
+      eq(studentHolds.student_id, userId),
+      eq(studentHolds.hold_type, 'orientation'),
+      eq(studentHolds.is_active, 1)
+    ))
+    .execute())[0];
 
   if (!hold) return error('Orientation hold not found or already resolved.', 404);
 
-  await env.PLATFORM_CONTEXT!.db.prepare(
-    `UPDATE student_holds SET is_active = 0, resolved_at = datetime('now'), metadata = '{"completed_via":"online"}' WHERE id = ?`
-  ).bind(hold.id).run();
+  await db.update(studentHolds)
+    .set({ is_active: 0, resolved_at: new Date(), metadata: '{"completed_via":"online"}' })
+    .where(eq(studentHolds.id, hold.id));
 
   return ok({ message: 'Orientation completed successfully. Course registration is now available.' });
 }
@@ -426,45 +530,60 @@ export async function handleCompleteOrientation(_req: Request, env: Env, userId:
 // ─── Program Fee Invoice ────────────────────────────────────────────────────
 
 export async function handleGenerateProgramInvoice(_req: Request, env: Env, userId: string): Promise<Response> {
-  const paymentHold = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT id FROM student_holds WHERE student_id = ? AND hold_type = 'payment' AND is_active = 1`
-  ).bind(userId).first<{ id: string }>();
+  const db = createCoreDb(env);
+
+  const paymentHold = (await db.select({ id: studentHolds.id })
+    .from(studentHolds)
+    .where(and(
+      eq(studentHolds.student_id, userId),
+      eq(studentHolds.hold_type, 'payment'),
+      eq(studentHolds.is_active, 1)
+    ))
+    .execute())[0];
 
   if (!paymentHold) return error('Payment hold already resolved.', 400);
 
-  const courseSelectionHold = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT id FROM student_holds WHERE student_id = ? AND hold_type = 'course_selection' AND is_active = 1`
-  ).bind(userId).first();
+  const courseSelectionHold = (await db.select({ id: studentHolds.id })
+    .from(studentHolds)
+    .where(and(
+      eq(studentHolds.student_id, userId),
+      eq(studentHolds.hold_type, 'course_selection'),
+      eq(studentHolds.is_active, 1)
+    ))
+    .execute())[0];
 
   if (courseSelectionHold) return error('Complete course registration before generating invoice.', 400);
 
-  const studentProg = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT sp.program_id, p.name as program_name
-     FROM student_programs sp
-     JOIN programs p ON p.id = sp.program_id
-     WHERE sp.uid = (SELECT uid FROM persons WHERE id = (SELECT person_id FROM users WHERE id = ?))
-     AND sp.current_flag = 1`
-  ).bind(userId).first<{ program_id: string; program_name: string }>();
+  const studentProg = (await db.select({
+    program_id: studentPrograms.program_id,
+    program_name: programs.name,
+  })
+    .from(studentPrograms)
+    .leftJoin(programs, eq(programs.id, studentPrograms.program_id))
+    .leftJoin(persons, eq(persons.uid, studentPrograms.uid))
+    .leftJoin(users, eq(users.person_id, persons.id))
+    .where(and(eq(users.id, userId), eq(studentPrograms.current_flag, 1)))
+    .execute())[0];
 
   if (!studentProg) return error('No active program found.', 404);
 
-  const currentTerm = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT id, name FROM academic_terms
-     WHERE date(start_date) <= date('now') AND date(end_date) >= date('now')
-     AND status = 'active' LIMIT 1`
-  ).first<{ id: string; name: string }>();
-
+  const currentTerm = await getActiveTerm(db);
   if (!currentTerm) return error('No active academic term found.', 404);
 
-  const fee = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT id, amount, description FROM program_fees WHERE program_id = ? AND term_id = ?`
-  ).bind(studentProg.program_id, currentTerm.id).first<{ id: string; amount: number; description: string }>();
+  const fee = (await db.select({ id: programFees.id, amount: programFees.amount, description: programFees.description })
+    .from(programFees)
+    .where(and(
+      eq(programFees.program_id, studentProg.program_id),
+      eq(programFees.term_id, currentTerm.id)
+    ))
+    .execute())[0];
 
   if (!fee) return error('No fee structure defined for this program and term. Contact admin.', 404);
 
-  const existingInvoice = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT id, status FROM invoices WHERE student_id = ? AND status = 'unpaid'`
-  ).bind(userId).first<{ id: string; status: string }>();
+  const existingInvoice = (await db.select({ id: invoices.id, status: invoices.status })
+    .from(invoices)
+    .where(and(eq(invoices.student_id, userId), eq(invoices.status, 'unpaid')))
+    .execute())[0];
 
   if (existingInvoice) {
     return ok({
@@ -480,10 +599,13 @@ export async function handleGenerateProgramInvoice(_req: Request, env: Env, user
   const dueDate = new Date();
   dueDate.setDate(dueDate.getDate() + 30);
 
-  await env.PLATFORM_CONTEXT!.db.prepare(
-    `INSERT INTO invoices (id, student_id, amount, status, due_date, created_at)
-     VALUES (?, ?, ?, 'unpaid', ?, datetime('now'))`
-  ).bind(invoiceId, userId, fee.amount, dueDate.toISOString().split('T')[0]).run();
+  await db.insert(invoices).values({
+    id: invoiceId,
+    student_id: userId,
+    amount: Math.round(fee.amount),
+    status: 'unpaid',
+    due_date: dueDate,
+  });
 
   return ok({
     invoice_id: invoiceId,
@@ -511,9 +633,12 @@ export async function handleAdminSyncCurriculum(req: Request, env: Env): Promise
     return error('program_id and curriculum array are required.', 400);
   }
 
-  const program = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT id FROM programs WHERE id = ?`
-  ).bind(program_id).first();
+  const db = createCoreDb(env);
+
+  const program = (await db.select({ id: programs.id })
+    .from(programs)
+    .where(eq(programs.id, program_id))
+    .execute())[0];
 
   if (!program) return error('Program not found.', 404);
 
@@ -521,30 +646,37 @@ export async function handleAdminSyncCurriculum(req: Request, env: Env): Promise
   let coursesAdded = 0;
 
   for (const term of curriculum) {
-    const termExists = await env.PLATFORM_CONTEXT!.db.prepare(
-      `SELECT id FROM academic_terms WHERE id = ?`
-    ).bind(term.term_id).first();
+    const termExists = (await db.select({ id: academicTerms.id })
+      .from(academicTerms)
+      .where(eq(academicTerms.id, term.term_id))
+      .execute())[0];
 
     if (!termExists) return error(`Academic term ${term.term_id} not found.`, 404);
 
     const curriculumId = crypto.randomUUID();
-    await env.PLATFORM_CONTEXT!.db.prepare(
-      `INSERT OR IGNORE INTO program_curriculum (id, program_id, term_id, term_number)
-       VALUES (?, ?, ?, ?)`
-    ).bind(curriculumId, program_id, term.term_id, term.term_number).run();
+    await db.insert(programCurriculum).values({
+      id: curriculumId,
+      program_id: program_id,
+      term_id: term.term_id,
+      term_number: term.term_number,
+    }).onConflictDoNothing();
     termsAdded++;
 
     for (const course of term.courses) {
-      const courseExists = await env.PLATFORM_CONTEXT!.db.prepare(
-        `SELECT id FROM courses WHERE id = ?`
-      ).bind(course.course_id).first();
+      const courseExists = (await db.select({ id: courses.id })
+        .from(courses)
+        .where(eq(courses.id, course.course_id))
+        .execute())[0];
 
       if (!courseExists) return error(`Course ${course.course_id} not found.`, 404);
 
-      await env.PLATFORM_CONTEXT!.db.prepare(
-        `INSERT OR IGNORE INTO program_courses (id, curriculum_id, course_id, is_mandatory, elective_group)
-         VALUES (?, ?, ?, ?, ?)`
-      ).bind(crypto.randomUUID(), curriculumId, course.course_id, course.is_mandatory ? 1 : 0, course.elective_group || null).run();
+      await db.insert(programCourses).values({
+        id: crypto.randomUUID(),
+        curriculum_id: curriculumId,
+        course_id: course.course_id,
+        is_mandatory: course.is_mandatory ? 1 : 0,
+        elective_group: course.elective_group || null,
+      }).onConflictDoNothing();
       coursesAdded++;
     }
   }
@@ -558,27 +690,39 @@ export async function handleAdminSetProgramFee(req: Request, env: Env): Promise<
 
   if (!program_id || !term_id || amount == null) return error('program_id, term_id, and amount are required.', 400);
 
+  const db = createCoreDb(env);
   const feeId = crypto.randomUUID();
-  await env.PLATFORM_CONTEXT!.db.prepare(
-    `INSERT INTO program_fees (id, program_id, term_id, amount, description)
-     VALUES (?, ?, ?, ?, ?)
-     ON CONFLICT(program_id, term_id) DO UPDATE SET amount = excluded.amount, description = excluded.description`
-  ).bind(feeId, program_id, term_id, amount, description || null).run();
+
+  await db.insert(programFees).values({
+    id: feeId,
+    program_id,
+    term_id,
+    amount,
+    description: description || null,
+  }).onConflictDoUpdate({
+    target: [programFees.program_id, programFees.term_id],
+    set: { amount, description: description || null, updated_at: new Date() },
+  });
 
   return ok({ message: 'Program fee set successfully', fee_id: feeId, amount });
 }
 
 export async function handleAdminResolveHold(req: Request, env: Env, userId: string): Promise<Response> {
   const body = await typedJson<{ hold_id?: string; hold_type?: string }>(req);
+  const db = createCoreDb(env);
 
   if (body.hold_id) {
-    await env.PLATFORM_CONTEXT!.db.prepare(
-      `UPDATE student_holds SET is_active = 0, resolved_at = datetime('now') WHERE id = ?`
-    ).bind(body.hold_id).run();
+    await db.update(studentHolds)
+      .set({ is_active: 0, resolved_at: new Date() })
+      .where(eq(studentHolds.id, body.hold_id));
   } else if (body.hold_type) {
-    await env.PLATFORM_CONTEXT!.db.prepare(
-      `UPDATE student_holds SET is_active = 0, resolved_at = datetime('now') WHERE student_id = ? AND hold_type = ? AND is_active = 1`
-    ).bind(userId, body.hold_type).run();
+    await db.update(studentHolds)
+      .set({ is_active: 0, resolved_at: new Date() })
+      .where(and(
+        eq(studentHolds.student_id, userId),
+        eq(studentHolds.hold_type, body.hold_type),
+        eq(studentHolds.is_active, 1)
+      ));
   } else {
     return error('Provide hold_id or hold_type.', 400);
   }

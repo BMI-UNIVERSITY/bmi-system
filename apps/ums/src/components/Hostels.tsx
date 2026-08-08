@@ -38,8 +38,8 @@ const Hostels: React.FC = () => {
   } = useApiDataStore();
 
   const [activeTab, setActiveTab] = useState<"halls" | "registry" | "transport">("halls");
-  const [routes, setRoutes] = useState([{id: 1, routeName: "Main Campus - City Center", vehicleNumber: "KAB 123C"}]);
-  const [passes, setPasses] = useState([{id: 1, routeId: 1, routeName: "Main Campus - City Center", validUntil: "2024-12-31"}]);
+  const [routes] = useState([{id: 1, routeName: "Main Campus - City Center", vehicleNumber: "KAB 123C"}]);
+  const [passes] = useState([{id: 1, routeId: 1, routeName: "Main Campus - City Center", validUntil: "2024-12-31"}]);
   const [searchTerm, setSearchTerm] = useState("");
   const [isAllocationModalOpen, setIsAllocationModalOpen] = useState(false);
   const [selectedHall, setSelectedHall] = useState<Hostel | null>(null);

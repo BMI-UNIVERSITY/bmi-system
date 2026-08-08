@@ -83,7 +83,7 @@ const AdminDocuments: React.FC = () => {
   };
 
   const handleView = useCallback(async (doc: Document) => {
-    setPreviewError(null);
+    
     setIsPreviewLoading(true);
     setViewingDoc(doc);
     setViewingDocUrl(null);
@@ -146,7 +146,7 @@ const AdminDocuments: React.FC = () => {
     }
     setViewingDoc(null);
     setViewingDocUrl(null);
-    setPreviewError(null);
+    
     setIsPreviewLoading(false);
   }, [viewingDocUrl]);
 

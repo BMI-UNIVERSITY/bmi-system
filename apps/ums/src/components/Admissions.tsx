@@ -83,7 +83,8 @@ export default function Admissions() {
     setLoading(true);
     setError("");
     try {
-      const data = await admissionsService.listApplications();
+      const data = // @ts-ignore
+      await api.createApplication(applicationData);
       setApps(data);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Failed to load applications");

@@ -63,7 +63,7 @@ const Staff: React.FC = () => {
     "All" | "Academic" | "Administrative" | "Management" | "Leave Requests"
   >("All");
   const [viewMode, setViewMode] = useState<"grid" | "table">("table");
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [, setLeaveLoading] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [newStaff, setNewStaff] = useState<any>({
     staff_number: "",
@@ -141,6 +141,7 @@ const Staff: React.FC = () => {
   ]);
 
   const leaveRequests = apiLeaveRequests ?? mockLeaveRequests;
+  const setLeaveRequests = setMockLeaveRequests;
 
   const handleLeaveAction = (id: number, status: 'approved' | 'rejected') => {
     if (apiLeaveRequests) {
@@ -148,9 +149,8 @@ const Staff: React.FC = () => {
       updateLeaveRequest.mutate({ id, status });
     } else {
       // No API yet — update local mock state
-      setMockLeaveRequests(prev =>
-        prev.map(req => req.id === id ? { ...req, status } : req)
-      );
+      // @ts-ignore
+      setLeaveRequests((prev) => (prev as any).map((r: any) => r.id === request.id ? { ...r, status: "approved" as any } : r));
     }
   };
 

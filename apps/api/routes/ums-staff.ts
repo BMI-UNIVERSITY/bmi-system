@@ -4,6 +4,7 @@
  */
 import { ok, error, json } from '../lib/types';
 import type { Env } from '../lib/types';
+import { getUmsUrl } from '../lib/config';
 
 export async function handleListStaff(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
@@ -217,7 +218,7 @@ export async function handleProvisionControlledAccount(request: Request, env: En
   // Send welcome / credential e-mail — best-effort, non-blocking
   if (env.RESEND_API_KEY) {
     const { sendEmail, buildEmailLayout } = await import('../lib/email');
-    const portalUrl = env.UMS_URL || 'https://ums.bmiuniversity107.workers.dev';
+    const portalUrl = getUmsUrl(env);
     const emailHtml = buildEmailLayout('BMI University — Account Created', `
       <h2 style="color:#0f172a;">Welcome, ${first_name}!</h2>
       <p style="color:#475569;line-height:1.6;">

@@ -3,6 +3,9 @@ import { ExecutionContext } from '@cloudflare/workers-types';
 import { hashPassword } from '@bmi/api-middleware';
 import { validatePasswordStrength, isCommonPassword } from '../lib/jwt';
 import { sendEmail, buildEmailLayout } from '../lib/email';
+import { createCoreDb } from '../lib/db';
+import { users } from '../schema/core';
+import { eq, and, gt } from 'drizzle-orm';
 
 interface ClaimBody {
   admissionCode?: string;
@@ -22,9 +25,18 @@ export async function handleClaimAccount(req: Request, env: Env, ctx: ExecutionC
   if (isCommonPassword(password)) return error('This password is too common. Please choose a stronger password.');
 
   try {
-    const user = await env.PLATFORM_CONTEXT!.db.prepare(
-      `SELECT id FROM users WHERE admission_code = ? AND account_claimed = 0 AND admission_code_expires_at > datetime('now')`
-    ).bind(admissionCode).first<{ id: string }>();
+    const db = createCoreDb(env);
+    const user = (await db.select({
+      id: users.id,
+      first_name: users.first_name,
+      email: users.email,
+    }).from(users).where(
+      and(
+        eq(users.admission_code, admissionCode),
+        eq(users.account_claimed, 0),
+        gt(users.admission_code_expires_at, new Date())
+      )
+    ).execute())[0];
 
     if (!user) {
       return error('Invalid or expired admission code, or account already claimed.', 400);
@@ -32,22 +44,22 @@ export async function handleClaimAccount(req: Request, env: Env, ctx: ExecutionC
 
     const hashedPassword = await hashPassword(password, env.PASSWORD_PEPPER, env.PBKDF2_ITERATIONS);
 
-    const userInfo = await env.PLATFORM_CONTEXT!.db.prepare(
-      `SELECT first_name, email FROM users WHERE id = ?`
-    ).bind(user.id).first<{ first_name: string; email: string }>();
+    await db.update(users)
+      .set({
+        password_hash: hashedPassword,
+        account_claimed: 1,
+        admission_code: null,
+        admission_code_expires_at: null,
+        updated_at: new Date(),
+      })
+      .where(eq(users.id, user.id));
 
-    await env.PLATFORM_CONTEXT!.db.prepare(
-      `UPDATE users SET password_hash = ?, account_claimed = 1, admission_code = NULL, admission_code_expires_at = NULL WHERE id = ?`
-    ).bind(hashedPassword, user.id).run();
-
-    // Onboarding holds are now strictly assigned during unified provisioning (lib/unified-provisioner.ts).
-
-    if (userInfo && env.RESEND_API_KEY) {
+    if (env.RESEND_API_KEY) {
       ctx.waitUntil(sendEmail(env, {
-        to: userInfo.email,
+        to: user.email,
         subject: 'Welcome to BMI University — Complete Your Onboarding',
         html: buildEmailLayout('Account Activated', `
-          <h2 style="color: #0f172a;">Welcome, ${userInfo.first_name}!</h2>
+          <h2 style="color: #0f172a;">Welcome, ${user.first_name}!</h2>
           <p style="color: #475569; line-height: 1.6;">
             Your account has been successfully claimed. You now have access to the BMI University Student Portal.
           </p>

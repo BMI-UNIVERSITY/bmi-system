@@ -159,6 +159,7 @@ export class GradeDeadlineService {
     daysUntil: number
   ): Promise<void> {
     try {
+      console.log(`Sending reminder for ${(course as any).code || course.courseId}, days until deadline: ${daysUntil}`);
       await fetch('/api/notifications/send', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

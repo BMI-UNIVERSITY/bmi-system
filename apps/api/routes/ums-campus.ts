@@ -124,7 +124,7 @@ export async function handleIssueTransportPass(req: Request, env: Env): Promise<
   return ok({ id, message: 'Transport pass issued' }, 201);
 }
 
-export async function handleRevokeTransportPass(req: Request, env: Env, id: string): Promise<Response> {
+export async function handleRevokeTransportPass(_req: Request, env: Env, id: string): Promise<Response> {
   const pass = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT id FROM transport_passes WHERE id = ?`
   ).bind(id).first();

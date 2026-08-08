@@ -5,6 +5,7 @@
 import { ok, error, json } from '../lib/types';
 import type { Env } from '../lib/types';
 import { generateRegNo } from '../lib/reg_number';
+import { cacheAside, invalidateCachePrefix } from '../lib/cache';
 
 function paginate(url: URL) {
   const page = Math.max(1, parseInt(url.searchParams.get('page') || '1'));
@@ -18,31 +19,44 @@ export async function handleListUmsCourses(request: Request, env: Env): Promise<
   const url = new URL(request.url);
   const { page, perPage, offset } = paginate(url);
 
-  const search = url.searchParams.get('search');
-  const departmentId = url.searchParams.get('department_id');
-  const filters: string[] = [];
-  const bindings: unknown[] = [];
+  const search = url.searchParams.get('search') || '';
+  const departmentId = url.searchParams.get('department_id') || '';
+  const cacheKey = `catalog:courses:p${page}:pp${perPage}:s_${search}:d_${departmentId}`;
 
-  if (search) {
-    filters.push(`(c.code LIKE ? OR c.title LIKE ?)`);
-    const q = `%${search}%`;
-    bindings.push(q, q);
-  }
-  if (departmentId) { filters.push(`c.department_id = ?`); bindings.push(departmentId); }
+  const { data, hit } = await cacheAside(
+    env.PLATFORM_CONTEXT?.kv,
+    cacheKey,
+    async () => {
+      const filters: string[] = [];
+      const bindings: unknown[] = [];
 
-  const where = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
+      if (search) {
+        filters.push(`(c.code LIKE ? OR c.title LIKE ?)`);
+        const q = `%${search}%`;
+        bindings.push(q, q);
+      }
+      if (departmentId) { filters.push(`c.department_id = ?`); bindings.push(departmentId); }
 
-  const countRow = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT COUNT(*) as total FROM courses c ${where}`)
-    .bind(...bindings).first<{ total: number }>();
+      const where = filters.length ? `WHERE ${filters.join(' AND ')}` : '';
 
-  const rows = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT c.*, d.name as department_name FROM courses c
-     LEFT JOIN departments d ON c.department_id = d.id
-     ${where}
-     ORDER BY c.code ASC LIMIT ? OFFSET ?`
-  ).bind(...bindings, perPage, offset).all();
+      const countRow = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT COUNT(*) as total FROM courses c ${where}`)
+        .bind(...bindings).first<{ total: number }>();
 
-  return ok({ items: rows.results, page, perPage, total: countRow?.total ?? 0 });
+      const rows = await env.PLATFORM_CONTEXT!.db.prepare(
+        `SELECT c.*, d.name as department_name FROM courses c
+         LEFT JOIN departments d ON c.department_id = d.id
+         ${where}
+         ORDER BY c.code ASC LIMIT ? OFFSET ?`
+      ).bind(...bindings, perPage, offset).all();
+
+      return { items: rows.results, page, perPage, total: countRow?.total ?? 0 };
+    },
+    { ttlSeconds: 3600 }
+  );
+
+  const response = ok(data);
+  response.headers.set('X-Cache', hit ? 'HIT' : 'MISS');
+  return response;
 }
 
 // ─── create course ────────────────────────────────────────────────────────────
@@ -60,6 +74,10 @@ export async function handleCreateCourse(request: Request, env: Env): Promise<Re
     `INSERT INTO courses (id, code, title, description, credits, term, capacity, department_id)
      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
   ).bind(id, code, title, description || null, parseInt(credits), term, parseInt(capacity), department_id || null).run();
+
+  // Writes go straight to Neon; invalidate the cached course catalog so the
+  // next read re-populates it (cache-aside invalidation).
+  await invalidateCachePrefix(env.PLATFORM_CONTEXT?.kv, 'catalog:courses:');
 
   const created = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT * FROM courses WHERE id = ?`).bind(id).first();
   return json({ success: true, data: created }, 201);
@@ -82,6 +100,8 @@ export async function handleUpdateCourse(request: Request, env: Env, courseId: s
     `UPDATE courses SET ${updates.join(', ')} WHERE id = ?`
   ).bind(...vals, courseId).run();
 
+  await invalidateCachePrefix(env.PLATFORM_CONTEXT?.kv, 'catalog:courses:');
+
   const updated = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT * FROM courses WHERE id = ?`).bind(courseId).first();
   if (!updated) return error('Course not found', 404);
   return ok(updated);
@@ -92,6 +112,7 @@ export async function handleUpdateCourse(request: Request, env: Env, courseId: s
 export async function handleDeleteCourse(_request: Request, env: Env, courseId: string): Promise<Response> {
   const result = await env.PLATFORM_CONTEXT!.db.prepare(`DELETE FROM courses WHERE id = ?`).bind(courseId).run();
   if (!result.meta.changes) return error('Course not found', 404);
+  await invalidateCachePrefix(env.PLATFORM_CONTEXT?.kv, 'catalog:courses:');
   return ok({ deleted: true });
 }
 
@@ -100,48 +121,98 @@ export async function handleDeleteCourse(_request: Request, env: Env, courseId: 
 export async function handleListPrograms(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const { page, perPage, offset } = paginate(url);
+  const cacheKey = `catalog:programs:p${page}:pp${perPage}`;
 
-  const rows = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT p.*, d.name as department_name, f.name as faculty_name
-     FROM programs p
-     LEFT JOIN departments d ON p.department_id = d.id
-     LEFT JOIN faculties f ON d.faculty_id = f.id
-     ORDER BY p.name ASC LIMIT ? OFFSET ?`
-  ).bind(perPage, offset).all();
+  const { data, hit } = await cacheAside(
+    env.PLATFORM_CONTEXT?.kv,
+    cacheKey,
+    async () => {
+      const rows = await env.PLATFORM_CONTEXT!.db.prepare(
+        `SELECT p.*, d.name as department_name, f.name as faculty_name
+         FROM programs p
+         LEFT JOIN departments d ON p.department_id = d.id
+         LEFT JOIN faculties f ON d.faculty_id = f.id
+         ORDER BY p.name ASC LIMIT ? OFFSET ?`
+      ).bind(perPage, offset).all();
 
-  const countRow = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT COUNT(*) as total FROM programs`).first<{ total: number }>();
-  return ok({ items: rows.results, page, perPage, total: countRow?.total ?? 0 });
+      const countRow = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT COUNT(*) as total FROM programs`).first<{ total: number }>();
+      return { items: rows.results, page, perPage, total: countRow?.total ?? 0 };
+    },
+    { ttlSeconds: 3600 }
+  );
+
+  const response = ok(data);
+  response.headers.set('X-Cache', hit ? 'HIT' : 'MISS');
+  return response;
 }
 
 // ─── list faculties ───────────────────────────────────────────────────────────
 
 export async function handleListFaculties(_request: Request, env: Env): Promise<Response> {
-  const rows = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT * FROM faculties ORDER BY name ASC`).all();
-  return ok(rows.results);
+  const cacheKey = `catalog:faculties:all`;
+
+  const { data, hit } = await cacheAside(
+    env.PLATFORM_CONTEXT?.kv,
+    cacheKey,
+    async () => {
+      const rows = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT * FROM faculties ORDER BY name ASC`).all();
+      return rows.results;
+    },
+    { ttlSeconds: 86400 }
+  );
+
+  const response = ok(data);
+  response.headers.set('X-Cache', hit ? 'HIT' : 'MISS');
+  return response;
 }
 
 // ─── list departments ─────────────────────────────────────────────────────────
 
 export async function handleListDepartments(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
-  const facultyId = url.searchParams.get('faculty_id');
+  const facultyId = url.searchParams.get('faculty_id') || 'all';
+  const cacheKey = `catalog:departments:f_${facultyId}`;
 
-  const query = facultyId
-    ? `SELECT * FROM departments WHERE faculty_id = ? ORDER BY name ASC`
-    : `SELECT * FROM departments ORDER BY name ASC`;
+  const { data, hit } = await cacheAside(
+    env.PLATFORM_CONTEXT?.kv,
+    cacheKey,
+    async () => {
+      const query = facultyId !== 'all'
+        ? `SELECT * FROM departments WHERE faculty_id = ? ORDER BY name ASC`
+        : `SELECT * FROM departments ORDER BY name ASC`;
 
-  const rows = facultyId
-    ? await env.PLATFORM_CONTEXT!.db.prepare(query).bind(facultyId).all()
-    : await env.PLATFORM_CONTEXT!.db.prepare(query).all();
+      const rows = facultyId !== 'all'
+        ? await env.PLATFORM_CONTEXT!.db.prepare(query).bind(facultyId).all()
+        : await env.PLATFORM_CONTEXT!.db.prepare(query).all();
 
-  return ok(rows.results);
+      return rows.results;
+    },
+    { ttlSeconds: 86400 }
+  );
+
+  const response = ok(data);
+  response.headers.set('X-Cache', hit ? 'HIT' : 'MISS');
+  return response;
 }
 
 // ─── list academic terms ──────────────────────────────────────────────────────
 
 export async function handleListTerms(_request: Request, env: Env): Promise<Response> {
-  const rows = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT * FROM academic_terms ORDER BY start_date DESC`).all();
-  return ok(rows.results);
+  const cacheKey = `catalog:terms:all`;
+
+  const { data, hit } = await cacheAside(
+    env.PLATFORM_CONTEXT?.kv,
+    cacheKey,
+    async () => {
+      const rows = await env.PLATFORM_CONTEXT!.db.prepare(`SELECT * FROM academic_terms ORDER BY start_date DESC`).all();
+      return rows.results;
+    },
+    { ttlSeconds: 86400 }
+  );
+
+  const response = ok(data);
+  response.headers.set('X-Cache', hit ? 'HIT' : 'MISS');
+  return response;
 }
 
 // ─── enrollments ──────────────────────────────────────────────────────────────

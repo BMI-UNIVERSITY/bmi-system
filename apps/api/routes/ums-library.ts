@@ -42,7 +42,7 @@ export async function handleListBorrowings(req: Request, env: Env): Promise<Resp
   return ok({ data: rows.results, meta: { total: countRow?.total ?? 0, page, perPage } });
 }
 
-export async function handleCreateBorrowing(req: Request, env: Env, userId: string): Promise<Response> {
+export async function handleCreateBorrowing(req: Request, env: Env, _userId: string): Promise<Response> {
   const body = await req.json() as any;
   const { book_id, student_id, due_date } = body;
 
@@ -77,7 +77,7 @@ export async function handleCreateBorrowing(req: Request, env: Env, userId: stri
   return ok({ id, message: 'Book borrowed successfully' }, 201);
 }
 
-export async function handleReturnBook(req: Request, env: Env, id: string): Promise<Response> {
+export async function handleReturnBook(_req: Request, env: Env, id: string): Promise<Response> {
   const borrowing = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT id, book_id, status FROM library_borrowings WHERE id = ?`
   ).bind(id).first<{ id: string; book_id: string; status: string }>();
@@ -140,7 +140,7 @@ export async function handleListFines(req: Request, env: Env): Promise<Response>
   return ok({ data: rows.results, meta: { total: countRow?.total ?? 0, page, perPage } });
 }
 
-export async function handleMarkFinePaid(req: Request, env: Env, id: string): Promise<Response> {
+export async function handleMarkFinePaid(_req: Request, env: Env, id: string): Promise<Response> {
   const fine = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT id, paid FROM library_fines WHERE id = ?`
   ).bind(id).first<{ id: string; paid: number }>();

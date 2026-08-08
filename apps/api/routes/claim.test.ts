@@ -1,6 +1,5 @@
-import { makeEnv, makeChainDB } from './test-helpers';
+import { makeEnv, makeDrizzleMock } from './test-helpers';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { handleClaimAccount } from './claim';
 
 vi.mock('@bmi/api-middleware', () => ({
   hashPassword: vi.fn().mockResolvedValue('hashed_password'),
@@ -16,6 +15,13 @@ vi.mock('../lib/email', () => ({
   buildEmailLayout: vi.fn().mockReturnValue('<html></html>'),
 }));
 
+vi.mock('../lib/db', () => ({
+  createCoreDb: vi.fn(),
+}));
+
+import { handleClaimAccount } from './claim';
+import { createCoreDb } from '../lib/db';
+
 describe('Claim routes — handleClaimAccount', () => {
   const mockCtx = { waitUntil: vi.fn(), passThroughOnException: vi.fn() };
 
@@ -24,11 +30,11 @@ describe('Claim routes — handleClaimAccount', () => {
   });
 
   it('claims account successfully with valid admission code', async () => {
-    const db = makeChainDB([
-      { id: 'user-1' }, // first() lookup by admission_code
-      { email: 'applicant@test.com', first_name: 'Jane' }, // first() get user info
+    const drizzle = makeDrizzleMock([
+      { id: 'user-1', email: 'applicant@test.com', first_name: 'Jane' },
     ]);
-    const env = makeEnv(db, { RESEND_API_KEY: 'test-key' });
+    vi.mocked(createCoreDb).mockReturnValue(drizzle);
+    const env = makeEnv(null, { RESEND_API_KEY: 'test-key' });
 
     const req = new Request('http://localhost/api/auth/claim', {
       method: 'POST',
@@ -36,7 +42,7 @@ describe('Claim routes — handleClaimAccount', () => {
       body: JSON.stringify({ admissionCode: 'ADM-001', password: 'Str0ng!Pass' }),
     });
     const res = await handleClaimAccount(req, env, mockCtx as any);
-    const body = await res.json();
+    const body = await res.json() as any;
 
     expect(res.status).toBe(200);
     expect(body.success).toBe(true);
@@ -52,15 +58,16 @@ describe('Claim routes — handleClaimAccount', () => {
       body: JSON.stringify({ admissionCode: 'ADM-001' }),
     });
     const res = await handleClaimAccount(req, env, mockCtx as any);
-    const body = await res.json();
+    const body = await res.json() as any;
 
     expect(res.status).toBe(400);
     expect(body.success).toBe(false);
   });
 
   it('returns 400 when admission code is not found', async () => {
-    const db = makeChainDB([null]);
-    const env = makeEnv(db);
+    const drizzle = makeDrizzleMock([null]);
+    vi.mocked(createCoreDb).mockReturnValue(drizzle);
+    const env = makeEnv();
 
     const req = new Request('http://localhost/api/auth/claim', {
       method: 'POST',
@@ -68,7 +75,7 @@ describe('Claim routes — handleClaimAccount', () => {
       body: JSON.stringify({ admissionCode: 'INVALID-CODE', password: 'Str0ng!Pass' }),
     });
     const res = await handleClaimAccount(req, env, mockCtx as any);
-    const body = await res.json();
+    const body = await res.json() as any;
 
     expect(res.status).toBe(400);
     expect(body.success).toBe(false);
@@ -83,18 +90,18 @@ describe('Claim routes — handleClaimAccount', () => {
       body: JSON.stringify({ admissionCode: 'ADM-001', password: 'weak' }),
     });
     const res = await handleClaimAccount(req, env, mockCtx as any);
-    const body = await res.json();
+    const body = await res.json() as any;
 
     expect(res.status).toBe(400);
     expect(body.success).toBe(false);
   });
 
   it('sends welcome email on successful claim', async () => {
-    const db = makeChainDB([
-      { id: 'user-1' },
-      { email: 'applicant@test.com', first_name: 'Jane' },
+    const drizzle = makeDrizzleMock([
+      { id: 'user-1', email: 'applicant@test.com', first_name: 'Jane' },
     ]);
-    const env = makeEnv(db, { RESEND_API_KEY: 'test-key' });
+    vi.mocked(createCoreDb).mockReturnValue(drizzle);
+    const env = makeEnv(null, { RESEND_API_KEY: 'test-key' });
 
     const req = new Request('http://localhost/api/auth/claim', {
       method: 'POST',
@@ -109,23 +116,14 @@ describe('Claim routes — handleClaimAccount', () => {
   });
 
   it('returns 500 when db query fails', async () => {
-    const chain = {
-      prepare: vi.fn().mockReturnValue({
-        bind: vi.fn().mockReturnValue({
-          first: vi.fn().mockRejectedValue(new Error('DB unavailable')),
-          all: vi.fn().mockResolvedValue({ results: [] }),
-          run: vi.fn().mockResolvedValue({ success: true }),
-        }),
-        first: vi.fn().mockResolvedValue(null),
-        all: vi.fn().mockResolvedValue({ results: [] }),
-        run: vi.fn().mockResolvedValue({ success: true }),
-      }),
-      query: vi.fn().mockResolvedValue([]),
-      queryOne: vi.fn().mockResolvedValue(null),
-      transaction: vi.fn().mockImplementation(async (cb: any) => cb(chain)),
-      getPlatform: vi.fn().mockReturnValue('test-mock'),
+    const drizzle: any = {
+      select: vi.fn().mockReturnThis(),
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      get: vi.fn().mockRejectedValue(new Error('DB unavailable')),
     };
-    const env = makeEnv(chain);
+    vi.mocked(createCoreDb).mockReturnValue(drizzle);
+    const env = makeEnv();
 
     const req = new Request('http://localhost/api/auth/claim', {
       method: 'POST',

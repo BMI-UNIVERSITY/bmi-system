@@ -9,7 +9,13 @@ import type { PlatformContext } from '@bmi/bootstrap';
 
 export interface Env {
   PLATFORM_CONTEXT?: PlatformContext;
-  DB: IDatabase;
+  /** D1 SQLite — cache/fallback layer only. Neon is the primary DB in production.
+   *  Bootstrap selects PostgresDatabaseAdapter when DATABASE_URL_CORE is set,
+   *  falling back to D1DatabaseAdapter(env.DB) only when it is not. */
+  DB?: IDatabase;
+  /** KV namespace for cache-aside (course catalog, program lists, etc.).
+   *  Bound as `KV` in wrangler configs; used by lib/cache.ts (cacheAside). */
+  KV?: KVNamespace;
   DOCUMENTS: R2Bucket;
   BACKUP_BUCKET: R2Bucket;
   JWT_SECRET: string;
@@ -134,8 +140,8 @@ export function error(message: string, status = 400): Response {
   return json({ success: false, error: message }, status);
 }
 
-export function ok<T>(data: T): Response {
-  return json({ success: true, data });
+export function ok<T>(data: T, status = 200): Response {
+  return json({ success: true, data }, status);
 }
 
 /**

@@ -6,38 +6,47 @@
   "main": "worker-student.ts",
 
   // ─── Cloudflare Account ───────────────────────────────────────────
-  // Set this to your account ID: npx wrangler whoami
-  "account_id": "2557f2f143734abc82bd4c80be750eb6",
+  "account_id": "3d71aae3dd47db612121c9f7ba281b97",
 
-  // ─── D1 Database (Single Source of Truth) ─────────────────────────
-  // This is the existing bmi-portal-db — now extended to serve both Portal & UMS.
-  // Run: npx wrangler d1 execute bmi-portal-db --file=db/schema.sql
+  // ─── D1 Database (Cache / Fallback Only) ─────────────────────────
+  // Neon (DATABASE_URL_CORE) is the primary database. D1 is used only
+  // as a fallback when no Neon URL is configured. In production this
+  // path is never taken.
   "d1_databases": [
     {
       "binding": "DB",
-      "database_name": "bmi-portal-db",
-      "database_id": "a5e26ad9-5d8e-4afa-9ad9-8cd55c1cbf1a"
+      "database_name": "bmi-cache-db",
+      "database_id": "00574d7a-e87d-4ac7-8335-2390c68b0977"
     }
   ],
-  
+
+  // ─── KV Namespace (Cache-Aside) ───────────────────────────────────
+  // Local dev uses a local KV store. Replace id after running:
+  //   npx wrangler kv namespace create bmi-catalog-cache
+  "kv_namespaces": [
+    {
+      "binding": "KV",
+      "id": "f90b5a56719344c1ad53598d3b948163",
+      "preview_id": "00000000000000000000000000000001"
+    }
+  ],
+
   "queues": {
     "producers": [
       {
         "queue": "bmi-email-queue",
         "binding": "EMAIL_QUEUE"
       }
-    ],
-    "consumers": [
-      {
-        "queue": "bmi-email-queue",
-        "max_batch_size": 10,
-        "max_batch_timeout": 5,
-        "max_retries": 3
-      }
     ]
   },
 
-  // ─── R2 Object Storage (Documents & Backups) ──────────────────────
+  "hyperdrive": [
+    {
+      "binding": "CORE_HYPERDRIVE",
+      "id": "a8de78e011d64a288399ff79fc9d7e24"
+    }
+  ],
+
   "r2_buckets": [
     {
       "binding": "DOCUMENTS",
@@ -49,37 +58,15 @@
     }
   ],
 
-  // ─── KV (Session Store & Rate Limiting) ───────────────────────────
-  // Note: Sessions and Rate Limits have been fully migrated to D1.
-
-  // ─── Public Environment Variables ─────────────────────────────────
-  // Secrets (JWT_SECRET, RESEND_API_KEY, etc.) must be set via:
-  //   npx wrangler secret put JWT_SECRET
-  //   npx wrangler secret put RESEND_API_KEY
-  //   npx wrangler secret put ADMIN_SETUP_KEY
   "vars": {
     "ENVIRONMENT": "production",
-    // Comma-separated list of all frontend origins that may call this API.
-    // Add your Cloudflare Pages URLs here after deployment.
     "ALLOWED_ORIGINS_OVERRIDE": "https://bmiuniversities.org,https://www.bmiuniversities.org,https://portal.bmiuniversities.org,https://ums.bmiuniversities.org,https://bmi-portal.pages.dev,https://bmi-ums.pages.dev,https://main.bmi-university.pages.dev,https://portal.bmi-university.pages.dev,https://ums.bmi-university.pages.dev,https://bmi-portal.hkmministries.org,https://bmi-ums.hkmministries.org"
   },
-
-  // ─── Cloudflare DNS Routes ──────────────────────────────────────────────────
-  // The monolith (bmi-api) retains only paths NOT owned by a domain worker:
-  //   /api/health           — liveliness probe
-  //   scheduled (cron)      — nightly backup job
-  // All other paths are handled by domain-worker routes below.
-  // Pattern: api.bmiuniversities.org/api/health* only.
-  // "routes": [
-  //   { "pattern": "api.bmiuniversities.org/api/health*", "zone_name": "bmiuniversities.org" }
-  // ],
-
 
   "triggers": {
     "crons": ["0 0 * * *"]
   },
 
-  // ─── Observability ────────────────────────────────────────────────
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1

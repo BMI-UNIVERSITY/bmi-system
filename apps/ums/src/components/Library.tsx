@@ -69,7 +69,7 @@ export const Library: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState("All");
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [activeTab, setActiveTab] = useState<"catalog" | "borrowings" | "fines">("catalog");
-  const [borrowings, setBorrowings] = useState([{id: 1, itemTitle: "Introduction to Algorithms", studentId: "STD-101", dueDate: "2024-06-15", status: "Overdue"}]);
+  const [borrowings] = useState([{id: 1, itemTitle: "Introduction to Algorithms", studentId: "STD-101", dueDate: "2024-06-15", status: "Overdue"}]);
   const [fines, setFines] = useState([{id: 1, studentId: "STD-101", amount: "50", status: "Unpaid", reason: "Overdue Book"}]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState<LibraryItem | null>(null);
@@ -647,9 +647,8 @@ export const Library: React.FC = () => {
               </tbody>
             </table>
           </div>
-          </div>
-          )
-        ) : null}
+        )
+      ) : null}
         
         {selectedItem && (
           <div className="fixed inset-0 z-[120] flex items-center justify-center bg-[#1a0033]/95 backdrop-blur-3xl p-4 md:p-8">

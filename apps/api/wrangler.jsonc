@@ -1,109 +1,111 @@
 {
-  "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "bmi-api",
-  "compatibility_date": "2025-01-01",
-  "compatibility_flags": ["nodejs_compat"],
-  "main": "index.ts",
-
-  // ─── Cloudflare Account ───────────────────────────────────────────
-  // Set this to your account ID: npx wrangler whoami
-  "account_id": "2557f2f143734abc82bd4c80be750eb6",
-
-  // ─── D1 Database (Single Source of Truth) ─────────────────────────
-  // This is the existing bmi-portal-db — now extended to serve both Portal & UMS.
-  // Run: npx wrangler d1 execute bmi-portal-db --file=db/schema.sql
-  "d1_databases": [
-    {
-      "binding": "DB",
-      "database_name": "bmi-portal-db",
-      "database_id": "a5e26ad9-5d8e-4afa-9ad9-8cd55c1cbf1a"
-    }
-  ],
-  
-  "queues": {
-    "producers": [
-      {
-        "queue": "bmi-email-queue",
-        "binding": "EMAIL_QUEUE"
-      }
-    ],
-    "consumers": [
-      {
-        "queue": "bmi-email-queue",
-        "max_batch_size": 10,
-        "max_batch_timeout": 5,
-        "max_retries": 3
-      }
-    ]
-  },
-
-  // ─── Neon PostgreSQL (Neon-Centric migration) ─────────────────────
-  // Four separate Neon projects, each bound to a Cloudflare Hyperdrive
-  // connection pool for low-latency Postgres access.
-  //
-  // Provision (Phase 3):
-  //   1. Create the four Neon projects: bmi-core-db, bmi-hr-db, bmi-library-db, bmi-alumni-campus-db
-  //   2. Apply migrations: pnpm run db:push:core | db:push:hr | db:push:library | db:push:alumni
-  //   3. Create Hyperdrive instances and paste their IDs below.
-  //   4. Set the connection strings as secrets:
-  //        npx wrangler secret put DATABASE_URL_CORE
-  //        npx wrangler secret put DATABASE_URL_HR
-  //        npx wrangler secret put DATABASE_URL_LIBRARY
-  //        npx wrangler secret put DATABASE_URL_ALUMNI
-  //   Until DATABASE_URL_* secrets are set, the Worker continues to use D1
-  //   via the `DB` binding below (strangler-fig compatibility).
-  "hyperdrive": [
-    // { "binding": "CORE_HYPERDRIVE", "id": "<neon-core-hyperdrive-id>" },
-    // { "binding": "HR_HYPERDRIVE", "id": "<neon-hr-hyperdrive-id>" },
-    // { "binding": "LIBRARY_HYPERDRIVE", "id": "<neon-library-hyperdrive-id>" },
-    // { "binding": "ALUMNI_HYPERDRIVE", "id": "<neon-alumni-hyperdrive-id>" }
-  ],
-
-  // ─── R2 Object Storage (Documents & Backups) ──────────────────────
-  "r2_buckets": [
-    {
-      "binding": "DOCUMENTS",
-      "bucket_name": "bmi-portal-documents"
-    },
-    {
-      "binding": "BACKUP_BUCKET",
-      "bucket_name": "bmi-portal-backups"
-    }
-  ],
-
-  // ─── KV (Session Store & Rate Limiting) ───────────────────────────
-  // Note: Sessions and Rate Limits have been fully migrated to D1.
-
-  // ─── Public Environment Variables ─────────────────────────────────
-  // Secrets (JWT_SECRET, RESEND_API_KEY, etc.) must be set via:
-  //   npx wrangler secret put JWT_SECRET
-  //   npx wrangler secret put RESEND_API_KEY
-  //   npx wrangler secret put ADMIN_SETUP_KEY
-  "vars": {
-    "ENVIRONMENT": "production",
-    // Comma-separated list of all frontend origins that may call this API.
-    // Add your Cloudflare Pages URLs here after deployment.
-    "ALLOWED_ORIGINS_OVERRIDE": "https://bmiuniversities.org,https://www.bmiuniversities.org,https://portal.bmiuniversities.org,https://ums.bmiuniversities.org,https://bmi-portal.pages.dev,https://bmi-ums.pages.dev,https://main.bmi-university.pages.dev,https://portal.bmi-university.pages.dev,https://ums.bmi-university.pages.dev,https://bmi-portal.hkmministries.org,https://bmi-ums.hkmministries.org"
-  },
-
-  // ─── Cloudflare DNS Routes ──────────────────────────────────────────────────
-  // The monolith (bmi-api) retains only paths NOT owned by a domain worker:
-  //   /api/health           — liveliness probe
-  //   scheduled (cron)      — nightly backup job
-  // All other paths are handled by domain-worker routes below.
-  // Pattern: api.bmiuniversities.org/api/health* only.
-  // "routes": [
-  //   { "pattern": "api.bmiuniversities.org/api/health*", "zone_name": "bmiuniversities.org" }
-  // ],
-
-
-  "triggers": {
-    "crons": ["0 0 * * *"]
-  },
-
-  // ─── Observability ────────────────────────────────────────────────
-  "observability": {
-    "enabled": true,
-    "head_sampling_rate": 1
-  }
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "bmi-api",
+	"compatibility_date": "2025-01-01",
+	"compatibility_flags": [
+		"nodejs_compat"
+	],
+	"main": "index.ts",
+	// ─── Cloudflare Account ───────────────────────────────────────────
+	// Run `npx wrangler whoami` after login to get your account ID.
+	"account_id": "3d71aae3dd47db612121c9f7ba281b97",
+	// ─── D1 Database (Cache Layer) ────────────────────────────────────
+	// Neon PostgreSQL (DATABASE_URL_CORE secret) is the PRIMARY database.
+	// D1 is used ONLY as a local SQLite cache/fallback — it is never the
+	// source of truth in production when DATABASE_URL_CORE is set.
+	//
+	// Create on new account:
+	//   npx wrangler d1 create bmi-cache-db
+	// Then paste the returned database_id below.
+	"d1_databases": [
+		{
+			"binding": "DB",
+			"database_name": "bmi-cache-db",
+			"database_id": "00574d7a-e87d-4ac7-8335-2390c68b0977"
+		}
+	],
+	// ─── KV Namespace (Cache-Aside) ───────────────────────────────────
+	// Used by lib/cache.ts (cacheAside) for high-read catalog endpoints.
+	// Local dev uses a local KV store regardless of the id value.
+	// After provisioning, replace id with:
+	//   npx wrangler kv namespace create bmi-catalog-cache
+	"kv_namespaces": [
+		{
+			"binding": "KV",
+			"id": "f90b5a56719344c1ad53598d3b948163",
+			"preview_id": "00000000000000000000000000000001"
+		}
+	],
+	"queues": {
+		"producers": [
+			{
+				"queue": "bmi-email-queue",
+				"binding": "EMAIL_QUEUE"
+			}
+		],
+		"consumers": [
+			{
+				"queue": "bmi-email-queue",
+				"max_batch_size": 10,
+				"max_batch_timeout": 5,
+				"max_retries": 3
+			}
+		]
+	},
+	// ─── Neon PostgreSQL (Primary Database) ───────────────────────────
+	// Single Neon project, single database (neondb).
+	// All domain schemas live inside it (ums, portal, hr, library, alumni).
+	//
+	// Phase 6 — Provision Hyperdrive (run once in a logged-in shell):
+	//   npx wrangler login
+	//   npx wrangler hyperdrive create bmi-core-hyperdrive \
+	//     --connection-string="<DATABASE_URL_CORE>"
+	//
+	// Paste the returned Hyperdrive ID below and uncomment the binding.
+	// Until it is active, the Worker reads the DATABASE_URL_CORE secret.
+	//
+	// Set production secrets (run once):
+	//   npx wrangler secret put DATABASE_URL_CORE
+	//   npx wrangler secret put JWT_SECRET
+	//   npx wrangler secret put PASSWORD_PEPPER
+	//   npx wrangler secret put RESEND_API_KEY
+	"hyperdrive": [
+		{
+			"binding": "CORE_HYPERDRIVE",
+			"id": "a8de78e011d64a288399ff79fc9d7e24"
+		}
+	],
+	// ─── R2 Object Storage (Documents & Backups) ──────────────────────
+	// Create on new account:
+	//   npx wrangler r2 bucket create bmi-portal-documents
+	//   npx wrangler r2 bucket create bmi-portal-backups
+	"r2_buckets": [
+		{
+			"binding": "DOCUMENTS",
+			"bucket_name": "bmi-portal-documents"
+		},
+		{
+			"binding": "BACKUP_BUCKET",
+			"bucket_name": "bmi-portal-backups"
+		}
+	],
+	// ─── Public Environment Variables ─────────────────────────────────
+	"vars": {
+		"ENVIRONMENT": "production",
+		"ALLOWED_ORIGINS_OVERRIDE": "https://bmiuniversities.org,https://www.bmiuniversities.org,https://portal.bmiuniversities.org,https://ums.bmiuniversities.org,https://bmi-portal.pages.dev,https://bmi-ums.pages.dev,https://main.bmi-university.pages.dev,https://portal.bmi-university.pages.dev,https://ums.bmi-university.pages.dev,https://bmi-portal.hkmministries.org,https://bmi-ums.hkmministries.org"
+	},
+	// ─── Cloudflare DNS Routes ──────────────────────────────────────────────────
+	// "routes": [
+	//   { "pattern": "api.bmiuniversities.org/*", "zone_name": "bmiuniversities.org" }
+	// ],
+	"triggers": {
+		"crons": [
+			"0 0 * * *"
+		]
+	},
+	// ─── Observability ────────────────────────────────────────────────
+	"observability": {
+		"enabled": true,
+		"head_sampling_rate": 1
+	}
 }

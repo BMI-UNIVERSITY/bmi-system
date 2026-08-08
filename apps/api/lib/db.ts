@@ -31,15 +31,17 @@ import * as alumniSchema from '../schema/alumni';
 import * as campusSchema from '../schema/campus';
 import type { Env } from './types';
 
-export type CoreDb = NeonHttpDatabase<typeof coreSchema & typeof academicSchema> | DrizzleD1Database<typeof coreSchema & typeof academicSchema>;
-export type HrDb = NeonHttpDatabase<typeof hrSchema> | DrizzleD1Database<typeof hrSchema>;
-export type LibraryDb = NeonHttpDatabase<typeof librarySchema> | DrizzleD1Database<typeof librarySchema>;
-export type AlumniDb = NeonHttpDatabase<typeof alumniSchema & typeof campusSchema> | DrizzleD1Database<typeof alumniSchema & typeof campusSchema>;
+export type CoreSchema = typeof coreSchema & typeof academicSchema & typeof hrSchema & typeof librarySchema & typeof alumniSchema & typeof campusSchema;
+export type CoreDb = NeonHttpDatabase<CoreSchema>;
+export type HrDb = NeonHttpDatabase<typeof hrSchema>;
+export type LibraryDb = NeonHttpDatabase<typeof librarySchema>;
+export type AlumniDb = NeonHttpDatabase<typeof alumniSchema & typeof campusSchema>;
 
 function getConnectionUrl(env: Env, perModuleVar: string): string | undefined {
   const url =
     env[perModuleVar as keyof Env] ??
     env.DATABASE_URL ??
+    env.DATABASE_URL_CORE ??
     // Hyperdrive binding (Connection String is available on the binding itself)
     (env.CORE_HYPERDRIVE as any)?.connectionString ??
     (env.HR_HYPERDRIVE as any)?.connectionString ??
@@ -53,9 +55,11 @@ function createNeon(url: string, schema: Record<string, unknown>): NeonHttpDatab
   return drizzleNeonHttp(client as any, { schema: schema as any });
 }
 
-/** D1 fallback used during the strangler-fig transition and local dev. */
-function createD1(env: Env): DrizzleD1Database<any> {
-  return drizzleD1(env.DB as any, { schema: {} as any });
+/** D1 fallback — only active in local dev or when DATABASE_URL_CORE is absent. */
+function createD1(env: Env): DrizzleD1Database<any> | null {
+  const binding = env.DB ?? (env.PLATFORM_CONTEXT?.db as any);
+  if (!binding) return null;
+  return drizzleD1(binding as any, { schema: {} as any });
 }
 
 /**
@@ -75,11 +79,19 @@ export function createCoreIdb(env: Env): IDatabase {
 /**
  * Minimal IDatabase wrapper around the D1 binding so callers get a uniform
  * interface. In practice routes receive this via `PLATFORM_CONTEXT.db`.
+ * Only used when DATABASE_URL_CORE is not configured (local dev / fallback).
  */
 export class D1FallbackAdapter implements IDatabase {
   private readonly db: IDatabase;
   constructor(env: Env) {
-    this.db = env.DB as unknown as IDatabase;
+    const binding = env.DB ?? (env.PLATFORM_CONTEXT?.db as IDatabase | undefined);
+    if (!binding) {
+      throw new Error(
+        'D1FallbackAdapter: env.DB is not set and no PLATFORM_CONTEXT.db is available. ' +
+        'Set DATABASE_URL_CORE to use Neon instead.'
+      );
+    }
+    this.db = binding;
   }
   query<T = any>(sql: string, params?: any[]): Promise<T[]> {
     return this.db.query(sql, params);
@@ -101,29 +113,39 @@ export class D1FallbackAdapter implements IDatabase {
   }
 }
 
+
 export function createCoreDb(env: Env): CoreDb {
   const url = getConnectionUrl(env, 'DATABASE_URL_CORE');
-  if (url) return createNeon(url, { ...coreSchema, ...academicSchema });
-  return createD1(env) as CoreDb;
+  if (url) return createNeon(url, { ...coreSchema, ...academicSchema, ...hrSchema, ...librarySchema, ...alumniSchema, ...campusSchema });
+  const d1 = createD1(env);
+  if (!d1) throw new Error('createCoreDb: no Neon URL and no D1 binding available. Set DATABASE_URL_CORE.');
+  return d1 as unknown as CoreDb;
 }
 
 export function createHrDb(env: Env): HrDb {
   const url = getConnectionUrl(env, 'DATABASE_URL_HR');
   if (url) return createNeon(url, hrSchema as unknown as Record<string, unknown>);
-  return createD1(env) as HrDb;
+  const d1 = createD1(env);
+  if (!d1) throw new Error('createHrDb: no Neon URL and no D1 binding available. Set DATABASE_URL_HR.');
+  return d1 as unknown as HrDb;
 }
 
 export function createLibraryDb(env: Env): LibraryDb {
   const url = getConnectionUrl(env, 'DATABASE_URL_LIBRARY');
   if (url) return createNeon(url, librarySchema as unknown as Record<string, unknown>);
-  return createD1(env) as LibraryDb;
+  const d1 = createD1(env);
+  if (!d1) throw new Error('createLibraryDb: no Neon URL and no D1 binding available. Set DATABASE_URL_LIBRARY.');
+  return d1 as unknown as LibraryDb;
 }
 
 export function createAlumniDb(env: Env): AlumniDb {
   const url = getConnectionUrl(env, 'DATABASE_URL_ALUMNI');
   if (url) return createNeon(url, { ...alumniSchema, ...campusSchema });
-  return createD1(env) as AlumniDb;
+  const d1 = createD1(env);
+  if (!d1) throw new Error('createAlumniDb: no Neon URL and no D1 binding available. Set DATABASE_URL_ALUMNI.');
+  return d1 as unknown as AlumniDb;
 }
+
 
 /**
  * Set the request-level identity for Row-Level Security.

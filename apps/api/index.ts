@@ -11,6 +11,7 @@ import { handleListRubrics, handleCreateRubric, handleDeleteRubric } from './rou
 import { handleGetPerformanceMetrics, handleGetQueryAnalysis, handleRunMaintenance, handleGetSystemHealth, handleClearMetrics } from './routes/performance';
 import { trackResponseTime } from './lib/performance';
 import { error, validateCsrfToken } from './lib/types';
+import { createCoreDb, setRequestContext, isNeon } from './lib/db';
 import type { Env } from './lib/types';
 import backupWorker from './backup';
 import { runArchivalJob } from './archival';
@@ -397,6 +398,20 @@ export default withSentry(
             return withCors(authResult, request, env.ALLOWED_ORIGINS_OVERRIDE);
           }
           auth = authResult;
+
+          // Phase 7 — Set Postgres RLS context so row-level policies can
+          // restrict data to the authenticated user.  The isNeon guard makes
+          // this a safe no-op when the D1 fallback adapter is active.
+          try {
+            const coreDb = createCoreDb(env);
+            if (isNeon(coreDb)) {
+              await setRequestContext(coreDb, auth.user.sub);
+            }
+          } catch {
+            // Non-fatal: RLS context failure should not block the request.
+            // Log and continue — the response may still succeed.
+            log.warn('setRequestContext failed — RLS context not set for this request');
+          }
         }
 
         let response = await route.handler(request, env, match, auth, ctx);

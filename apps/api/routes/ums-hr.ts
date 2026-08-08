@@ -3,7 +3,7 @@
  * Endpoints: /api/v1/hr/leave-requests, /api/v1/hr/payroll
  * All records stored in the same D1 database for referential integrity.
  */
-import { ok, error, json } from '../lib/types';
+import { ok, error } from '../lib/types';
 import type { Env } from '../lib/types';
 
 // ── Leave Requests ────────────────────────────────────────────────────────────
@@ -47,7 +47,7 @@ export async function handleListLeaveRequests(req: Request, env: Env): Promise<R
   });
 }
 
-export async function handleGetLeaveRequest(req: Request, env: Env, id: string): Promise<Response> {
+export async function handleGetLeaveRequest(_req: Request, env: Env, id: string): Promise<Response> {
   const row = await env.PLATFORM_CONTEXT!.db.prepare(
     `SELECT lr.*, u.first_name, u.last_name, u.email, s.staff_number
      FROM leave_requests lr
@@ -59,7 +59,7 @@ export async function handleGetLeaveRequest(req: Request, env: Env, id: string):
   return ok(row);
 }
 
-export async function handleCreateLeaveRequest(req: Request, env: Env, userId: string): Promise<Response> {
+export async function handleCreateLeaveRequest(req: Request, env: Env, _userId: string): Promise<Response> {
   const body = await req.json() as any;
   const { staff_id, type, start_date, end_date, reason } = body;
 

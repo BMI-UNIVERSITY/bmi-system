@@ -39,6 +39,80 @@ export function makeChainDB(firstVals: any[] = [], allVals: any[] = []) {
   return db;
 }
 
+export function makeDrizzleMock(getVals: any[] = [], allVals: any[] = []) {
+  let gi = 0, ai = 0;
+  // .get() → one scalar from getVals queue
+  const get = vi.fn().mockImplementation(() => Promise.resolve(getVals[gi++ % Math.max(getVals.length, 1)] ?? null));
+  // .all() → one result-set from allVals queue
+  const all = vi.fn().mockImplementation(() => Promise.resolve(allVals[ai++ % Math.max(allVals.length, 1)] ?? []));
+  const run = vi.fn().mockResolvedValue({ success: true, meta: { changes: 1 } });
+
+  const execute = vi.fn().mockImplementation(() => {
+    if (getVals.length > 0 && gi < getVals.length) {
+      const val = getVals[gi++];
+      return Promise.resolve(val === null || val === undefined ? [] : Array.isArray(val) ? val : [val]);
+    }
+    const res = allVals[ai++ % Math.max(allVals.length, 1)] ?? [];
+    return Promise.resolve(Array.isArray(res) ? res : [res]);
+  });
+
+  const runObj = {
+    run,
+    execute: vi.fn().mockResolvedValue({ success: true, meta: { changes: 1 } }),
+    then: (onFulfilled: any) => Promise.resolve({ success: true, meta: { changes: 1 } }).then(onFulfilled),
+  };
+
+  // When the query chain itself is awaited (no explicit .all()/.get()/.execute()), resolve via all()
+  const buildSelectBuilder = (): any => {
+    const builder: any = {
+      from: vi.fn().mockReturnThis(),
+      where: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      offset: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(),
+      leftJoin: vi.fn().mockReturnThis(),
+      get,
+      all,
+      run,
+      execute,
+      then: (onFulfilled: any, onRejected: any) =>
+        all().then(onFulfilled, onRejected),
+    };
+    return builder;
+  };
+
+  const mock: any = {
+    select: vi.fn().mockImplementation(() => buildSelectBuilder()),
+    insert: vi.fn().mockReturnValue({
+      values: vi.fn().mockReturnValue({
+        onConflictDoUpdate: vi.fn().mockReturnValue(runObj),
+        onConflictDoNothing: vi.fn().mockReturnValue(runObj),
+        run,
+        execute: vi.fn().mockResolvedValue({ success: true, meta: { changes: 1 } }),
+        then: (onFulfilled: any) => Promise.resolve({ success: true, meta: { changes: 1 } }).then(onFulfilled),
+      }),
+    }),
+    update: vi.fn().mockReturnValue({
+      set: vi.fn().mockReturnValue({
+        where: vi.fn().mockReturnValue(runObj),
+        run,
+        execute: vi.fn().mockResolvedValue({ success: true, meta: { changes: 1 } }),
+        then: (onFulfilled: any) => Promise.resolve({ success: true, meta: { changes: 1 } }).then(onFulfilled),
+      }),
+    }),
+    delete: vi.fn().mockReturnValue({
+      where: vi.fn().mockReturnValue(runObj),
+      run,
+      execute: vi.fn().mockResolvedValue({ success: true, meta: { changes: 1 } }),
+      then: (onFulfilled: any) => Promise.resolve({ success: true, meta: { changes: 1 } }).then(onFulfilled),
+    }),
+    transaction: vi.fn().mockImplementation(async (cb: any) => cb(mock)),
+    execute: vi.fn().mockResolvedValue({ rows: [] }),
+  };
+  return mock;
+}
+
+
 /** Build a minimal mock PlatformContext */
 export function makeContext(db?: any) {
   const rawDb = db ?? makeChainDB();
@@ -94,104 +168,50 @@ export function makeContext(db?: any) {
       getUserByEmail: vi.fn(),
       updateUser: vi.fn(),
       deleteUser: vi.fn(),
-      validateCredentials: vi.fn(),
-      setupMfa: vi.fn(),
-      verifyMfa: vi.fn(),
-      resetPassword: vi.fn(),
+      authenticate: vi.fn(),
+    },
+    document: {
+      getTemplate: vi.fn(),
+      generateDocument: vi.fn(),
+      signDocument: vi.fn(),
+    },
+    storage: {
+      uploadFile: vi.fn().mockImplementation(async (key: string, data: Buffer | Uint8Array) => {
+        mockStorageFiles.set(key, Buffer.from(data));
+        return { key, url: `https://storage.test/${key}`, size: data.length };
+      }),
+      getFile: vi.fn().mockImplementation(async (key: string) => {
+        return mockStorageFiles.get(key) || null;
+      }),
+      deleteFile: vi.fn().mockImplementation(async (key: string) => {
+        mockStorageFiles.delete(key);
+      }),
     },
     lms: {
       getCourses: vi.fn(),
-      getCourse: vi.fn(),
-      enrollStudent: vi.fn(),
-      dropStudent: vi.fn(),
-      getEnrollments: vi.fn(),
       getGrades: vi.fn(),
-      syncGrade: vi.fn(),
-    },
-    email: {
-      createMailbox: vi.fn(),
-      deleteMailbox: vi.fn(),
-      sendEmail: vi.fn(),
-      resetMailboxPassword: vi.fn(),
     },
     payment: {
-      createPaymentIntent: vi.fn().mockResolvedValue({
-        id: 'pi_mock_123',
-        amount: 1000,
-        currency: 'USD',
-        status: 'succeeded'
-      }),
-      getPaymentIntent: vi.fn(),
-      cancelPaymentIntent: vi.fn(),
+      createPaymentIntent: vi.fn().mockResolvedValue({ id: 'pi_mock_123', amount: 1000, currency: 'USD', status: 'succeeded' }),
       handleWebhook: vi.fn(),
     },
-    document: {
-      generateDocument: vi.fn(),
-      getDocument: vi.fn(),
-      getDocumentsByUser: vi.fn(),
-      verifyDocument: vi.fn().mockImplementation((params: any) => {
-        if (params.documentId === 'UNKNOWN-123') {
-          return Promise.resolve({ valid: false, error: 'Certificate not found', code: 'NOT_FOUND', document: null, hashVerified: false });
-        }
-        return Promise.resolve({
-          valid: true,
-          document: {
-            serial_number: params.documentId || 'TEST-123',
-            student_name: 'Test Student',
-            degree_title: 'Bachelor of Science',
-            issue_date: '2026-05-20',
-            gpa: 3.8,
-            status: 'ISSUED'
-          },
-          hashVerified: true
-        });
-      }),
+    alumni: {
+      setupEmailForwarding: vi.fn().mockResolvedValue(true),
     },
-    notification: {
-      send: vi.fn(),
-      getNotifications: vi.fn(),
-      markAsRead: vi.fn(),
-      markAllAsRead: vi.fn(),
-    },
-    storage: {
-      upload: vi.fn().mockImplementation((input: any) => {
-        mockStorageFiles.set(input.key, input.data);
-        return Promise.resolve({
-          id: crypto.randomUUID(),
-          key: input.key,
-          url: `https://mock.storage/${input.key}`,
-          size: input.data.byteLength,
-          mimeType: input.mimeType,
-          createdAt: new Date(),
-          metadata: input.metadata,
-        });
-      }),
-      download: vi.fn().mockImplementation((key: string) => {
-        return Promise.resolve(mockStorageFiles.get(key) || Buffer.from(''));
-      }),
-      delete: vi.fn().mockImplementation((key: string) => {
-        mockStorageFiles.delete(key);
-        return Promise.resolve();
-      }),
-      getUrl: vi.fn().mockImplementation((key: string) => {
-        return Promise.resolve(`https://mock.storage/${key}`);
-      }),
+    email: {
+      createMailbox: vi.fn().mockResolvedValue(true),
+      sendEmail: vi.fn().mockResolvedValue(true),
     },
   };
 }
 
-/** Wrap a raw env object to include PLATFORM_CONTEXT from a given db mock */
-export function makeEnv(db?: any, extraProps: Record<string, any> = {}) {
+/** Helper to construct Env with PLATFORM_CONTEXT attached */
+export function makeEnv(db?: any, extraEnv: Record<string, any> = {}): any {
   return {
     PLATFORM_CONTEXT: makeContext(db),
-    JWT_SECRET: 'test-secret',
-    PASSWORD_PEPPER: 'test-pepper',
-    RESEND_API_KEY: 'test-resend',
-    ADMIN_EMAIL: 'admin@bmi.edu',
+    JWT_SECRET: 'test-jwt-secret-key-32-bytes-long!!',
     ENVIRONMENT: 'test',
-    ALLOWED_ORIGINS_OVERRIDE: '',
-    WRITE_QUEUE: { get: vi.fn() },
-    EMAIL_QUEUE: { send: vi.fn() },
-    ...extraProps,
+    ADMIN_KEY: 'test-admin-key',
+    ...extraEnv,
   };
 }

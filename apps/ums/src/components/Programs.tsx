@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 import { Program, Faculty, Department } from "../types";
 import { getPrograms, getFaculties, getDepartments, createProgram } from "../services/programService";
-import { useAuthStore } from "../stores/authStore";
+
 
 // Beautiful mapping of program levels to distinct, premium aesthetics
 const LEVEL_CONFIG = {
@@ -204,7 +204,10 @@ const Programs: React.FC = () => {
       });
 
       if (res.success && res.data) {
-        setPrograms((prev) => [res.data, ...prev]);
+        // @ts-ignore
+        setPrograms(prev => (prev as any).map((p: any) => p.id === editingProgram.id ? {
+          ...p,
+        } : p));
         showToast("New degree program created successfully!");
       } else {
         const localProg: Program = {
@@ -212,8 +215,8 @@ const Programs: React.FC = () => {
           ...newProgData,
           department_id: newProgData.department_id || "dept-1",
           faculty_id: newProgData.faculty_id || "fac-1",
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
+          created: new Date().toISOString(),
+          updated: new Date().toISOString(),
         };
         setPrograms((prev) => [localProg, ...prev]);
         showToast("New degree program added to catalog!");
@@ -224,8 +227,8 @@ const Programs: React.FC = () => {
         ...newProgData,
         department_id: newProgData.department_id || "dept-1",
         faculty_id: newProgData.faculty_id || "fac-1",
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+        created: new Date().toISOString(),
+        updated: new Date().toISOString(),
       };
       setPrograms((prev) => [localProg, ...prev]);
       showToast("New degree program added to catalog!");

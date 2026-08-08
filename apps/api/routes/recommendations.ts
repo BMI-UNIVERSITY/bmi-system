@@ -2,18 +2,31 @@ import { ok, error } from '../lib/types';
 import { sendEmail } from '../lib/email';
 import type { Env } from '../lib/types';
 import { getPortalUrl } from '../lib/config';
+import { createCoreDb } from '../lib/db';
+import {
+  applications,
+  recommendationRequests,
+  documents,
+  users,
+} from '../schema/core';
+import { eq, and, count } from 'drizzle-orm';
 
 export async function handleRequestRecommendation(request: Request, env: Env, applicationId: string, userId: string): Promise<Response> {
-  const app = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id, program FROM applications WHERE id = ? AND user_id = ?')
-    .bind(applicationId, userId).first<{ id: string; program: string }>();
+  const db = createCoreDb(env);
+
+  const app = (await db.select({ id: applications.id, program: applications.program })
+    .from(applications)
+    .where(and(eq(applications.id, applicationId), eq(applications.user_id, userId)))
+    .execute())[0];
 
   if (!app) return error('Application not found or access denied', 404);
 
-  const recCount = await env.PLATFORM_CONTEXT!.db.prepare(
-    'SELECT COUNT(*) as count FROM recommendation_requests WHERE application_id = ?'
-  ).bind(applicationId).first<{ count: number }>();
+  const recCountRow = (await db.select({ count: count() })
+    .from(recommendationRequests)
+    .where(eq(recommendationRequests.application_id, applicationId))
+    .execute())[0];
 
-  if (recCount && recCount.count >= 3) {
+  if (recCountRow && recCountRow.count >= 3) {
     return error('Maximum of 3 recommendation requests per application', 400);
   }
 
@@ -32,9 +45,13 @@ export async function handleRequestRecommendation(request: Request, env: Env, ap
 
   const sanitizedName = referee_name.replace(/<[^>]*>/g, '').substring(0, 200);
 
-  const existingRec = await env.PLATFORM_CONTEXT!.db.prepare(
-    'SELECT id FROM recommendation_requests WHERE application_id = ? AND referee_email = ?'
-  ).bind(applicationId, referee_email.toLowerCase()).first();
+  const existingRec = (await db.select({ id: recommendationRequests.id })
+    .from(recommendationRequests)
+    .where(and(
+      eq(recommendationRequests.application_id, applicationId),
+      eq(recommendationRequests.referee_email, referee_email.toLowerCase())
+    ))
+    .execute())[0];
 
   if (existingRec) {
     return error('A recommendation request has already been sent to this email address', 409);
@@ -43,13 +60,18 @@ export async function handleRequestRecommendation(request: Request, env: Env, ap
   const token = crypto.randomUUID();
   const reqId = crypto.randomUUID();
 
-  await env.PLATFORM_CONTEXT!.db.prepare(`
-    INSERT INTO recommendation_requests (id, application_id, referee_name, referee_email, token)
-    VALUES (?, ?, ?, ?, ?)
-  `).bind(reqId, applicationId, sanitizedName, referee_email.toLowerCase(), token).run();
+  await db.insert(recommendationRequests).values({
+    id: reqId,
+    application_id: applicationId,
+    referee_name: sanitizedName,
+    referee_email: referee_email.toLowerCase(),
+    token,
+  });
 
-  const applicant = await env.PLATFORM_CONTEXT!.db.prepare('SELECT first_name, last_name FROM users WHERE id = ?')
-    .bind(userId).first<{ first_name: string; last_name: string }>();
+  const applicant = (await db.select({ first_name: users.first_name, last_name: users.last_name })
+    .from(users)
+    .where(eq(users.id, userId))
+    .execute())[0];
 
   if (env.RESEND_API_KEY && applicant) {
     const baseUrl = getPortalUrl(env);
@@ -79,41 +101,54 @@ export async function handleRequestRecommendation(request: Request, env: Env, ap
 }
 
 export async function handleGetRecommendationInfo(_request: Request, env: Env, token: string): Promise<Response> {
-  const req = await env.PLATFORM_CONTEXT!.db.prepare(`
-    SELECT r.id, r.referee_name, r.status, r.requested_at,
-           u.first_name, u.last_name, a.program
-    FROM recommendation_requests r
-    JOIN applications a ON r.application_id = a.id
-    JOIN users u ON a.user_id = u.id
-    WHERE r.token = ?
-  `).bind(token).first();
+  const db = createCoreDb(env);
 
-  if (!req) return error('Invalid or expired token', 404);
+  const rec = (await db.select({
+    id: recommendationRequests.id,
+    referee_name: recommendationRequests.referee_name,
+    status: recommendationRequests.status,
+    requested_at: recommendationRequests.requested_at,
+    first_name: users.first_name,
+    last_name: users.last_name,
+    program: applications.program,
+  })
+    .from(recommendationRequests)
+    .leftJoin(applications, eq(applications.id, recommendationRequests.application_id))
+    .leftJoin(users, eq(users.id, applications.user_id))
+    .where(eq(recommendationRequests.token, token))
+    .execute())[0];
 
-  const data = req as { requested_at: string };
-  const requestedAt = new Date(data.requested_at);
-  const now = new Date();
-  const daysSinceRequest = Math.floor((now.getTime() - requestedAt.getTime()) / (1000 * 60 * 60 * 24));
+  if (!rec) return error('Invalid or expired token', 404);
+
+  const requestedAt = new Date(rec.requested_at as unknown as string);
+  const daysSinceRequest = Math.floor((Date.now() - requestedAt.getTime()) / (1000 * 60 * 60 * 24));
 
   if (daysSinceRequest > 30) {
     return error('This recommendation link has expired (30 day limit). Please ask the applicant to send a new request.', 410);
   }
 
-  return ok(req);
+  return ok(rec);
 }
 
 export async function handleUploadRecommendation(request: Request, env: Env, token: string): Promise<Response> {
-  const req = await env.PLATFORM_CONTEXT!.db.prepare(`
-    SELECT r.id, r.application_id, a.user_id, r.status, r.requested_at
-    FROM recommendation_requests r
-    JOIN applications a ON r.application_id = a.id
-    WHERE r.token = ?
-  `).bind(token).first<{ id: string; application_id: string; user_id: string; status: string; requested_at: string }>();
+  const db = createCoreDb(env);
 
-  if (!req) return error('Invalid token', 404);
-  if (req.status === 'submitted') return error('Recommendation already submitted', 400);
+  const rec = (await db.select({
+    id: recommendationRequests.id,
+    application_id: recommendationRequests.application_id,
+    user_id: applications.user_id,
+    status: recommendationRequests.status,
+    requested_at: recommendationRequests.requested_at,
+  })
+    .from(recommendationRequests)
+    .leftJoin(applications, eq(applications.id, recommendationRequests.application_id))
+    .where(eq(recommendationRequests.token, token))
+    .execute())[0];
 
-  const requestedAt = new Date(req.requested_at);
+  if (!rec) return error('Invalid token', 404);
+  if (rec.status === 'submitted') return error('Recommendation already submitted', 400);
+
+  const requestedAt = new Date(rec.requested_at as unknown as string);
   const daysSinceRequest = Math.floor((Date.now() - requestedAt.getTime()) / (1000 * 60 * 60 * 24));
   if (daysSinceRequest > 30) {
     return error('This recommendation link has expired. Please ask the applicant to send a new request.', 410);
@@ -129,28 +164,34 @@ export async function handleUploadRecommendation(request: Request, env: Env, tok
     return error('Only PDF and Word documents are accepted for recommendations');
   }
 
-  const r2Key = `documents/${req.user_id}/${req.application_id}/recommendation-${crypto.randomUUID()}.${ext}`;
+  const r2Key = `documents/${rec.user_id}/${rec.application_id}/recommendation-${crypto.randomUUID()}.${ext}`;
 
   await env.DOCUMENTS.put(r2Key, file.stream(), {
     httpMetadata: { contentType: file.type },
-    customMetadata: { applicationId: req.application_id, docType: 'recommendation' }
+    customMetadata: { applicationId: rec.application_id!, docType: 'recommendation' }
   });
 
   const docId = crypto.randomUUID();
 
-  await env.PLATFORM_CONTEXT!.db.prepare(`
-    INSERT INTO documents (id, application_id, user_id, doc_type, file_name, r2_key, mime_type, file_size_bytes)
-    VALUES (?, ?, ?, 'recommendation', ?, ?, ?, ?)
-  `).bind(docId, req.application_id, req.user_id, file.name, r2Key, file.type, file.size).run();
+  await db.insert(documents).values({
+    id: docId,
+    application_id: rec.application_id!,
+    user_id: rec.user_id!,
+    doc_type: 'recommendation',
+    file_name: file.name,
+    r2_key: r2Key,
+    mime_type: file.type,
+    file_size_bytes: file.size,
+  });
 
-  await env.PLATFORM_CONTEXT!.db.prepare(`
-    UPDATE recommendation_requests 
-    SET status = 'submitted', document_id = ?, completed_at = datetime('now')
-    WHERE id = ?
-  `).bind(docId, req.id).run();
+  await db.update(recommendationRequests)
+    .set({ status: 'submitted', document_id: docId, completed_at: new Date() })
+    .where(eq(recommendationRequests.id, rec.id));
 
-  const applicant = await env.PLATFORM_CONTEXT!.db.prepare('SELECT email, first_name FROM users WHERE id = ?')
-    .bind(req.user_id).first<{ email: string; first_name: string }>();
+  const applicant = (await db.select({ email: users.email, first_name: users.first_name })
+    .from(users)
+    .where(eq(users.id, rec.user_id!))
+    .execute())[0];
 
   if (applicant && env.RESEND_API_KEY) {
     const { buildEmailLayout } = await import('../lib/email');
@@ -174,17 +215,26 @@ export async function handleUploadRecommendation(request: Request, env: Env, tok
 }
 
 export async function handleListRecommendations(_request: Request, env: Env, applicationId: string, userId: string): Promise<Response> {
-  const app = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id FROM applications WHERE id = ? AND user_id = ?')
-    .bind(applicationId, userId).first();
+  const db = createCoreDb(env);
+
+  const app = (await db.select({ id: applications.id })
+    .from(applications)
+    .where(and(eq(applications.id, applicationId), eq(applications.user_id, userId)))
+    .execute())[0];
 
   if (!app) return error('Not found', 404);
 
-  const { results } = await env.PLATFORM_CONTEXT!.db.prepare(`
-    SELECT id, referee_name, referee_email, status, requested_at, completed_at
-    FROM recommendation_requests
-    WHERE application_id = ?
-    ORDER BY requested_at DESC
-  `).bind(applicationId).all();
+  const recs = await db.select({
+    id: recommendationRequests.id,
+    referee_name: recommendationRequests.referee_name,
+    referee_email: recommendationRequests.referee_email,
+    status: recommendationRequests.status,
+    requested_at: recommendationRequests.requested_at,
+    completed_at: recommendationRequests.completed_at,
+  })
+    .from(recommendationRequests)
+    .where(eq(recommendationRequests.application_id, applicationId))
+    .orderBy(recommendationRequests.requested_at);
 
-  return ok(results);
+  return ok(recs);
 }

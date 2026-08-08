@@ -2,7 +2,7 @@
  * BMI UMS — Student & Application Mutation Hooks
  */
 
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from './apiClient';
 import { QUERY_KEYS } from './queryKeys';
 

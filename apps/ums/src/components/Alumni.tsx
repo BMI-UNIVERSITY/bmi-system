@@ -98,8 +98,8 @@ const Alumni: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<"Registry" | "Events" | "Donations">("Registry");
   const [searchTerm, setSearchTerm] = useState("");
-  const [events, setEvents] = useState([{id: 1, title: "Annual Alumni Gala", date: "2024-12-01", location: "Grand Hall", capacity: 500}]);
-  const [donations, setDonations] = useState([{id: 1, alumniId: "ALM-101", amount: "5000", purpose: "Scholarship Fund", donatedAt: "2024-05-15"}]);
+  const [events] = useState([{id: 1, title: "Annual Alumni Gala", date: "2024-12-01", location: "Grand Hall", capacity: 500}]);
+  const [donations] = useState([{id: 1, alumniId: "ALM-101", amount: "5000", purpose: "Scholarship Fund", donatedAt: "2024-05-15"}]);
   const [yearFilter, setYearFilter] = useState("All Years");
   const [hallOfFameOnly, setHallOfFameOnly] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -138,10 +138,10 @@ const Alumni: React.FC = () => {
         newAlumniFromSync.push({
           id: `ALM-${s.id}`,
           name: s.full_name || `${s.first_name} ${s.last_name}`,
-          classYear: String(s.academic_year || "2024"),
+          classYear: String((s as any).enrollment_date || "2024"),
           course: s.program || "Degree Program",
           occupation: "Graduated Alumnus — Record Verified",
-          location: s.address || "Institutional Directory",
+          location: s.email || "Institutional Directory",
           achievements: "Graduated with honors. Academic record verified by registrar.",
           email: s.email || `alumni.${s.id}@bmi.edu`,
           isHallOfFame: false,

@@ -125,66 +125,114 @@ export const academicStandingRecords = pgTable('academic_standing_records', {
 export const programCurriculum = pgTable('program_curriculum', {
   id: text('id').primaryKey(),
   program_id: text('program_id').notNull(),
-  course_id: text('course_id').notNull(),
-  level: integer('level'),
-  semester: integer('semester'),
-  core: integer('core').notNull().default(1),
+  term_id: text('term_id').notNull(),
+  term_number: integer('term_number').notNull(),
   created_at: timestamp('created_at').notNull().defaultNow(),
 }, (t) => [
-  index('idx_curriculum_program').on(t.program_id),
-  index('idx_curriculum_course').on(t.course_id),
+  uniqueIndex('program_curriculum_program_term_unique').on(t.program_id, t.term_id),
+  index('idx_program_curriculum_program').on(t.program_id),
 ]);
 
 export const programCourses = pgTable('program_courses', {
-  program_id: text('program_id').notNull(),
+  id: text('id').primaryKey(),
+  curriculum_id: text('curriculum_id').notNull(),
   course_id: text('course_id').notNull(),
-  is_required: integer('is_required').notNull().default(0),
-  semester: integer('semester'),
-  level: integer('level'),
+  is_mandatory: integer('is_mandatory').notNull().default(1),
+  elective_group: text('elective_group'),
+  prerequisite_ids: text('prerequisite_ids'),
   created_at: timestamp('created_at').notNull().defaultNow(),
 }, (t) => [
-  uniqueIndex('program_courses_program_course_unique').on(t.program_id, t.course_id),
+  uniqueIndex('program_courses_curriculum_course_unique').on(t.curriculum_id, t.course_id),
+  index('idx_program_courses_curriculum').on(t.curriculum_id),
 ]);
 
 export const courseSections = pgTable('course_sections', {
   id: text('id').primaryKey(),
   course_id: text('course_id').notNull(),
+  term_id: text('term_id').notNull(),
   section_code: text('section_code').notNull(),
   instructor_id: text('instructor_id'),
-  schedule: text('schedule'),
   capacity: integer('capacity').notNull().default(0),
-  enrolled: integer('enrolled').notNull().default(0),
+  room: text('room'),
+  schedule: text('schedule'),
+  is_active: integer('is_active').notNull().default(1),
   created_at: timestamp('created_at').notNull().defaultNow(),
   updated_at: timestamp('updated_at').notNull().defaultNow(),
 }, (t) => [
-  index('idx_sections_course').on(t.course_id),
+  uniqueIndex('course_sections_course_term_code_unique').on(t.course_id, t.term_id, t.section_code),
+  index('idx_course_sections_course').on(t.course_id),
+  index('idx_course_sections_term').on(t.term_id),
+  index('idx_course_sections_instr').on(t.instructor_id),
 ]);
 
 export const studentHolds = pgTable('student_holds', {
   id: text('id').primaryKey(),
   student_id: text('student_id').notNull(),
-  type: text('type').notNull(),
-  reason: text('reason'),
-  status: text('status').notNull().default('active'),
-  created_by: text('created_by'),
-  resolved_by: text('resolved_by'),
-  resolved_at: timestamp('resolved_at'),
+  hold_type: text('hold_type').notNull(),
+  reason: text('reason').notNull(),
+  is_active: integer('is_active').notNull().default(1),
+  metadata: text('metadata'),
   created_at: timestamp('created_at').notNull().defaultNow(),
-  updated_at: timestamp('updated_at').notNull().defaultNow(),
+  resolved_at: timestamp('resolved_at'),
 }, (t) => [
-  index('idx_holds_student').on(t.student_id),
-  index('idx_holds_status').on(t.status),
+  index('idx_student_holds_student').on(t.student_id),
 ]);
 
 export const studentCourseRegistrations = pgTable('student_course_registrations', {
   id: text('id').primaryKey(),
   student_id: text('student_id').notNull(),
   course_id: text('course_id').notNull(),
+  term_id: text('term_id').notNull(),
+  registration_type: text('registration_type').notNull(),
   status: text('status').notNull().default('registered'),
-  approval_status: text('approval_status').notNull().default('pending'),
-  semester: text('semester'),
+  section_id: text('section_id'),
+  registered_at: timestamp('registered_at').notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('student_course_registrations_student_course_term_unique').on(t.student_id, t.course_id, t.term_id),
+  index('idx_student_course_reg_term').on(t.student_id, t.term_id),
+  index('idx_student_course_reg_section').on(t.section_id),
+]);
+
+// ─── Timetabling & Rubrics ────────────────────────────────────────────────────
+export const timetabling = pgTable('timetabling', {
+  id: text('id').primaryKey(),
+  course_id: text('course_id').notNull(),
+  instructor_id: text('instructor_id'),
+  classroom_id: text('classroom_id'),
+  day_of_week: text('day_of_week').notNull(),
+  start_time: text('start_time').notNull(),
+  end_time: text('end_time').notNull(),
   created_at: timestamp('created_at').notNull().defaultNow(),
   updated_at: timestamp('updated_at').notNull().defaultNow(),
 }, (t) => [
-  index('idx_registrations_student').on(t.student_id),
+  index('idx_timetabling_course').on(t.course_id),
+  index('idx_timetabling_instructor').on(t.instructor_id),
+  index('idx_timetabling_day').on(t.day_of_week),
+]);
+
+export const rubrics = pgTable('rubrics', {
+  id: text('id').primaryKey(),
+  title: text('title').notNull(),
+  description: text('description'),
+  course_id: text('course_id'),
+  criteria: text('criteria').notNull(),
+  total_points: integer('total_points').notNull().default(100),
+  created_at: timestamp('created_at').notNull().defaultNow(),
+  updated_at: timestamp('updated_at').notNull().defaultNow(),
+}, (t) => [
+  index('idx_rubrics_course').on(t.course_id),
+]);
+
+// ─── Program Fees ─────────────────────────────────────────────────────────────
+export const programFees = pgTable('program_fees', {
+  id: text('id').primaryKey(),
+  program_id: text('program_id').notNull(),
+  term_id: text('term_id').notNull(),
+  amount: real('amount').notNull(),
+  description: text('description'),
+  created_at: timestamp('created_at').notNull().defaultNow(),
+  updated_at: timestamp('updated_at').notNull().defaultNow(),
+}, (t) => [
+  uniqueIndex('program_fees_program_term_unique').on(t.program_id, t.term_id),
+  index('idx_program_fees_program').on(t.program_id),
 ]);

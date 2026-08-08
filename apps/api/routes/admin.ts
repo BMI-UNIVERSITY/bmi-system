@@ -2,6 +2,9 @@ import { ok, error, logAdminAction, typedJson } from '../lib/types';
 import { sendEmail } from '../lib/email';
 import { getPortalUrl } from '../lib/config';
 import type { Env } from '../lib/types';
+import { createCoreDb } from '../lib/db';
+import { users, passwordResetTokens, adminAuditLogs, emailLogs, contactSubmissions, newsletterSubscribers } from '../schema/core';
+import { eq, and, sql, desc, count } from 'drizzle-orm';
 
 export async function handleAdminSetup(request: Request, env: Env): Promise<Response> {
   if (!env.ADMIN_SETUP_KEY) {
@@ -30,12 +33,22 @@ export async function handleAdminSetup(request: Request, env: Env): Promise<Resp
     return error('Email and password are required');
   }
 
-  const existing = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id FROM users WHERE role = ?').bind('admin').first();
+  const db = createCoreDb(env);
+
+  const existing = (await db.select({ id: users.id })
+    .from(users)
+    .where(eq(users.role, 'admin'))
+    .limit(1)
+    .execute())[0];
   if (existing) {
     return error('An admin already exists. Use the admin panel to promote additional users.', 409);
   }
 
-  const existingUser = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id FROM users WHERE email = ?').bind(body.email.toLowerCase()).first();
+  const existingUser = (await db.select({ id: users.id })
+    .from(users)
+    .where(eq(users.email, body.email.toLowerCase()))
+    .limit(1)
+    .execute())[0];
   if (existingUser) {
     return error('A user with this email already exists', 409);
   }
@@ -44,16 +57,15 @@ export async function handleAdminSetup(request: Request, env: Env): Promise<Resp
   const passwordHash = await hashPassword(body.password, env.PASSWORD_PEPPER, env.PBKDF2_ITERATIONS);
   const userId = crypto.randomUUID();
 
-  await env.PLATFORM_CONTEXT!.db.prepare(
-    `INSERT INTO users (id, email, password_hash, first_name, last_name, role, is_verified)
-     VALUES (?, ?, ?, ?, ?, 'admin', 1)`
-  ).bind(
-    userId,
-    body.email.toLowerCase(),
-    passwordHash,
-    body.first_name || 'Admin',
-    body.last_name || 'User'
-  ).run();
+  await db.insert(users).values({
+    id: userId,
+    email: body.email.toLowerCase(),
+    password_hash: passwordHash,
+    first_name: body.first_name || 'Admin',
+    last_name: body.last_name || 'User',
+    role: 'admin',
+    is_verified: 1,
+  });
 
   return ok({ message: 'Admin account created successfully.', user_id: userId });
 }
@@ -63,13 +75,21 @@ export async function handleListUsers(request: Request, env: Env): Promise<Respo
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 200);
   const offset = Math.max(parseInt(url.searchParams.get('offset') || '0'), 0);
 
-  const users = await env.PLATFORM_CONTEXT!.db.prepare(
-    'SELECT id, email, first_name, last_name, role, is_verified, created_at FROM users ORDER BY created_at DESC LIMIT ? OFFSET ?'
-  ).bind(limit, offset).all();
+  const db = createCoreDb(env);
 
-  const totalResult = await env.PLATFORM_CONTEXT!.db.prepare('SELECT COUNT(*) as total FROM users').first<{ total: number }>();
+  const userList = await db.select({
+    id: users.id,
+    email: users.email,
+    first_name: users.first_name,
+    last_name: users.last_name,
+    role: users.role,
+    is_verified: users.is_verified,
+    created_at: users.created_at,
+  }).from(users).orderBy(desc(users.created_at)).limit(limit).offset(offset);
 
-  return ok({ users: users.results, total: totalResult?.total ?? 0, limit, offset });
+  const totalResult = (await db.select({ total: count() }).from(users).execute())[0];
+
+  return ok({ users: userList, total: totalResult?.total ?? 0, limit, offset });
 }
 
 export async function handleUpdateUserRole(request: Request, env: Env, actorId: string): Promise<Response> {
@@ -89,14 +109,19 @@ export async function handleUpdateUserRole(request: Request, env: Env, actorId: 
     return error(`Invalid role. Must be one of: ${validRoles.join(', ')}`);
   }
 
-  const target = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id, role FROM users WHERE id = ?').bind(targetId).first<{ id: string; role: string }>();
+  const db = createCoreDb(env);
+  const target = (await db.select({ id: users.id, role: users.role })
+    .from(users)
+    .where(eq(users.id, targetId))
+    .execute())[0];
+
   if (!target) {
     return error('User not found', 404);
   }
 
-  await env.PLATFORM_CONTEXT!.db.prepare(
-    `UPDATE users SET role = ?, updated_at = datetime('now') WHERE id = ?`
-  ).bind(body.role, targetId).run();
+  await db.update(users)
+    .set({ role: body.role, updated_at: new Date() })
+    .where(eq(users.id, targetId));
 
   await logAdminAction(env, actorId, 'update_user_role', 'user', targetId, { old_role: target.role, new_role: body.role }, request);
 
@@ -111,9 +136,14 @@ export async function handleDeleteUser(request: Request, env: Env, actorId: stri
     return error('You cannot delete your own account', 400);
   }
 
-  const target = await env.PLATFORM_CONTEXT!.db.prepare(
-    'SELECT id, email, first_name, last_name, role FROM users WHERE id = ?'
-  ).bind(targetId).first<{ id: string; email: string; first_name: string; last_name: string; role: string }>();
+  const db = createCoreDb(env);
+  const target = (await db.select({
+    id: users.id,
+    email: users.email,
+    first_name: users.first_name,
+    last_name: users.last_name,
+    role: users.role,
+  }).from(users).where(eq(users.id, targetId)).execute())[0];
 
   if (!target) {
     return error('User not found', 404);
@@ -124,7 +154,7 @@ export async function handleDeleteUser(request: Request, env: Env, actorId: stri
   }
 
   // Cascade will automatically delete applications, documents, enrollments, sessions
-  await env.PLATFORM_CONTEXT!.db.prepare('DELETE FROM users WHERE id = ?').bind(targetId).run();
+  await db.delete(users).where(eq(users.id, targetId));
 
   await logAdminAction(env, actorId, 'delete_user', 'user', targetId, {
     deleted_email: target.email,
@@ -139,24 +169,28 @@ export async function handleAdminResetPassword(request: Request, env: Env, actor
   const url = new URL(request.url);
   const targetId = url.pathname.split('/')[4];
 
-  const target = await env.PLATFORM_CONTEXT!.db.prepare(
-    'SELECT id, email, first_name FROM users WHERE id = ?'
-  ).bind(targetId).first<{ id: string; email: string; first_name: string }>();
+  const db = createCoreDb(env);
+  const target = (await db.select({
+    id: users.id,
+    email: users.email,
+    first_name: users.first_name,
+  }).from(users).where(eq(users.id, targetId)).execute())[0];
 
   if (!target) {
     return error('User not found', 404);
   }
 
   // Delete any old unused tokens for this user first
-  await env.PLATFORM_CONTEXT!.db.prepare(
-    'DELETE FROM password_reset_tokens WHERE user_id = ? AND used_at IS NULL'
-  ).bind(targetId).run();
+  await db.delete(passwordResetTokens)
+    .where(and(eq(passwordResetTokens.user_id, targetId), sql`${passwordResetTokens.used_at} IS NULL`));
 
   const resetToken = crypto.randomUUID();
-  await env.PLATFORM_CONTEXT!.db.prepare(
-    `INSERT INTO password_reset_tokens (id, user_id, token, expires_at)
-     VALUES (?, ?, ?, datetime('now', '+24 hours'))`
-  ).bind(crypto.randomUUID(), targetId, resetToken).run();
+  await db.insert(passwordResetTokens).values({
+    id: crypto.randomUUID(),
+    user_id: targetId,
+    token: resetToken,
+    expires_at: new Date(Date.now() + 24 * 60 * 60 * 1000),
+  });
 
   if (env.RESEND_API_KEY) {
     const resetUrl = `${getPortalUrl(env)}/reset-password?token=${resetToken}`;
@@ -206,35 +240,36 @@ export async function handleGetAuditLogs(request: Request, env: Env): Promise<Re
   const offset = Math.max(parseInt(url.searchParams.get('offset') || '0'), 0);
   const actionFilter = url.searchParams.get('action') || null;
 
-  let query = `
-    SELECT
-      l.id, l.action, l.target_type, l.target_id, l.details,
-      l.ip_address, l.created_at,
-      u.first_name || ' ' || u.last_name AS actor_name,
-      u.email AS actor_email, u.role AS actor_role
-    FROM admin_audit_logs l
-    LEFT JOIN users u ON u.id = l.user_id
-  `;
-  const bindings: (string | number)[] = [];
+  const db = createCoreDb(env);
+
+  const logsQuery = db.select({
+    id: adminAuditLogs.id,
+    action: adminAuditLogs.action,
+    target_type: adminAuditLogs.target_type,
+    target_id: adminAuditLogs.target_id,
+    details: adminAuditLogs.details,
+    ip_address: adminAuditLogs.ip_address,
+    created_at: adminAuditLogs.created_at,
+    actor_name: sql<string>`${users.first_name} || ' ' || ${users.last_name}`,
+    actor_email: users.email,
+    actor_role: users.role,
+  })
+  .from(adminAuditLogs)
+  .leftJoin(users, eq(users.id, adminAuditLogs.user_id));
 
   if (actionFilter) {
-    query += ' WHERE l.action = ?';
-    bindings.push(actionFilter);
+    logsQuery.where(eq(adminAuditLogs.action, actionFilter));
   }
 
-  query += ' ORDER BY l.created_at DESC LIMIT ? OFFSET ?';
-  bindings.push(limit, offset);
+  const logs = await logsQuery.orderBy(desc(adminAuditLogs.created_at)).limit(limit).offset(offset);
 
-  const logs = await env.PLATFORM_CONTEXT!.db.prepare(query).bind(...bindings).all();
+  const totalCountQuery = db.select({ total: count() }).from(adminAuditLogs);
+  if (actionFilter) {
+    totalCountQuery.where(eq(adminAuditLogs.action, actionFilter));
+  }
+  const totalResult = (await totalCountQuery.execute())[0];
 
-  const totalQuery = actionFilter
-    ? 'SELECT COUNT(*) as total FROM admin_audit_logs WHERE action = ?'
-    : 'SELECT COUNT(*) as total FROM admin_audit_logs';
-  const totalResult = await env.PLATFORM_CONTEXT!.db.prepare(totalQuery)
-    .bind(...(actionFilter ? [actionFilter] : []))
-    .first<{ total: number }>();
-
-  return ok({ logs: logs.results, total: totalResult?.total ?? 0, limit, offset });
+  return ok({ logs, total: totalResult?.total ?? 0, limit, offset });
 }
 
 export async function handleBulkEmails(request: Request, env: Env): Promise<Response> {
@@ -249,13 +284,18 @@ export async function handleBulkEmails(request: Request, env: Env): Promise<Resp
     return error('Cannot send more than 500 emails at once', 400);
   }
 
+  const db = createCoreDb(env);
   let enqueued = 0;
+
   for (const to of recipients) {
     try {
       const logId = crypto.randomUUID();
-      await env.PLATFORM_CONTEXT!.db.prepare(
-        `INSERT INTO email_logs (id, to_address, subject, status) VALUES (?, ?, ?, 'pending')`
-      ).bind(logId, to, subject).run();
+      await db.insert(emailLogs).values({
+        id: logId,
+        to_address: to,
+        subject: subject,
+        status: 'pending',
+      });
 
       await env.PLATFORM_CONTEXT!.queue.send({ to, subject, html, logId });
       enqueued++;
@@ -274,18 +314,25 @@ export async function handleListContactSubmissions(request: Request, env: Env): 
   const limit = Math.min(100, parseInt(url.searchParams.get('limit') ?? '50'));
   const offset = parseInt(url.searchParams.get('offset') ?? '0');
 
-  const rows = await env.PLATFORM_CONTEXT!.db.prepare(
-    `SELECT id, name, email, subject, message, status, ip_address, created_at
-     FROM contact_submissions
-     WHERE status = ? OR ? = 'all'
-     ORDER BY created_at DESC
-     LIMIT ? OFFSET ?`,
-  ).bind(status, status, limit, offset).all<{
-    id: string; name: string; email: string; subject: string;
-    message: string; status: string; ip_address: string | null; created_at: string;
-  }>();
+  const db = createCoreDb(env);
+  const submissionsQuery = db.select({
+    id: contactSubmissions.id,
+    name: contactSubmissions.name,
+    email: contactSubmissions.email,
+    subject: contactSubmissions.subject,
+    message: contactSubmissions.message,
+    status: contactSubmissions.status,
+    ip_address: contactSubmissions.ip_address,
+    created_at: contactSubmissions.created_at,
+  }).from(contactSubmissions);
 
-  return ok({ results: rows.results, limit, offset });
+  if (status !== 'all') {
+    submissionsQuery.where(eq(contactSubmissions.status, status));
+  }
+
+  const rows = await submissionsQuery.orderBy(desc(contactSubmissions.created_at)).limit(limit).offset(offset);
+
+  return ok({ results: rows, limit, offset });
 }
 
 /** GET /api/admin/newsletter-subscribers — list newsletter subscribers */
@@ -295,20 +342,27 @@ export async function handleListNewsletterSubscribers(request: Request, env: Env
   const limit = Math.min(500, parseInt(url.searchParams.get('limit') ?? '100'));
   const offset = parseInt(url.searchParams.get('offset') ?? '0');
 
+  const db = createCoreDb(env);
+
+  const listQuery = db.select({
+    id: newsletterSubscribers.id,
+    email: newsletterSubscribers.email,
+    source: newsletterSubscribers.source,
+    status: newsletterSubscribers.status,
+    subscribed_at: newsletterSubscribers.subscribed_at,
+  }).from(newsletterSubscribers);
+
+  const countQuery = db.select({ n: count() }).from(newsletterSubscribers);
+
+  if (status !== 'all') {
+    listQuery.where(eq(newsletterSubscribers.status, status));
+    countQuery.where(eq(newsletterSubscribers.status, status));
+  }
+
   const [rows, total] = await Promise.all([
-    env.PLATFORM_CONTEXT!.db.prepare(
-      `SELECT id, email, source, status, subscribed_at
-       FROM newsletter_subscribers
-       WHERE status = ? OR ? = 'all'
-       ORDER BY subscribed_at DESC
-       LIMIT ? OFFSET ?`,
-    ).bind(status, status, limit, offset).all<{
-      id: string; email: string; source: string; status: string; subscribed_at: string;
-    }>(),
-    env.PLATFORM_CONTEXT!.db.prepare(
-      `SELECT COUNT(*) AS n FROM newsletter_subscribers WHERE status = ? OR ? = 'all'`,
-    ).bind(status, status).first<{ n: number }>(),
+    listQuery.orderBy(desc(newsletterSubscribers.subscribed_at)).limit(limit).offset(offset),
+    countQuery.execute(),
   ]);
 
-  return ok({ results: rows.results, total: total?.n ?? 0, limit, offset });
+  return ok({ results: rows, total: total[0]?.n ?? 0, limit, offset });
 }

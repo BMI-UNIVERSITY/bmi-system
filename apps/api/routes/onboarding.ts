@@ -1,26 +1,37 @@
-
 import { ok, error } from '../lib/types';
 import type { Env } from '../lib/types';
+import { createCoreDb } from '../lib/db';
+import { documents, applications, invoices } from '../schema/core';
+import { enrollments, studentHolds } from '../schema/academic';
+import { eq, and } from 'drizzle-orm';
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 export async function handleGetOnboardingStatus(_request: Request, env: Env, userId: string): Promise<Response> {
+  const db = createCoreDb(env);
+
   // Check if they uploaded an ID document
-  const idDoc = await env.PLATFORM_CONTEXT!.db.prepare(
-    'SELECT id FROM documents WHERE user_id = ? AND doc_type = ?'
-  ).bind(userId, 'id_document').first();
+  const idDoc = (await db.select({ id: documents.id })
+    .from(documents)
+    .where(and(eq(documents.user_id, userId), eq(documents.doc_type, 'id_document')))
+    .limit(1)
+    .execute())[0];
   const hasUploadedID = !!idDoc;
 
   // Check if they have enrolled in any class
-  const enrollment = await env.PLATFORM_CONTEXT!.db.prepare(
-    'SELECT id FROM enrollments WHERE student_id = ?'
-  ).bind(userId).first();
+  const enrollment = (await db.select({ id: enrollments.id })
+    .from(enrollments)
+    .where(eq(enrollments.student_id, userId))
+    .limit(1)
+    .execute())[0];
   const hasRegisteredClasses = !!enrollment;
 
   // Check if they have paid at least one invoice
-  const invoice = await env.PLATFORM_CONTEXT!.db.prepare(
-    'SELECT id FROM invoices WHERE student_id = ? AND status = ?'
-  ).bind(userId, 'paid').first();
+  const invoice = (await db.select({ id: invoices.id })
+    .from(invoices)
+    .where(and(eq(invoices.student_id, userId), eq(invoices.status, 'paid')))
+    .limit(1)
+    .execute())[0];
   const hasPaidInvoice = !!invoice;
 
   const tasks = [
@@ -77,14 +88,24 @@ export async function handleUploadStudentDocument(request: Request, env: Env, us
   const docType = url.searchParams.get('doc_type');
   if (!docType) return error('doc_type is required', 400);
 
-  const app = await env.PLATFORM_CONTEXT!.db.prepare('SELECT id FROM applications WHERE user_id = ?').bind(userId).first<{id: string}>();
+  const db = createCoreDb(env);
+
+  const app = (await db.select({ id: applications.id })
+    .from(applications)
+    .where(eq(applications.user_id, userId))
+    .limit(1)
+    .execute())[0];
+
   let applicationId = app?.id;
   if (!applicationId) {
     applicationId = `STUDENT-PROFILE-${userId}`;
-    // Insert a minimal application to satisfy foreign key constraint
-    await env.PLATFORM_CONTEXT!.db.prepare(
-      `INSERT OR IGNORE INTO applications (id, user_id, status, program, degree_level) VALUES (?, ?, 'draft', 'General', 'undergraduate')`
-    ).bind(applicationId, userId).run();
+    await db.insert(applications).values({
+      id: applicationId,
+      user_id: userId,
+      status: 'draft',
+      program: 'General',
+      degree_level: 'undergraduate',
+    }).onConflictDoNothing();
   }
 
   const formData = await request.formData();
@@ -111,16 +132,25 @@ export async function handleUploadStudentDocument(request: Request, env: Env, us
   });
 
   const docId = crypto.randomUUID();
-  await env.PLATFORM_CONTEXT!.db.prepare(
-    `INSERT INTO documents (id, application_id, user_id, doc_type, file_name, r2_key, mime_type, file_size_bytes)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-  ).bind(docId, applicationId, userId, docType, safeFileName, r2Key, detectedMime, file.size).run();
+  await db.insert(documents).values({
+    id: docId,
+    application_id: applicationId,
+    user_id: userId,
+    doc_type: docType,
+    file_name: safeFileName,
+    r2_key: r2Key,
+    mime_type: detectedMime,
+    file_size_bytes: file.size,
+  });
 
   if (docType === 'id_document') {
-    await env.PLATFORM_CONTEXT!.db.prepare(
-      `UPDATE student_holds SET is_active = 0, resolved_at = datetime('now')
-       WHERE student_id = ? AND hold_type = 'document' AND is_active = 1`
-    ).bind(userId).run();
+    await db.update(studentHolds)
+      .set({ is_active: 0, resolved_at: new Date() })
+      .where(and(
+        eq(studentHolds.student_id, userId),
+        eq(studentHolds.hold_type, 'document'),
+        eq(studentHolds.is_active, 1)
+      ));
   }
 
   return ok({ document_id: docId, file_name: safeFileName, doc_type: docType });
