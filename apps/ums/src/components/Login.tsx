@@ -63,15 +63,20 @@ const DEMO_CREDENTIALS = [
 ];
 
 const Login: React.FC<LoginProps> = ({ onLogin, logo }) => {
-  const [email, setEmail] = useState('admin@bmi.edu');
-  const [password, setPassword] = useState('TestAdmin2024!!');
+  const isLocalDev = typeof window !== 'undefined' && 
+    (window.location.hostname === 'localhost' || 
+     window.location.hostname === '127.0.0.1' || 
+     window.location.hostname.startsWith('192.168.'));
+
+  const [email, setEmail] = useState(isLocalDev ? 'admin@bmi.edu' : '');
+  const [password, setPassword] = useState(isLocalDev ? 'TestAdmin2024!!' : '');
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showActivateAccount, setShowActivateAccount] = useState(false);
-  // Tracks which controlled profile card was last clicked for visual feedback
-  const [activeProfile, setActiveProfile] = useState<string | null>('Executive Admin');
+  const [activeProfile, setActiveProfile] = useState<string | null>(isLocalDev ? 'Executive Admin' : null);
+
 
   // MFA state
   const [showMfa, setShowMfa] = useState(false);
@@ -144,47 +149,50 @@ const Login: React.FC<LoginProps> = ({ onLogin, logo }) => {
         </div>
 
         {/* Quick Demo Access Bar */}
-        <div className="mb-5 bg-slate-50 dark:bg-gray-800/60 rounded-2xl p-3 border border-slate-200 dark:border-gray-700">
-          <div className="flex items-center justify-between mb-2 px-1">
-            <span className="text-[10px] font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-wider flex items-center gap-1">
-              <KeyRound className="w-3.5 h-3.5 text-[#FFD700]" />
-              Controlled Admin Profiles
-            </span>
-            <span className="text-[10px] font-semibold text-gray-400">Select Role to Sign In</span>
+        {isLocalDev && (
+          <div className="mb-5 bg-slate-50 dark:bg-gray-800/60 rounded-2xl p-3 border border-slate-200 dark:border-gray-700">
+            <div className="flex items-center justify-between mb-2 px-1">
+              <span className="text-[10px] font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-wider flex items-center gap-1">
+                <KeyRound className="w-3.5 h-3.5 text-[#FFD700]" />
+                Controlled Admin Profiles
+              </span>
+              <span className="text-[10px] font-semibold text-gray-400">Select Role to Sign In</span>
+            </div>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {DEMO_CREDENTIALS.map((demo) => {
+                const Icon = demo.icon;
+                const isSelected = activeProfile === demo.role;
+                return (
+                  <button
+                    key={demo.role}
+                    type="button"
+                    // Pre-fills credentials into the form — does NOT auto-submit.
+                    // The user must click "Sign In" to authenticate.
+                    onClick={() => handleProfileSelect(demo.email, demo.password, demo.role)}
+                    disabled={loading}
+                    title={`Fill credentials for ${demo.role}`}
+                    aria-pressed={isSelected}
+                    className={`flex flex-col items-start p-2.5 rounded-xl border transition-all ${
+                      isSelected
+                        ? demo.color + ' ring-2 ring-offset-1 ring-current scale-[1.02]'
+                        : demo.color + ' opacity-80 hover:opacity-100'
+                    } shadow-xs text-left cursor-pointer active:scale-95 disabled:opacity-50 group`}
+                  >
+                    <div className="flex items-center gap-1.5 w-full mb-1">
+                      <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                      <span className="text-[10px] font-extrabold leading-tight truncate">{demo.role}</span>
+                      {isSelected && (
+                        <span className="ml-auto text-[8px] font-black uppercase tracking-wider opacity-70">✓ Ready</span>
+                      )}
+                    </div>
+                    <span className="text-[9px] text-gray-500 dark:text-gray-400 font-medium leading-tight line-clamp-1">{demo.scope}</span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {DEMO_CREDENTIALS.map((demo) => {
-              const Icon = demo.icon;
-              const isSelected = activeProfile === demo.role;
-              return (
-                <button
-                  key={demo.role}
-                  type="button"
-                  // Pre-fills credentials into the form — does NOT auto-submit.
-                  // The user must click "Sign In" to authenticate.
-                  onClick={() => handleProfileSelect(demo.email, demo.password, demo.role)}
-                  disabled={loading}
-                  title={`Fill credentials for ${demo.role}`}
-                  aria-pressed={isSelected}
-                  className={`flex flex-col items-start p-2.5 rounded-xl border transition-all ${
-                    isSelected
-                      ? demo.color + ' ring-2 ring-offset-1 ring-current scale-[1.02]'
-                      : demo.color + ' opacity-80 hover:opacity-100'
-                  } shadow-xs text-left cursor-pointer active:scale-95 disabled:opacity-50 group`}
-                >
-                  <div className="flex items-center gap-1.5 w-full mb-1">
-                    <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-                    <span className="text-[10px] font-extrabold leading-tight truncate">{demo.role}</span>
-                    {isSelected && (
-                      <span className="ml-auto text-[8px] font-black uppercase tracking-wider opacity-70">✓ Ready</span>
-                    )}
-                  </div>
-                  <span className="text-[9px] text-gray-500 dark:text-gray-400 font-medium leading-tight line-clamp-1">{demo.scope}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        )}
+
 
         {/* Error Message */}
         {error && (
