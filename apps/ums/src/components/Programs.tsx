@@ -204,7 +204,7 @@ const Programs: React.FC = () => {
       });
 
       if (res.success && res.data) {
-        // @ts-ignore
+        // @ts-expect-error editor state uses a loose shape
         setPrograms(prev => (prev as any).map((p: any) => p.id === editingProgram.id ? {
           ...p,
         } : p));

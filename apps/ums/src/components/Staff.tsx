@@ -150,7 +150,7 @@ const Staff: React.FC = () => {
       updateLeaveRequest.mutate({ id, status });
     } else {
       // No API yet — update local mock state
-      // @ts-ignore
+      // @ts-expect-error leave request status uses a wider union
       setLeaveRequests((prev) => (prev as any).map((r: any) => r.id === request.id ? { ...r, status: "approved" as any } : r));
     }
   };

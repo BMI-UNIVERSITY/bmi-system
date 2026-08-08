@@ -22,6 +22,6 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       - name: Typecheck
-        run: pnpm tsc --noEmit
+        run: pnpm ci:typecheck
       - name: Lint
-        run: pnpm eslint .
+        run: pnpm ci:lint

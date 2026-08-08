@@ -36,7 +36,7 @@ async function handleResponse<T>(res: Response): Promise<T> {
       const body = await res.json();
       if (body?.error) message = body.error;
       else if (body?.message) message = body.message;
-    } catch (_) {}
+    } catch (_) { /* ignore parse errors */ }
     throw new ApiError(message, res.status);
   }
   // Handle 204 No Content

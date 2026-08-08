@@ -23,5 +23,5 @@ export default [
       '@typescript-eslint/no-unused-vars': 'off',
     },
   },
-  { ignores: ['dist', 'node_modules', '.wrangler', 'scripts'] },
+  { ignores: ['dist', 'node_modules', '.wrangler', 'scripts', 'check_db.cjs', 'init-db.mjs'] },
 ];

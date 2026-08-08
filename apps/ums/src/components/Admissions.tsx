@@ -83,7 +83,7 @@ export default function Admissions() {
     setLoading(true);
     setError("");
     try {
-      const data = // @ts-ignore
+      const data = // @ts-expect-error application API response shape
       await api.createApplication(applicationData);
       setApps(data);
     } catch (err: unknown) {
