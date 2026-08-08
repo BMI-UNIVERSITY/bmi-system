@@ -210,26 +210,26 @@ const Programs: React.FC = () => {
         } : p));
         showToast("New degree program created successfully!");
       } else {
-        const localProg: Program = {
+        const localProg = {
           id: `prog-${Date.now()}`,
           ...newProgData,
           department_id: newProgData.department_id || "dept-1",
           faculty_id: newProgData.faculty_id || "fac-1",
           created: new Date().toISOString(),
           updated: new Date().toISOString(),
-        };
+        } as Program;
         setPrograms((prev) => [localProg, ...prev]);
         showToast("New degree program added to catalog!");
       }
     } catch {
-      const localProg: Program = {
+      const localProg = {
         id: `prog-${Date.now()}`,
         ...newProgData,
         department_id: newProgData.department_id || "dept-1",
         faculty_id: newProgData.faculty_id || "fac-1",
         created: new Date().toISOString(),
         updated: new Date().toISOString(),
-      };
+      } as Program;
       setPrograms((prev) => [localProg, ...prev]);
       showToast("New degree program added to catalog!");
     } finally {

@@ -101,5 +101,24 @@ export const admissionsService = {
     }
     const result = await response.json() as { success: boolean; data: StatusLogEntry[] };
     return result.data || [];
+  },
+
+  /**
+   * Create a new application
+   */
+  async createApplication(data: Record<string, any>) {
+    const response = await authFetch(`${API_URL.replace('/v1', '')}/applications`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      const error = (await parseJsonSafe(response)) as { error?: string };
+      throw new Error(error?.error || 'Failed to create application');
+    }
+    return response.json();
   }
 };
+

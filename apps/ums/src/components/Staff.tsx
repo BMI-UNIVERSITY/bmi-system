@@ -63,8 +63,9 @@ const Staff: React.FC = () => {
     "All" | "Academic" | "Administrative" | "Management" | "Leave Requests"
   >("All");
   const [viewMode, setViewMode] = useState<"grid" | "table">("table");
-  const [, setLeaveLoading] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+
   const [newStaff, setNewStaff] = useState<any>({
     staff_number: "",
     first_name: "",
@@ -130,7 +131,7 @@ const Staff: React.FC = () => {
 
 
   // ── Leave Requests — real API with local fallback ───────────────────────────
-  const { data: apiLeaveRequests, isLoading: leaveLoading } = useLeaveRequestsQuery();
+  const { data: apiLeaveRequests } = useLeaveRequestsQuery();
   const updateLeaveRequest = useUpdateLeaveRequest();
 
   // Fallback mock data shown when backend endpoint not yet available
