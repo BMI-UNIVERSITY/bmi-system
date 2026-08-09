@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Lock, AlertCircle, Loader2, ShieldCheck, UserCheck, KeyRound, Scroll, CreditCard, Users, ClipboardList, Info } from 'lucide-react';
+import { Mail, Lock, AlertCircle, Loader2, ShieldCheck, UserCheck, KeyRound, Scroll, CreditCard, Users, ClipboardList } from 'lucide-react';
 import { User, AuthResponse } from '../services/authService';
 import { API_URL } from '../services/config';
 import { useAuthStore } from '../stores/authStore';
