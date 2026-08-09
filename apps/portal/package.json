@@ -43,7 +43,7 @@
     "react-dom": "^19.2.7",
     "react-image-crop": "^11.1.2",
     "react-router-dom": "^7.18.1",
-    "zod": "^3.25.67"
+    "zod": "^4.4.3"
   },
   "optionalDependencies": {
     "@rolldown/binding-linux-x64-gnu": "1.1.3"
