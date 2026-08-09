@@ -5,7 +5,7 @@ import { handleUploadDocument, handleDownloadDocument, handleDeleteDocument, han
 import { handleRequestRecommendation, handleGetRecommendationInfo, handleUploadRecommendation, handleListRecommendations } from './routes/recommendations';
 import { requireAuth, rateLimit, withCors, getCorsHeaders, createLogger, requestLogger } from '@bmi/api-middleware';
 import { handleGetDashboard, handleGetCourses, handleEnroll, handleGetFinances, handlePayInvoice, handleDropCourse, handleGetTranscript, handleGetSettings, handleUpdateSettings, handleUpdatePhoto, handleGetTickets, handleCreateTicket } from './routes/student';
-import { handleAdminSetup, handleListUsers, handleUpdateUserRole, handleDeleteUser, handleAdminResetPassword, handleGetAuditLogs, handleBulkEmails, handleListContactSubmissions, handleListNewsletterSubscribers } from './routes/admin';
+import { handleAdminSetup, handleAdminSetupInfo, handleAdminSetupReset, handleListUsers, handleUpdateUserRole, handleDeleteUser, handleAdminResetPassword, handleGetAuditLogs, handleBulkEmails, handleListContactSubmissions, handleListNewsletterSubscribers } from './routes/admin';
 import { handleListTimetabling, handleCreateTimetabling } from './routes/ums-timetabling';
 import { handleListRubrics, handleCreateRubric, handleDeleteRubric } from './routes/ums-rubrics';
 import { handleGetPerformanceMetrics, handleGetQueryAnalysis, handleRunMaintenance, handleGetSystemHealth, handleClearMetrics } from './routes/performance';
@@ -134,6 +134,9 @@ const ROUTES: Route[] = [
   { method: 'GET', path: /^\/api\/student\/finances$/, roles: ['student'], handler: async (req, env, _p, auth) =>handleGetFinances(req, env, auth!.user.sub) },
   { method: 'POST', path: /^\/api\/student\/invoices\/([^/]+)\/pay$/, roles: ['student'], handler: async (req, env, p, auth) =>handlePayInvoice(req, env, auth!.user.sub, p[1]) },
   { method: 'POST', path: /^\/api\/admin\/setup$/, roles: undefined, handler: async (req, env) =>handleAdminSetup(req, env) },
+  // Bootstrap-only helpers — remove after first admin login is confirmed
+  { method: 'GET',  path: /^\/api\/admin\/setup\/info$/, roles: undefined, handler: async (req, env) =>handleAdminSetupInfo(req, env) },
+  { method: 'POST', path: /^\/api\/admin\/setup\/reset$/, roles: undefined, handler: async (req, env) =>handleAdminSetupReset(req, env) },
   { method: 'GET', path: /^\/api\/admin\/users$/, roles: ['admin'], handler: async (req, env) =>handleListUsers(req, env) },
   { method: 'PUT', path: /^\/api\/admin\/users\/([^/]+)\/role$/, roles: ['admin'], handler: async (req, env, _p, auth) =>handleUpdateUserRole(req, env, auth!.user.sub) },
   { method: 'DELETE', path: /^\/api\/admin\/users\/([^/]+)$/, roles: ['admin'], handler: async (req, env, _p, auth) =>handleDeleteUser(req, env, auth!.user.sub) },
@@ -371,6 +374,8 @@ export default withSentry(
         '/api/auth/reset-password',
         '/api/auth/resend-verification',
         '/api/admin/setup',
+        '/api/admin/setup/info',
+        '/api/admin/setup/reset',
       ]);
       const isCsrfExempt = csrfExemptPaths.has(path) || path === '/api/recommendations/' || path.startsWith('/api/recommendations/');
       if (stateChangingMethods.includes(method) && !isCsrfExempt) {

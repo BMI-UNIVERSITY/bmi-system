@@ -70,6 +70,47 @@ export async function handleAdminSetup(request: Request, env: Env): Promise<Resp
   return ok({ message: 'Admin account created successfully.', user_id: userId });
 }
 
+/** GET /api/admin/setup/info — returns existing admin accounts (setup-key gated) */
+export async function handleAdminSetupInfo(request: Request, env: Env): Promise<Response> {
+  if (!env.ADMIN_SETUP_KEY) return error('ADMIN_SETUP_KEY not configured', 501);
+  const enc = new TextEncoder();
+  const given = enc.encode(request.headers.get('X-Admin-Setup-Key') ?? '');
+  const real  = enc.encode(env.ADMIN_SETUP_KEY);
+  if (given.byteLength !== real.byteLength || !crypto.subtle.timingSafeEqual(given, real))
+    return error('Unauthorized', 401);
+
+  const db = createCoreDb(env);
+  const admins = await db.select({ id: users.id, email: users.email, first_name: users.first_name, last_name: users.last_name, role: users.role, created_at: users.created_at })
+    .from(users).where(eq(users.role, 'admin')).execute();
+  return ok({ admins });
+}
+
+/** POST /api/admin/setup/reset — resets an admin's password (setup-key gated) */
+export async function handleAdminSetupReset(request: Request, env: Env): Promise<Response> {
+  if (!env.ADMIN_SETUP_KEY) return error('ADMIN_SETUP_KEY not configured', 501);
+  const enc = new TextEncoder();
+  const given = enc.encode(request.headers.get('X-Admin-Setup-Key') ?? '');
+  const real  = enc.encode(env.ADMIN_SETUP_KEY);
+  if (given.byteLength !== real.byteLength || !crypto.subtle.timingSafeEqual(given, real))
+    return error('Unauthorized', 401);
+
+  let body: { email: string; new_password: string };
+  try { body = await request.json(); }
+  catch { return error('Invalid JSON body'); }
+  if (!body.email || !body.new_password) return error('email and new_password are required');
+
+  const db = createCoreDb(env);
+  const target = (await db.select({ id: users.id, role: users.role })
+    .from(users).where(eq(users.email, body.email.toLowerCase())).limit(1).execute())[0];
+  if (!target) return error('User not found', 404);
+  if (target.role !== 'admin') return error('Target user is not an admin', 403);
+
+  const { hashPassword } = await import('@bmi/api-middleware');
+  const passwordHash = await hashPassword(body.new_password, env.PASSWORD_PEPPER, env.PBKDF2_ITERATIONS);
+  await db.update(users).set({ password_hash: passwordHash, updated_at: new Date() }).where(eq(users.id, target.id));
+  return ok({ message: 'Admin password reset successfully.' });
+}
+
 export async function handleListUsers(request: Request, env: Env): Promise<Response> {
   const url = new URL(request.url);
   const limit = Math.min(parseInt(url.searchParams.get('limit') || '50'), 200);
