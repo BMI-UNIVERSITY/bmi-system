@@ -30,7 +30,7 @@ jobs:
       university: ${{ steps.filter.outputs.university }}
       any: ${{ steps.filter.outputs.api == 'true' || steps.filter.outputs.portal == 'true' || steps.filter.outputs.ums == 'true' || steps.filter.outputs.university == 'true' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Path Filters
         uses: dorny/paths-filter@v3
@@ -75,7 +75,7 @@ jobs:
       needs.changes.outputs.ums == 'true' ||
       needs.changes.outputs.university == 'true'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 2 # Turbo needs HEAD^ to compute affected packages
 
@@ -131,7 +131,7 @@ jobs:
     runs-on: ubuntu-latest
     if: github.event_name == 'schedule'
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v4
         with:
@@ -170,7 +170,7 @@ jobs:
     environment:
       name: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v4
         with:
@@ -222,7 +222,7 @@ jobs:
     environment:
       name: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v4
         with:
@@ -275,7 +275,7 @@ jobs:
     environment:
       name: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v4
         with:
@@ -328,7 +328,7 @@ jobs:
     environment:
       name: production
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v4
         with:
