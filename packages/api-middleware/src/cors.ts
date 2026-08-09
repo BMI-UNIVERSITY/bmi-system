@@ -15,11 +15,11 @@ export function getCorsHeaders(
 
   if (origin && !isAllowed) {
     // Dynamically match any Cloudflare Pages branch / preview deployment domain (*.pages.dev)
-    if (/^https:\/\/([a-zA-Z0-9-]+\.)?pages\.dev$/.test(origin)) {
+    if (/^https:\/\/(?:[a-zA-Z0-9-]+\.)*pages\.dev$/.test(origin)) {
       isAllowed = true;
-    } else if (/^https:\/\/([a-zA-Z0-9-]+\.)?bmiuniversities\.org$/.test(origin)) {
+    } else if (/^https:\/\/(?:[a-zA-Z0-9-]+\.)*bmiuniversities\.org$/.test(origin)) {
       isAllowed = true;
-    } else if (/^https:\/\/([a-zA-Z0-9-]+\.)?hkmministries\.org$/.test(origin)) {
+    } else if (/^https:\/\/(?:[a-zA-Z0-9-]+\.)*hkmministries\.org$/.test(origin)) {
       isAllowed = true;
     }
   }
