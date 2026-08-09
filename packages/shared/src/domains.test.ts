@@ -33,6 +33,8 @@ describe('@bmi/shared — domains', () => {
     expect(ALLOWED_ORIGINS).toContain('https://bmi-ums.pages.dev');
     expect(ALLOWED_ORIGINS).toContain('http://localhost:5173');
     expect(ALLOWED_ORIGINS).toContain('http://localhost:3000');
+    expect(ALLOWED_ORIGINS).toContain('http://localhost:4173');
+    expect(ALLOWED_ORIGINS).toContain('http://localhost:5174');
   });
 
   it('ALLOWED_ORIGINS has no duplicates', () => {

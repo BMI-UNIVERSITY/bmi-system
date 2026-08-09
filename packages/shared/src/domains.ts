@@ -31,6 +31,8 @@ export const DEV_ORIGINS = [
   'http://localhost:5173',
   'http://localhost:3000',
   'http://localhost:4173',
+  // UMS dev & preview port (see apps/ums/vite.config.ts)
+  'http://localhost:5174',
 ] as const;
 
 /**

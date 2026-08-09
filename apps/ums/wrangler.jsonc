@@ -1,8 +1,8 @@
 {
-  // Cloudflare Pages configuration for the BMI Portal frontend.
-  // The API (Worker) lives in apps/api and is deployed separately.
+  // Cloudflare Pages configuration for the BMI UMS frontend.
+  // Build output is Vite's default dist/ directory.
   // account_id comes from the CLOUDFLARE_ACCOUNT_ID GitHub Secret at deploy time.
-  "name": "bmi-portal",
+  "name": "bmi-ums",
   "pages_build_output_dir": "./dist",
   "compatibility_date": "2025-01-01"
 }

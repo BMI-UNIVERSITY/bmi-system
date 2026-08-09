@@ -17,5 +17,6 @@ exports[`@bmi/shared — domains > snapshot — allowed origins list has not cha
   "http://localhost:5173",
   "http://localhost:3000",
   "http://localhost:4173",
+  "http://localhost:5174",
 ]
 `;

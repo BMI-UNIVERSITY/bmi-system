@@ -6,22 +6,39 @@ on:
   pull_request:
     branches: [main]
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: '24'
+  PNPM_VERSION: '9.12.0'
+
 jobs:
-  lint-and-typecheck:
+  ci:
+    name: Lint, Typecheck & Test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v3
+
+      - uses: pnpm/action-setup@v4
         with:
-          version: 9
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ env.NODE_VERSION }}
           cache: 'pnpm'
+          cache-dependency-path: 'pnpm-lock.yaml'
+
       - name: Install dependencies
-        run: pnpm install
+        run: pnpm install --frozen-lockfile
+
       - name: Typecheck
-        run: pnpm ci:typecheck
+        run: pnpm exec turbo run type-check --concurrency=100%
+
       - name: Lint
-        run: pnpm ci:lint
+        run: pnpm exec turbo run lint --concurrency=100%
+
+      - name: Test
+        run: pnpm exec turbo run test --concurrency=100%

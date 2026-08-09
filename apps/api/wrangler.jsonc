@@ -2,40 +2,46 @@
 	"$schema": "node_modules/wrangler/config-schema.json",
 	"name": "bmi-api",
 	"compatibility_date": "2025-01-01",
-	"compatibility_flags": [
-		"nodejs_compat"
-	],
+	"compatibility_flags": ["nodejs_compat"],
 	"main": "index.ts",
-	// ─── Cloudflare Account ───────────────────────────────────────────
-	// Run `npx wrangler whoami` after login to get your account ID.
-	"account_id": "3d71aae3dd47db612121c9f7ba281b97",
-	// ─── D1 Database (Cache Layer) ────────────────────────────────────
+
+	// ─── Cloudflare Account ────────────────────────────────────────────────────
+	// Account: Bmiuniversity107@gmail.com — https://dash.cloudflare.com/3d71aae3dd47db612121c9f7ba281b97
+	// account_id is NOT hardcoded here — it is injected at deploy time via the
+	// CLOUDFLARE_ACCOUNT_ID environment variable (GitHub Secret).
+	// For local `wrangler dev`, run: npx wrangler login  OR  set CLOUDFLARE_API_TOKEN.
+
+	// ─── D1 Database (Cache / Fallback) ───────────────────────────────────────
 	// Neon PostgreSQL (DATABASE_URL_CORE secret) is the PRIMARY database.
-	// D1 is used ONLY as a local SQLite cache/fallback — it is never the
-	// source of truth in production when DATABASE_URL_CORE is set.
+	// D1 is used ONLY as a local SQLite cache/fallback — never the source of truth
+	// in production when DATABASE_URL_CORE is set.
 	//
-	// Create on new account:
-	//   npx wrangler d1 create bmi-cache-db
-	// Then paste the returned database_id below.
+	// To provision on new account (run once, then paste database_id below):
+	//   pnpm exec wrangler d1 create bmi-cache-db
 	"d1_databases": [
 		{
 			"binding": "DB",
 			"database_name": "bmi-cache-db",
-			"database_id": "00574d7a-e87d-4ac7-8335-2390c68b0977"
+			"database_id": "REPLACE_AFTER_PROVISIONING"
 		}
 	],
-	// ─── KV Namespace (Cache-Aside) ───────────────────────────────────
-	// Used by lib/cache.ts (cacheAside) for high-read catalog endpoints.
-	// Local dev uses a local KV store regardless of the id value.
-	// After provisioning, replace id with:
-	//   npx wrangler kv namespace create bmi-catalog-cache
+
+	// ─── KV Namespace (Catalog Cache-Aside) ───────────────────────────────────
+	// Used by lib/cache.ts for high-read catalog endpoints.
+	//
+	// To provision (run once, then paste id below):
+	//   pnpm exec wrangler kv namespace create bmi-catalog-cache
 	"kv_namespaces": [
 		{
 			"binding": "KV",
-			"id": "f90b5a56719344c1ad53598d3b948163",
-			"preview_id": "00000000000000000000000000000001"
+			"id": "REPLACE_AFTER_PROVISIONING",
+			"preview_id": "REPLACE_AFTER_PROVISIONING"
 		}
 	],
+
+	// ─── Queues (Email Delivery) ───────────────────────────────────────────────
+	// To provision (run once):
+	//   pnpm exec wrangler queues create bmi-email-queue
 	"queues": {
 		"producers": [
 			{
@@ -52,33 +58,24 @@
 			}
 		]
 	},
-	// ─── Neon PostgreSQL (Primary Database) ───────────────────────────
-	// Single Neon project, single database (neondb).
-	// All domain schemas live inside it (ums, portal, hr, library, alumni).
+
+	// ─── Hyperdrive (Neon Connection Pooler) ──────────────────────────────────
+	// Speeds up Neon connections from Workers by pooling at the edge.
 	//
-	// Phase 6 — Provision Hyperdrive (run once in a logged-in shell):
-	//   npx wrangler login
-	//   npx wrangler hyperdrive create bmi-core-hyperdrive \
-	//     --connection-string="<DATABASE_URL_CORE>"
-	//
-	// Paste the returned Hyperdrive ID below and uncomment the binding.
-	// Until it is active, the Worker reads the DATABASE_URL_CORE secret.
-	//
-	// Set production secrets (run once):
-	//   npx wrangler secret put DATABASE_URL_CORE
-	//   npx wrangler secret put JWT_SECRET
-	//   npx wrangler secret put PASSWORD_PEPPER
-	//   npx wrangler secret put RESEND_API_KEY
+	// To provision (run once, then paste id below):
+	//   pnpm exec wrangler hyperdrive create bmi-core-hyperdrive \
+	//     --connection-string="<DATABASE_URL_CORE from .dev.vars>"
 	"hyperdrive": [
 		{
 			"binding": "CORE_HYPERDRIVE",
-			"id": "a8de78e011d64a288399ff79fc9d7e24"
+			"id": "REPLACE_AFTER_PROVISIONING"
 		}
 	],
-	// ─── R2 Object Storage (Documents & Backups) ──────────────────────
-	// Create on new account:
-	//   npx wrangler r2 bucket create bmi-portal-documents
-	//   npx wrangler r2 bucket create bmi-portal-backups
+
+	// ─── R2 Buckets (Documents & Backups) ─────────────────────────────────────
+	// To provision (run once):
+	//   pnpm exec wrangler r2 bucket create bmi-portal-documents
+	//   pnpm exec wrangler r2 bucket create bmi-portal-backups
 	"r2_buckets": [
 		{
 			"binding": "DOCUMENTS",
@@ -89,21 +86,22 @@
 			"bucket_name": "bmi-portal-backups"
 		}
 	],
-	// ─── Public Environment Variables ─────────────────────────────────
+
+	// ─── Public Environment Variables ─────────────────────────────────────────
+	// Non-secret config baked into the Worker at deploy time.
+	// Secrets (JWT_SECRET, DATABASE_URL_CORE, etc.) are set via `wrangler secret put`.
 	"vars": {
 		"ENVIRONMENT": "production",
-		"ALLOWED_ORIGINS_OVERRIDE": "https://bmiuniversities.org,https://www.bmiuniversities.org,https://portal.bmiuniversities.org,https://ums.bmiuniversities.org,https://bmi-portal.pages.dev,https://bmi-ums.pages.dev,https://main.bmi-university.pages.dev,https://portal.bmi-university.pages.dev,https://ums.bmi-university.pages.dev,https://bmi-portal.hkmministries.org,https://bmi-ums.hkmministries.org"
+		"ALLOWED_ORIGINS_OVERRIDE": "https://bmiuniversities.org,https://www.bmiuniversities.org,https://portal.bmiuniversities.org,https://ums.bmiuniversities.org,https://bmi-portal.pages.dev,https://bmi-ums.pages.dev,https://bmi-university.pages.dev,https://bmi-portal.hkmministries.org,https://bmi-ums.hkmministries.org"
 	},
-	// ─── Cloudflare DNS Routes ──────────────────────────────────────────────────
-	// "routes": [
-	//   { "pattern": "api.bmiuniversities.org/*", "zone_name": "bmiuniversities.org" }
-	// ],
+
+	// ─── Cron Triggers ────────────────────────────────────────────────────────
+	// Runs scheduled tasks (backup, archival) daily at midnight UTC.
 	"triggers": {
-		"crons": [
-			"0 0 * * *"
-		]
+		"crons": ["0 0 * * *"]
 	},
-	// ─── Observability ────────────────────────────────────────────────
+
+	// ─── Observability ────────────────────────────────────────────────────────
 	"observability": {
 		"enabled": true,
 		"head_sampling_rate": 1

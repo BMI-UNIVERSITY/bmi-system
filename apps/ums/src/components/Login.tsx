@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Mail, Lock, AlertCircle, Loader2, ShieldCheck, UserCheck, KeyRound, Scroll, CreditCard, Users, ClipboardList } from 'lucide-react';
 import { User, AuthResponse } from '../services/authService';
+import { API_URL } from '../services/config';
 import { useAuthStore } from '../stores/authStore';
 import ForgotPasswordModal from './ForgotPasswordModal';
 import ActivateAccountModal from './ActivateAccountModal';
@@ -94,7 +95,13 @@ const Login: React.FC<LoginProps> = ({ onLogin, logo }) => {
     if (!result.success) {
       let errorMsg = result.error || 'Login failed';
       if (typeof errorMsg === 'string' && (errorMsg.includes('Network error') || errorMsg.includes('Failed to fetch'))) {
-        setError('Unable to reach authentication server. Utilizing local demo session.');
+        // The auth API is unreachable. State the exact endpoint being hit and
+        // point at the likely cause per environment instead of implying a
+        // local demo session (no such fallback exists).
+        const hint = API_URL.startsWith('/')
+          ? 'If you are running locally, the API must be running too: start it with `npm run dev` in apps/api (it serves on http://127.0.0.1:8787), then sign in again.'
+          : 'The API is not reachable from the browser. Check your network and that VITE_API_URL points at the API Worker at build time (see apps/ums/DEPLOY.md).';
+        setError(`Unable to reach the authentication server (${API_URL}). ${hint}`);
       } else {
         setError(errorMsg);
       }

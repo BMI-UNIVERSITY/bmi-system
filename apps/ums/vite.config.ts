@@ -4,7 +4,7 @@ import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
 
 // BMI UMS - 100% Open Source Frontend
-// Backend API: http://localhost:3001
+// Backend API (dev proxy): http://127.0.0.1:8787 (start with `npm run dev` in apps/api)
 
 export default defineConfig({
   preview: {
