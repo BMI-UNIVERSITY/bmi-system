@@ -18,10 +18,13 @@ export const MARKETING_URL = 'https://bmiuniversities.org' as const;
 export const MARKETING_URL_WWW = 'https://www.bmiuniversities.org' as const;
 
 /** The Cloudflare Pages preview URL of the portal (used as a fallback origin). */
-export const PORTAL_PAGES_URL = 'https://bmi-portal.pages.dev' as const;
+export const PORTAL_PAGES_URL = 'https://bmi-portal-b0i.pages.dev' as const;
 
 /** The Cloudflare Pages preview URL of the UMS frontend. */
-export const UMS_PAGES_URL = 'https://bmi-ums.pages.dev' as const;
+export const UMS_PAGES_URL = 'https://bmi-ums-88m.pages.dev' as const;
+
+/** The Cloudflare Pages preview URL of the marketing website. */
+export const UNIVERSITY_PAGES_URL = 'https://bmi-university-bzd.pages.dev' as const;
 
 /** The canonical production URL of the backend API Worker. */
 export const API_WORKER_URL = 'https://bmi-api.bmi-university.workers.dev' as const;
@@ -48,6 +51,10 @@ export const ALLOWED_ORIGINS: string[] = [
   PORTAL_PAGES_URL,
   UMS_URL,
   UMS_PAGES_URL,
+  UNIVERSITY_PAGES_URL,
+  'https://bmi-portal.pages.dev',
+  'https://bmi-ums.pages.dev',
+  'https://bmi-university.pages.dev',
   // Cloudflare Pages deployment branches
   'https://portal.bmi-university.pages.dev',
   'https://ums.bmi-university.pages.dev',

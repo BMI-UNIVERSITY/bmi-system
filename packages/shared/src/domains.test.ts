@@ -31,6 +31,8 @@ describe('@bmi/shared — domains', () => {
     expect(ALLOWED_ORIGINS).toContain('https://ums.bmiuniversities.org');
     expect(ALLOWED_ORIGINS).toContain('https://bmi-portal.pages.dev');
     expect(ALLOWED_ORIGINS).toContain('https://bmi-ums.pages.dev');
+    expect(ALLOWED_ORIGINS).toContain('https://bmi-portal-b0i.pages.dev');
+    expect(ALLOWED_ORIGINS).toContain('https://bmi-ums-88m.pages.dev');
     expect(ALLOWED_ORIGINS).toContain('http://localhost:5173');
     expect(ALLOWED_ORIGINS).toContain('http://localhost:3000');
     expect(ALLOWED_ORIGINS).toContain('http://localhost:4173');

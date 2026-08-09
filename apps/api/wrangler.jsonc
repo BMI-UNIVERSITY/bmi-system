@@ -70,7 +70,7 @@
 	// ─── Public Environment Variables ─────────────────────────────────────────
 	"vars": {
 		"ENVIRONMENT": "production",
-		"ALLOWED_ORIGINS_OVERRIDE": "https://bmiuniversities.org,https://www.bmiuniversities.org,https://portal.bmiuniversities.org,https://ums.bmiuniversities.org,https://bmi-portal.pages.dev,https://bmi-ums.pages.dev,https://bmi-university.pages.dev,https://bmi-portal.hkmministries.org,https://bmi-ums.hkmministries.org"
+		"ALLOWED_ORIGINS_OVERRIDE": "https://bmiuniversities.org,https://www.bmiuniversities.org,https://portal.bmiuniversities.org,https://ums.bmiuniversities.org,https://bmi-portal.pages.dev,https://bmi-ums.pages.dev,https://bmi-university.pages.dev,https://bmi-ums-88m.pages.dev,https://bmi-portal-b0i.pages.dev,https://bmi-university-bzd.pages.dev,https://bmi-portal.hkmministries.org,https://bmi-ums.hkmministries.org"
 	},
 
 	// ─── Cron Triggers ────────────────────────────────────────────────────────
