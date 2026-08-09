@@ -7,6 +7,6 @@ export default defineConfig({
     environment: 'node',
     globals: true,
     testTimeout: 30000,
-    exclude: ['**/node_modules/**', '**/tests/smoke/**', '**/tests/integration/**'],
+    exclude: ['**/node_modules/**', '**/tests/smoke/**', '**/tests/integration/**', '**/test-integration/**'],
   },
 });
