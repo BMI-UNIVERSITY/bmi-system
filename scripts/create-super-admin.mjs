@@ -12,7 +12,7 @@
  *   node scripts/create-super-admin.mjs my-secret-setup-key admin@bmiuniversities.org SuperPass123! Super Admin
  */
 
-import fetch from 'node-fetch';
+// Uses native Node.js fetch (Node 18+)
 
 const API_URL = process.env.VITE_API_URL || 'https://bmi-api.bmi-university.workers.dev';
 const setupKey = process.argv[2] || process.env.ADMIN_SETUP_KEY;
