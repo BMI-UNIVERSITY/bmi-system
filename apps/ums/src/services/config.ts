@@ -1,22 +1,18 @@
-
 import { PORTAL_URL, UMS_URL, API_WORKER_URL } from '@bmi/shared';
 
-// IMPORTANT: In production builds, VITE_API_URL MUST be injected at build
-// time via Cloudflare Pages env vars (see apps/ums/DEPLOY.md). Falling back
-// to a relative path works in `vite dev` (the proxy forwards /api -> :3001)
-// but breaks in production for two reasons:
-//   1. Cloudflare Pages' static `_redirects` proxy is unreliable for CORS
-//      preflights, so cross-origin POSTs are blocked.
-//   2. The "/api/*" rule does not reliably forward all headers needed by
-//      the API (e.g. cookies, custom auth headers).
-//
-// The production fallback is sourced from @bmi/shared so there is exactly
-// one place to update the API URL. Override locally via apps/ums/.env.
-const DEFAULT_API_URL =
-  ((import.meta as unknown as { env: Record<string, boolean | string> }).env?.PROD ? API_WORKER_URL : '');
+// Single source of truth for the production API URL is @bmi/shared → API_WORKER_URL.
+// At build time, VITE_API_URL env var takes precedence (set in CI via GitHub Actions).
+// When absent, the production build falls back to API_WORKER_URL baked from @bmi/shared.
+// For local dev (import.meta.env.DEV) a relative '' base is used so Vite's proxy handles /api.
 
-export const API_URL =
-  ((import.meta as unknown as { env: Record<string, string> }).env.VITE_API_URL || DEFAULT_API_URL) + '/api/v1';
+const isDevBuild = (import.meta as unknown as { env: Record<string, boolean | string> }).env?.DEV;
+const envOverride = (import.meta as unknown as { env: Record<string, string> }).env.VITE_API_URL;
+
+// In prod builds, always use the explicit env override OR the shared constant.
+// Never fall back to a relative path in production.
+const DEFAULT_API_URL = isDevBuild ? '' : (envOverride || API_WORKER_URL);
+
+export const API_URL = (envOverride || DEFAULT_API_URL) + '/api/v1';
 
 export const API_TIMEOUT = 30000; // 30 seconds
 export const MAX_RETRIES = 2;

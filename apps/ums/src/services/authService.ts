@@ -9,9 +9,7 @@
 import { ApiResponse } from '../types/index';
 import { API_URL } from './config';
 
-// Single source of truth for the API base URL is `./config.ts`. In production
-// builds `config.ts` falls back to https://bmi-api.bmiuniversity107.workers.dev
-// unless VITE_API_URL is provided at build time.
+// API base URL is managed exclusively in ./config.ts → API_URL.
 
 export interface User {
   id: string;
