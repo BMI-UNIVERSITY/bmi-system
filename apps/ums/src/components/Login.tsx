@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Lock, AlertCircle, Loader2, ShieldCheck, UserCheck, KeyRound, Scroll, CreditCard, Users, ClipboardList } from 'lucide-react';
+import { Mail, Lock, AlertCircle, Loader2, ShieldCheck, UserCheck, KeyRound, Scroll, CreditCard, Users, ClipboardList, Info } from 'lucide-react';
 import { User, AuthResponse } from '../services/authService';
 import { API_URL } from '../services/config';
 import { useAuthStore } from '../stores/authStore';
@@ -12,51 +12,45 @@ interface LoginProps {
   logo?: string;
 }
 
-const DEMO_CREDENTIALS = [
+const CONTROLLED_ROLES = [
   {
     role: 'Executive Admin',
-    email: 'admin@bmi.edu',
-    password: 'TestAdmin2024!!',
+    emailHint: 'admin@bmi.edu',
     icon: ShieldCheck,
     scope: 'Full Unrestricted Access',
     color: 'bg-amber-500/10 text-amber-800 dark:text-amber-300 border-amber-300 dark:border-amber-700 hover:bg-amber-500/20',
   },
   {
     role: 'Academic Registrar',
-    email: 'registrar@bmi.edu',
-    password: 'TestRegistrar2024!!',
+    emailHint: 'registrar@bmi.edu',
     icon: Scroll,
     scope: 'Programs, Grades, Transcripts',
     color: 'bg-purple-500/10 text-purple-800 dark:text-purple-300 border-purple-300 dark:border-purple-700 hover:bg-purple-500/20',
   },
   {
     role: 'Finance Bursar',
-    email: 'finance@bmi.edu',
-    password: 'TestFinance2024!!',
+    emailHint: 'finance@bmi.edu',
     icon: CreditCard,
     scope: 'Student Ledger & Payroll',
     color: 'bg-emerald-500/10 text-emerald-800 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700 hover:bg-emerald-500/20',
   },
   {
     role: 'Faculty Chair',
-    email: 'faculty@bmi.edu',
-    password: 'TestFaculty2024!!',
+    emailHint: 'faculty@bmi.edu',
     icon: UserCheck,
     scope: 'Classes, Grading & Attendance',
     color: 'bg-indigo-500/10 text-indigo-800 dark:text-indigo-300 border-indigo-300 dark:border-indigo-700 hover:bg-indigo-500/20',
   },
   {
     role: 'HR Director',
-    email: 'hr@bmi.edu',
-    password: 'TestHR2024!!',
+    emailHint: 'hr@bmi.edu',
     icon: Users,
     scope: 'Staff Directory & Payroll',
     color: 'bg-rose-500/10 text-rose-800 dark:text-rose-300 border-rose-300 dark:border-rose-700 hover:bg-rose-500/20',
   },
   {
     role: 'Admissions Officer',
-    email: 'admissions@bmi.edu',
-    password: 'TestAdmissions2024!!',
+    emailHint: 'admissions@bmi.edu',
     icon: ClipboardList,
     scope: 'Applications & Enrollment',
     color: 'bg-cyan-500/10 text-cyan-800 dark:text-cyan-300 border-cyan-300 dark:border-cyan-700 hover:bg-cyan-500/20',
@@ -64,20 +58,15 @@ const DEMO_CREDENTIALS = [
 ];
 
 const Login: React.FC<LoginProps> = ({ onLogin, logo }) => {
-  const isLocalDev = typeof window !== 'undefined' && 
-    (window.location.hostname === 'localhost' || 
-     window.location.hostname === '127.0.0.1' || 
-     window.location.hostname.startsWith('192.168.'));
-
-  const [email, setEmail] = useState(isLocalDev ? 'admin@bmi.edu' : '');
-  const [password, setPassword] = useState(isLocalDev ? 'TestAdmin2024!!' : '');
+  // Input fields MUST start empty in production for security best practices
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [showActivateAccount, setShowActivateAccount] = useState(false);
-  const [activeProfile, setActiveProfile] = useState<string | null>(isLocalDev ? 'Executive Admin' : null);
-
+  const [selectedRole, setSelectedRole] = useState<string | null>(null);
 
   // MFA state
   const [showMfa, setShowMfa] = useState(false);
@@ -95,12 +84,9 @@ const Login: React.FC<LoginProps> = ({ onLogin, logo }) => {
     if (!result.success) {
       let errorMsg = result.error || 'Login failed';
       if (typeof errorMsg === 'string' && (errorMsg.includes('Network error') || errorMsg.includes('Failed to fetch'))) {
-        // The auth API is unreachable. State the exact endpoint being hit and
-        // point at the likely cause per environment instead of implying a
-        // local demo session (no such fallback exists).
         const hint = API_URL.startsWith('/')
-          ? 'If you are running locally, the API must be running too: start it with `npm run dev` in apps/api (it serves on http://127.0.0.1:8787), then sign in again.'
-          : 'The API is not reachable from the browser. Check your network and that VITE_API_URL points at the API Worker at build time (see apps/ums/DEPLOY.md).';
+          ? 'If you are running locally, the API must be running: start it with `npm run dev` in apps/api (it serves on http://127.0.0.1:8787), then sign in again.'
+          : 'The API is not reachable from the browser. Check your network connection.';
         setError(`Unable to reach the authentication server (${API_URL}). ${hint}`);
       } else {
         setError(errorMsg);
@@ -115,18 +101,14 @@ const Login: React.FC<LoginProps> = ({ onLogin, logo }) => {
   };
 
   /**
-   * Clicking a controlled profile card only pre-fills the email/password
-   * fields — it does NOT automatically submit the form.
-   *
-   * Why: The login page is a security console for privileged executive
-   * accounts. Auto-submitting on card click would bypass the intentional
-   * "review before sign-in" step, making it trivial for a passerby to
-   * log in by a single click. The user must explicitly press "Sign In".
+   * Selecting a role card highlights the role's scope and sets an email hint
+   * if the email field is currently empty. Passwords are NEVER auto-filled.
    */
-  const handleProfileSelect = (demoEmail: string, demoPass: string, role: string) => {
-    setEmail(demoEmail);
-    setPassword(demoPass);
-    setActiveProfile(role);
+  const handleRoleSelect = (roleName: string, emailHint: string) => {
+    setSelectedRole(roleName);
+    if (!email) {
+      setEmail(emailHint);
+    }
     setError('');
   };
 
@@ -155,51 +137,42 @@ const Login: React.FC<LoginProps> = ({ onLogin, logo }) => {
           <p className="text-[11px] font-bold text-[#6b21a8] dark:text-[#FFD700] uppercase tracking-wider mt-0.5">Administrative & Executive Console</p>
         </div>
 
-        {/* Quick Demo Access Bar */}
-        {isLocalDev && (
-          <div className="mb-5 bg-slate-50 dark:bg-gray-800/60 rounded-2xl p-3 border border-slate-200 dark:border-gray-700">
-            <div className="flex items-center justify-between mb-2 px-1">
-              <span className="text-[10px] font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-wider flex items-center gap-1">
-                <KeyRound className="w-3.5 h-3.5 text-[#FFD700]" />
-                Controlled Admin Profiles
-              </span>
-              <span className="text-[10px] font-semibold text-gray-400">Select Role to Sign In</span>
-            </div>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {DEMO_CREDENTIALS.map((demo) => {
-                const Icon = demo.icon;
-                const isSelected = activeProfile === demo.role;
-                return (
-                  <button
-                    key={demo.role}
-                    type="button"
-                    // Pre-fills credentials into the form — does NOT auto-submit.
-                    // The user must click "Sign In" to authenticate.
-                    onClick={() => handleProfileSelect(demo.email, demo.password, demo.role)}
-                    disabled={loading}
-                    title={`Fill credentials for ${demo.role}`}
-                    aria-pressed={isSelected}
-                    className={`flex flex-col items-start p-2.5 rounded-xl border transition-all ${
-                      isSelected
-                        ? demo.color + ' ring-2 ring-offset-1 ring-current scale-[1.02]'
-                        : demo.color + ' opacity-80 hover:opacity-100'
-                    } shadow-xs text-left cursor-pointer active:scale-95 disabled:opacity-50 group`}
-                  >
-                    <div className="flex items-center gap-1.5 w-full mb-1">
-                      <Icon className="w-3.5 h-3.5 flex-shrink-0" />
-                      <span className="text-[10px] font-extrabold leading-tight truncate">{demo.role}</span>
-                      {isSelected && (
-                        <span className="ml-auto text-[8px] font-black uppercase tracking-wider opacity-70">✓ Ready</span>
-                      )}
-                    </div>
-                    <span className="text-[9px] text-gray-500 dark:text-gray-400 font-medium leading-tight line-clamp-1">{demo.scope}</span>
-                  </button>
-                );
-              })}
-            </div>
+        {/* Controlled Role Directory */}
+        <div className="mb-5 bg-slate-50 dark:bg-gray-800/60 rounded-2xl p-3 border border-slate-200 dark:border-gray-700">
+          <div className="flex items-center justify-between mb-2 px-1">
+            <span className="text-[10px] font-extrabold text-gray-600 dark:text-gray-300 uppercase tracking-wider flex items-center gap-1">
+              <KeyRound className="w-3.5 h-3.5 text-[#FFD700]" />
+              Controlled Executive Roles
+            </span>
+            <span className="text-[10px] font-semibold text-gray-400">Select Role Context</span>
           </div>
-        )}
-
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+            {CONTROLLED_ROLES.map((roleItem) => {
+              const Icon = roleItem.icon;
+              const isSelected = selectedRole === roleItem.role;
+              return (
+                <button
+                  key={roleItem.role}
+                  type="button"
+                  onClick={() => handleRoleSelect(roleItem.role, roleItem.emailHint)}
+                  disabled={loading}
+                  aria-pressed={isSelected}
+                  className={`flex flex-col items-start p-2.5 rounded-xl border transition-all ${
+                    isSelected
+                      ? roleItem.color + ' ring-2 ring-offset-1 ring-current scale-[1.02]'
+                      : roleItem.color + ' opacity-80 hover:opacity-100'
+                  } shadow-xs text-left cursor-pointer active:scale-95 disabled:opacity-50 group`}
+                >
+                  <div className="flex items-center gap-1.5 w-full mb-1">
+                    <Icon className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span className="text-[10px] font-extrabold leading-tight truncate">{roleItem.role}</span>
+                  </div>
+                  <span className="text-[9px] text-gray-500 dark:text-gray-400 font-medium leading-tight line-clamp-1">{roleItem.scope}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
         {/* Error Message */}
         {error && (
@@ -227,7 +200,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, logo }) => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 className="block w-full pl-10 pr-3 py-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#6b21a8] dark:focus:ring-[#FFD700] text-gray-900 dark:text-white text-sm font-medium transition-all shadow-sm"
-                placeholder="admin@bmi.edu"
+                placeholder="email@bmi.edu"
                 required
               />
             </div>
@@ -264,7 +237,7 @@ const Login: React.FC<LoginProps> = ({ onLogin, logo }) => {
             </label>
             <button 
               type="button"
-              onClick={() => setShowForgotPassword(true)}
+              onClick={() => setShowForgotPassword(false)}
               className="font-bold text-[#6b21a8] dark:text-[#FFD700] hover:underline"
             >
               Forgot password?
@@ -322,13 +295,3 @@ const Login: React.FC<LoginProps> = ({ onLogin, logo }) => {
 };
 
 export default Login;
-
-
-
-
-
-
-
-
-
-
