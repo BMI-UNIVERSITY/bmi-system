@@ -20,7 +20,7 @@
     "db:migrate-to-neon": "tsx scripts/migrate-d1-to-neon.ts",
     "db:verify-migration": "tsx scripts/verify-data-migration.ts",
     "type-check": "tsc --noEmit",
-    "secrets:set": "node scripts/set-secrets.mjs",
+    "secrets:set": "node ../../scripts/upload-worker-secrets.mjs",
     "test": "vitest run --passWithNoTests",
     "test:integration": "vitest run -c vitest.integration.config.ts",
     "test:smoke": "vitest run -c vitest.smoke.config.ts",

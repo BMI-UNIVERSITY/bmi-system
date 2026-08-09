@@ -66,10 +66,10 @@ for (const key of SECRETS_TO_UPLOAD) {
     continue;
   }
   try {
-    // Use echo to pipe the value into wrangler secret put (non-interactive)
+    // Use echo/printf to pipe the value into wrangler secret put (non-interactive)
     const cmd = process.platform === 'win32'
-      ? `echo ${value}| pnpm exec wrangler secret put ${key}`
-      : `printf '%s' '${value.replace(/'/g, "'\\''")}' | pnpm exec wrangler secret put ${key}`;
+      ? `echo ${value}| npx wrangler secret put ${key}`
+      : `printf '%s' '${value.replace(/'/g, "'\\''")}' | npx wrangler secret put ${key}`;
 
     execSync(cmd, {
       cwd: WORKER_DIR,
