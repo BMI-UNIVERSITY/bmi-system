@@ -206,12 +206,10 @@ jobs:
         run: pnpm exec turbo run build --filter=@bmi/api --concurrency=100%
 
       - name: Deploy to Cloudflare Workers
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: apps/api
-          command: deploy
+        run: pnpm --filter @bmi/api exec wrangler deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
   # ─── Deploy Portal Frontend ───────────────────────────────────────────────────
   deploy-portal:
@@ -259,12 +257,10 @@ jobs:
           VITE_API_URL: "https://bmi-api.bmiuniversity107.workers.dev"
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: apps/portal
-          command: pages deploy dist --project-name=bmi-portal
+        run: pnpm --filter bmi-portal exec wrangler pages deploy dist --project-name=bmi-portal
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
   # ─── Deploy UMS Frontend ──────────────────────────────────────────────────────
   deploy-ums:
@@ -312,12 +308,10 @@ jobs:
           VITE_API_URL: "https://bmi-api.bmiuniversity107.workers.dev"
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: apps/ums
-          command: pages deploy dist --project-name=bmi-ums
+        run: pnpm --filter bmi-ums-frontend exec wrangler pages deploy dist --project-name=bmi-ums
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
   # ─── Deploy University Frontend ───────────────────────────────────────────────
   deploy-university:
@@ -369,10 +363,8 @@ jobs:
           test -f bmi-university/out/index.html && echo "✅ index.html found" || echo "❌ index.html NOT found"
 
       - name: Deploy to Cloudflare Pages
-        uses: cloudflare/wrangler-action@v4
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          workingDirectory: bmi-university
-          command: pages deploy out --project-name=bmi-university --branch=main
+        run: pnpm --filter bmi-university exec wrangler pages deploy out --project-name=bmi-university --branch=main
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
 
