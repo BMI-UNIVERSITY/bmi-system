@@ -37,7 +37,7 @@ jobs:
         run: pnpm exec turbo run build --filter=bmi-portal --concurrency=100%
         env:
           NODE_ENV: production
-          VITE_API_URL: 'https://bmi-api.bmiuniversity107.workers.dev'
+          VITE_API_URL: 'https://bmi-api.bmi-university.workers.dev'
 
       - name: Deploy Preview to Cloudflare Pages
         run: pnpm --filter bmi-portal exec wrangler pages deploy dist --project-name=bmi-portal --branch=${{ github.head_ref }}
@@ -69,7 +69,7 @@ jobs:
         run: pnpm exec turbo run build --filter=bmi-ums-frontend --concurrency=100%
         env:
           NODE_ENV: production
-          VITE_API_URL: 'https://bmi-api.bmiuniversity107.workers.dev'
+          VITE_API_URL: 'https://bmi-api.bmi-university.workers.dev'
 
       - name: Deploy Preview to Cloudflare Pages
         run: pnpm --filter bmi-ums-frontend exec wrangler pages deploy dist --project-name=bmi-ums --branch=${{ github.head_ref }}

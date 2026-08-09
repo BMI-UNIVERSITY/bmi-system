@@ -1,2 +1,2 @@
-/api/* https://bmi-api.bmiuniversity107.workers.dev/api/:splat 200
+/api/* https://bmi-api.bmi-university.workers.dev/api/:splat 200
 /* /index.html 200
