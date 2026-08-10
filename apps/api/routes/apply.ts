@@ -543,3 +543,87 @@ export async function handleGetStatusLogs(_request: Request, env: Env, appId: st
 
   return ok(results);
 }
+
+// ─── Admin: Create application on behalf of an applicant ───────────────────────
+// POST /api/admin/applications
+// Accepts: { email, first_name, last_name, phone?, program, degree_level, high_school?, gpa?, address?, nationality? }
+// Finds-or-creates the user record then inserts the application directly.
+export async function handleAdminCreateApplication(
+  request: Request,
+  env: Env,
+  adminId: string,
+): Promise<Response> {
+  let body: Record<string, unknown>;
+  try {
+    body = await request.json();
+  } catch {
+    return error('Invalid JSON body', 400);
+  }
+
+  const { email, first_name, last_name, phone, program, degree_level, high_school, gpa, address, nationality } = body as Record<string, any>;
+
+  if (!email || !first_name || !last_name || !program || !degree_level) {
+    return error('email, first_name, last_name, program, and degree_level are required', 400);
+  }
+
+  const normalizedEmail = String(email).toLowerCase().trim();
+
+  if (!VALID_PROGRAMS.includes(program)) {
+    return error('Invalid program selected', 400);
+  }
+
+  const db = env.PLATFORM_CONTEXT!.db;
+
+  // Find-or-create the applicant user
+  let user = await db.prepare(
+    `SELECT id FROM users WHERE email = ?`
+  ).bind(normalizedEmail).first<{ id: string }>();
+
+  let userId: string;
+
+  if (user) {
+    userId = user.id;
+  } else {
+    // Create a new pre-verified applicant account with a random temp password
+    const { hashPassword } = await import('@bmi/api-middleware');
+    const tempPassword = crypto.randomUUID();
+    const passwordHash = await hashPassword(tempPassword, env.PASSWORD_PEPPER, env.PBKDF2_ITERATIONS);
+    userId = crypto.randomUUID();
+
+    await db.prepare(
+      `INSERT INTO users (id, email, password_hash, first_name, last_name, phone, role, is_verified, account_claimed, created_at, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, 'applicant', 1, 0, datetime('now'), datetime('now'))`
+    ).bind(userId, normalizedEmail, passwordHash, String(first_name), String(last_name), phone ? String(phone) : null).run();
+  }
+
+  // Check for an existing non-rejected application
+  const existing = await db.prepare(
+    `SELECT COUNT(*) as count FROM applications WHERE user_id = ? AND status NOT IN ('rejected')`
+  ).bind(userId).first<{ count: number }>();
+
+  if ((existing?.count ?? 0) > 0) {
+    return error('An active application already exists for this email address.', 409);
+  }
+
+  const appId = crypto.randomUUID();
+  const gpaValue = gpa != null ? parseFloat(String(gpa)) : null;
+
+  await createApplicationWithDependenciesOptimized(db, {
+    appId,
+    userId,
+    program: String(program),
+    degreeLevel: String(degree_level),
+    highSchool: high_school ? String(high_school) : undefined,
+    gpa: gpaValue ?? undefined,
+    address: address ? String(address) : undefined,
+    nationality: nationality ? String(nationality) : undefined,
+  });
+
+  await logAdminAction(env, adminId, 'admin_create_application', 'application', appId, {
+    applicant_email: normalizedEmail,
+    program,
+    degree_level,
+  }, request);
+
+  return ok({ application_id: appId, user_id: userId, status: 'submitted' });
+}

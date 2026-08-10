@@ -41,8 +41,12 @@ const USER_KEY = 'bmi_user';
 const REMEMBER_KEY = 'bmi_remember_me';
 const TOKEN_EXPIRY_KEY = 'bmi_token_expiry';
 
-// Access token stored in memory only — never in localStorage (XSS protection)
+// CSRF token stored in memory only — sent as X-CSRF-Token on state-changing requests
 let _memoryToken: string | null = null;
+
+// JWT bearer token stored in memory — sent as Authorization: Bearer on all authenticated requests
+// This handles cross-origin Pages deployments where SameSite=None cookies may be blocked
+let _jwtToken: string | null = null;
 
 // Session timeout constants
 const TOKEN_EXPIRY_BUFFER_MS = 5 * 60 * 1000;  // 5 minute buffer before expiry
@@ -123,6 +127,7 @@ export async function login(email: string, password: string, rememberMe: boolean
       const expiryTime = Date.now() + (7 * 24 * 60 * 60 * 1000); // 7 days (matches backend cookie)
       localStorage.setItem(TOKEN_EXPIRY_KEY, expiryTime.toString());
       _memoryToken = data.data?.csrf_token || data.csrf_token; // Store CSRF token in memory
+      _jwtToken = data.data?.token || data.token || null; // Store JWT bearer token
 
       // eslint-disable-next-line no-console
       console.log('[authService] Returning success with user role:', user.role);
@@ -174,6 +179,7 @@ export async function logout(): Promise<void> {
   } finally {
     // Clear memory token
     _memoryToken = null;
+    _jwtToken = null;
     // Clear localStorage
     localStorage.removeItem(USER_KEY);
     localStorage.removeItem(TOKEN_EXPIRY_KEY);
@@ -279,6 +285,9 @@ export async function authFetch(url: string, options: RequestInit = {}, timeoutM
   const headers: Record<string, string> = {
     ...(options.body ? { 'Content-Type': 'application/json' } : {}),
     ...(csrfToken ? { 'X-CSRF-Token': csrfToken } : {}),
+    // Send JWT as Authorization header so cross-origin Pages requests authenticate
+    // even when the SameSite=None cookie doesn't flow correctly
+    ...(_jwtToken ? { 'Authorization': `Bearer ${_jwtToken}` } : {}),
     ...(options.headers as Record<string, string>),
   };
 
